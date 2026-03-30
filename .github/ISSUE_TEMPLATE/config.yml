@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+- name: Deployment help
+  url: https://github.com/jasontayler/AzureLocal-ClusterTool-Web/blob/main/docs/IIS-Deployment.md
+  about: Full IIS setup guide, gMSA configuration, HTTPS, and troubleshooting.
+- name: User guide
+  url: https://github.com/jasontayler/AzureLocal-ClusterTool-Web/blob/main/docs/USER-GUIDE.md
+  about: Feature walkthroughs for operators and administrators.

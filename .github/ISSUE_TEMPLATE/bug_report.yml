@@ -1,0 +1,103 @@
+name: Bug Report
+description: Something is not working correctly
+labels: [ "bug" ]
+body:
+- type: markdown
+  attributes:
+    value: |
+      Thanks for taking the time to report a bug. Please fill in as much detail as you can.
+
+- type: textarea
+  id: description
+  attributes:
+    label: What happened?
+    description: A clear description of the bug.
+    placeholder: "When I click ... the page shows ..."
+  validations:
+    required: true
+
+- type: textarea
+  id: expected
+  attributes:
+    label: What did you expect?
+    placeholder: "I expected the page to show ..."
+  validations:
+    required: true
+
+- type: textarea
+  id: steps
+  attributes:
+    label: Steps to reproduce
+    description: Step-by-step instructions to reproduce the issue.
+    placeholder: |
+      1. Go to ...
+      2. Click on ...
+      3. See error
+  validations:
+    required: true
+
+- type: dropdown
+  id: area
+  attributes:
+    label: Area
+    description: Which part of the app is affected?
+    options:
+    - Virtual Machines
+    - Cluster Nodes
+    - Cluster Roles
+    - Storage
+    - Network / ATC Intents
+    - Cluster Info / Health
+    - Solution Updates
+    - Azure Arc
+    - AKS
+    - Remote Log Viewer
+    - Events
+    - Background Collector
+    - Admin - Clusters
+    - Admin - Settings
+    - Admin - RBAC Roles
+    - Admin - Audit Log
+    - Admin - Alerting
+    - Authentication / Sign-in
+    - Other
+  validations:
+    required: true
+
+- type: input
+  id: version
+  attributes:
+    label: App version
+    description: Visible in the bottom of the left nav bar.
+    placeholder: "v0.9.0-beta"
+  validations:
+    required: true
+
+- type: dropdown
+  id: database
+  attributes:
+    label: Database provider
+    options:
+    - SQLite (default)
+    - PostgreSQL
+    - SQL Server
+    - Not sure
+  validations:
+    required: false
+
+- type: textarea
+  id: logs
+  attributes:
+    label: Error text or screenshot
+    description: Paste any error messages shown on screen, or attach a screenshot.
+    render: text
+  validations:
+    required: false
+
+- type: checkboxes
+  id: checked
+  attributes:
+    label: Checklist
+    options:
+    - label: I have searched existing issues and this is not a duplicate.
+      required: true

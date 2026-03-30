@@ -1,0 +1,86 @@
+name: Feature Request / Feedback
+description: Suggest an improvement or share beta feedback
+labels: [ "enhancement" ]
+body:
+- type: markdown
+  attributes:
+    value: |
+      Thank you for helping improve the Azure Local Cluster Tool.
+      Share what you need, what is working well, or what could be better.
+
+- type: dropdown
+  id: type
+  attributes:
+    label: Type
+    options:
+    - New feature request
+    - Improvement to existing feature
+    - General beta feedback
+    - Performance concern
+    - UX / usability issue
+  validations:
+    required: true
+
+- type: textarea
+  id: problem
+  attributes:
+    label: What problem does this solve?
+    description: Describe the operational problem or gap you are experiencing.
+    placeholder: "When managing VMs I have to ... which is slow because ..."
+  validations:
+    required: true
+
+- type: textarea
+  id: suggestion
+  attributes:
+    label: What would you like to see?
+    description: Describe the feature or change you would find valuable.
+  validations:
+    required: false
+
+- type: dropdown
+  id: area
+  attributes:
+    label: Area
+    options:
+    - Virtual Machines
+    - Cluster Nodes
+    - Cluster Roles
+    - Storage
+    - Network / ATC Intents
+    - Cluster Info / Health
+    - Solution Updates
+    - Azure Arc
+    - AKS
+    - Remote Log Viewer
+    - Events
+    - Background Collector / Performance
+    - Admin - Clusters
+    - Admin - Settings
+    - Admin - RBAC Roles
+    - Admin - Audit Log
+    - Admin - Alerting
+    - Authentication / Sign-in
+    - Deployment / Setup scripts
+    - Documentation
+    - Other
+  validations:
+    required: true
+
+- type: input
+  id: version
+  attributes:
+    label: App version
+    description: Visible in the bottom of the left nav bar.
+    placeholder: "v0.9.0-beta"
+  validations:
+    required: false
+
+- type: textarea
+  id: context
+  attributes:
+    label: Environment context (optional)
+    description: Azure Local version, cluster size, number of clusters, etc. — helps prioritise.
+    placeholder: "Azure Local 25H2, 3-node cluster, ~10 clusters total"
+  validations:
+    required: false
