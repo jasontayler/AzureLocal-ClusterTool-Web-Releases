@@ -4,6 +4,26 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.1-beta — 2026-03-30
+
+### Bug Fixes
+
+- **Security / Drift Detection** — Drift detection (`Invoke-AzStackHciVSRDriftDetectionValidation`)
+  is only available on clusters running solution update 2602 or later. The app now checks the
+  installed release version before attempting a drift check. Clusters on older releases display a
+  clear message instead of a raw PowerShell "cmdlet not found" error. The auto-run on page load
+  is skipped entirely for clusters below 2602.
+
+- **Windows Auth / AD Groups** — Fine-grained RBAC (custom roles with AD group SIDs) did not
+  work on the Windows Auth site. IIS provides group membership as `groupsid` claims but all pages
+  read `groups` claims. A middleware layer now maps `groupsid` values to `groups` on every
+  authenticated request so RBAC checks and cluster visibility work correctly with AD group SIDs.
+
+- **Setup-IIS.ps1** — The Entra ID site setup script now sets `ASPNETCORE_ENVIRONMENT=Production`
+  on the IIS app pool so that `appsettings.Production.json` is loaded automatically.
+
+---
+
 ## v0.9.0-beta — 2026-03-30
 
 First public beta release. The application covers all major Azure Local operational
