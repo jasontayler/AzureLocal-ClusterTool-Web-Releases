@@ -4,6 +4,37 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.2-beta — 2026-03-31
+
+### Bug Fixes
+
+- **Deploy script — `appsettings.WinAuth.json` overwrite** — The deployment script incorrectly
+  replaced `appsettings.WinAuth.json` on the server whenever all three Entra group IDs were empty.
+  Empty groups is a valid intentional configuration (ForcePassThrough mode — all authenticated
+  domain users have access). The file is now only replaced when the server still holds the stale
+  `BUILTIN\Administrators` default from an older install. All other server-side versions,
+  including intentionally empty groups, are preserved as-is.
+
+- **Deploy script — `appsettings.Production.json` not loaded** — ASP.NET Core only loads
+  `appsettings.Production.json` when `ASPNETCORE_ENVIRONMENT=Production` is set on the IIS app
+  pool. Without it, production settings (group IDs, DB connection string, ARM credentials) are
+  silently ignored even when the file exists. A new idempotent step in `Deploy-ToIIS.ps1` (step 7a)
+  checks and sets this environment variable on `HCIPortalPool` via PS remoting on every deploy.
+  Existing installs that ran Setup-IIS.ps1 after v0.9.1-beta already have this set; the step is a
+  no-op for them.
+
+### New Features
+
+- **Deleted Cluster Data Retention setting** — A new admin setting controls how long snapshot data
+  (LatestSnapshot and SnapshotHistory rows) is kept after a cluster is removed from the admin page.
+  - Default `0` — data is purged immediately when the cluster is deleted (keeps the database lean).
+  - Values `1 / 3 / 7 / 14 / 30` — orphaned rows are cleaned up by the nightly prune after the
+    configured number of days (useful if you want to retain recent history temporarily after
+    decommissioning a cluster).
+  - Configured at **Admin > Settings** under the "Background Collector" group.
+
+---
+
 ## v0.9.1-beta — 2026-03-30
 
 ### Bug Fixes
