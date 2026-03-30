@@ -43,7 +43,7 @@ A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)
 | Authentication | Microsoft Entra ID SSO (`Microsoft.Identity.Web`) |
 | Authorisation | Entra security groups + fine-grained custom RBAC |
 | PowerShell | `Microsoft.PowerShell.SDK` 7.5.4 — WinRM via `WSManConnectionInfo` |
-| Database | EF Core 9 — PostgreSQL (recommended), SQLite, or SQL Server |
+| Database | EF Core 9 — SQLite (default) or SQL Server |
 | Hosting | IIS (InProcess) with gMSA service account |
 
 ---
@@ -59,10 +59,15 @@ A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)
 
 ## Getting Started
 
-1. **Download** the latest ZIP from the [Releases](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/releases) page and extract it to your IIS server
-2. **Edit** `AzureLocal.ClusterTool.Web/appsettings.json` — fill in `AzureAd`, `Groups`, and `Database` settings
-3. **Edit** `clusters.json.example` → rename to `clusters.json` and add your cluster(s)
-4. **Run** the setup script and deploy — see [docs/QUICK-START.md](docs/QUICK-START.md) for a step-by-step guide
+### Run locally (dev)
+
+```powershell
+git clone https://github.com/jasontayler/AzureLocal-ClusterTool-Web.git
+cd AzureLocal-ClusterTool-Web
+dotnet run
+```
+
+Set `AzureAd:*` and `Groups:*` values in `appsettings.Development.json` (copy from `appsettings.json`).
 
 ### Deploy to IIS
 
@@ -80,9 +85,63 @@ See [docs/IIS-Deployment.md](docs/IIS-Deployment.md) for the full setup guide in
 
 #### Upgrading an existing installation
 
-Extract the new ZIP over your existing deployment folder, then recycle the app pool. The app uses `EnsureCreated` on startup — schema changes are applied automatically on a new database. For an existing database, the app logs any schema differences to the event log; see [docs/IIS-Deployment.md](docs/IIS-Deployment.md) for upgrade notes.
+If you already have a `app.db` database from a version prior to the background collector feature, you must add the three new tables before (or immediately after) deploying. `EnsureCreated` only runs on a **new** database file — it will not modify an existing one.
 
-For PostgreSQL (the recommended provider), no manual schema steps are needed — `EnsureCreated` is safe to run against an existing database and only applies missing objects.
+Download `sqlite3.exe` from **https://www.sqlite.org/download.html** (Windows `sqlite-tools-win-x64-*.zip`) and run on the IIS server:
+
+```powershell
+$db = "C:\apps\hci-portal-data\app.db"
+sqlite3.exe $db @"
+CREATE TABLE IF NOT EXISTS LatestSnapshots (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ClusterName TEXT NOT NULL,
+    DataType TEXT NOT NULL,
+    JsonData TEXT NOT NULL,
+    CollectedAt TEXT NOT NULL,
+    CollectDurationMs INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(ClusterName, DataType)
+);
+CREATE TABLE IF NOT EXISTS SnapshotHistories (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ClusterName TEXT NOT NULL,
+    DataType TEXT NOT NULL,
+    JsonData TEXT NOT NULL,
+    CollectedAt TEXT NOT NULL,
+    CollectDurationMs INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS IX_SnapshotHistories_Cluster
+    ON SnapshotHistories (ClusterName, DataType, CollectedAt);
+CREATE TABLE IF NOT EXISTS CollectorHealths (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ClusterName TEXT NOT NULL,
+    LastSuccessAt TEXT,
+    LastFailureAt TEXT,
+    LastError TEXT,
+    LastPollDurationMs INTEGER NOT NULL DEFAULT 0,
+    LastPollCallCount INTEGER NOT NULL DEFAULT 0,
+    ConsecutiveFails INTEGER NOT NULL DEFAULT 0,
+    IsCircuitOpen INTEGER NOT NULL DEFAULT 0,
+    CircuitOpenUntil TEXT,
+    UNIQUE(ClusterName)
+);
+"@
+```
+
+If you are upgrading from a version before cluster disable was added, also add the `IsDisabled` column to the `Clusters` table. The command silently succeeds on a fresh install where the column already exists:
+
+```powershell
+# Safe to run on any install — silently ignored if column already exists
+sqlite3.exe $db "ALTER TABLE Clusters ADD COLUMN IsDisabled INTEGER NOT NULL DEFAULT 0;" 2>&1 | Out-Null
+```
+
+Verify the tables were created:
+
+```powershell
+sqlite3.exe $db ".tables"
+# Should include: LatestSnapshots  SnapshotHistories  CollectorHealths
+```
+
+Then recycle the app pool (`iisreset /noforce` or recycle `HCIPortalPool` in IIS Manager). The background collector starts automatically ~15 seconds after startup.
 
 ---
 
@@ -103,15 +162,10 @@ Key settings in `appsettings.json` on the server:
     "HciAdmin":   "<entra-group-object-id>"
   },
   "Database": {
-    "Provider":         "PostgreSQL",
-    "ConnectionString": "Host=localhost;Database=hciportal;Username=hci_app;Password=CHANGE_ME"
+    "Provider":         "Sqlite",
+    "ConnectionString": "Data Source=C:\\apps\\hci-portal-data\\app.db"
   }
 }
-```
-
-**PostgreSQL** is the recommended database. Install PostgreSQL on the app server (or any accessible server), create a database and user, then fill in the connection string above. The app creates all tables automatically on first startup — no migrations needed.
-
-Supported providers: `PostgreSQL` (recommended), `SqlServer`, `Sqlite`.
 ```
 
 ---
@@ -126,14 +180,25 @@ Supported providers: `PostgreSQL` (recommended), `SqlServer`, `Sqlite`.
 
 Fine-grained RBAC (per resource type, per named resource, per operation) can be configured via **Admin → Roles** once signed in as HciAdmin.
 
+---
+
+## Testing
+
+```powershell
+dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
+```
+
+282 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
+
+---
+
 ## Beta Feedback
 
-This is a beta release. Please use [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues) to report bugs or suggest improvements. Use the provided issue templates — they include an area selector and version field which helps track down issues quickly.
+This is a beta release. Please use [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/issues) to report bugs or suggest improvements. Use the provided issue templates — they include an area selector and version field which helps track down issues quickly.
 
 Known gaps in this release:
 - VM creation is not supported — existing VMs are managed only
 - SQL Server / Azure SQL providers have not been end-to-end tested against a live cluster
-- SQLite is supported but not recommended for production — use PostgreSQL
 
 ---
 
