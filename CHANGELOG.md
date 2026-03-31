@@ -4,6 +4,34 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.4-beta — 2026-03-31
+
+### Performance
+
+- **Snapshot-first data loading across all cluster pages** — Four additional pages were calling
+  live WinRM commands on every page load when the background snapshot poller already had
+  current data available:
+
+  | Page | Live call replaced | Estimated saving |
+  |---|---|---|
+  | Nodes | `Get-AzureStackHCI` (Arc portal URL) | ~3 s |
+  | Cluster Info | `Get-SolutionUpdate` + `Get-AzureStackHCI` | ~5-15 s |
+  | Arc Registration | `Get-AzureStackHCI` (full page data source) | ~3 s |
+  | Cluster Storage | `Get-ClusterNode` (move-volume dropdown) | ~1-2 s |
+
+  All four now read from the snapshot cache first. `ArcRegistration` falls back to a live
+  WinRM call only when the snapshot is empty (e.g. first load before the poller has run).
+  `ClusterInfoPage` adds both snapshot tasks to the `Task.WhenAll` block so DB reads race
+  in parallel with the WinRM pool connection.
+
+- **Solution Updates page** (`a8b04ea`) — Three bottlenecks fixed in the previous release:
+  - `Get-SolutionUpdateEnvironment -FullHealthCheckDetails` (30-120 s) removed from
+    auto-load; now on-demand via "Check Health" button only.
+  - Arc info sourced from snapshot instead of live `Get-AzureStackHCI`.
+  - `GetSolutionUpdateRunsAsync` reduced from two `Get-SolutionUpdate` PS calls to one.
+
+---
+
 ## v0.9.2-beta — 2026-03-31
 
 ### Bug Fixes
