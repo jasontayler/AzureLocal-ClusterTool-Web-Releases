@@ -4,6 +4,36 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.5-beta — 2026-03-31
+
+### Performance
+
+- **Parallel background collector** — The snapshot collector now runs all due data types for a
+  cluster concurrently instead of serially. A per-cluster visit previously took up to 40-50 s
+  because ~10 WinRM calls executed one after another. They now fire simultaneously via
+  `Task.WhenAll`, bounded by a `RunspacePool` of up to 4 concurrent connections, reducing a
+  full visit to ~6-8 s (bounded by the slowest single call, typically `Get-SolutionUpdate`).
+
+  Failure handling improved alongside the parallelisation:
+  - A single flaky type (e.g. `Get-NetIntentStatus`) no longer blocks VMs, Nodes, and Storage
+    from being collected on the same visit.
+  - Partial success (some types land, some fail) resets `ConsecutiveFails` to 0 — the circuit
+    breaker only opens when **all** types fail on a visit, same as before.
+  - Admin > Collector Health now shows an **orange "Partial"** status (instead of a misleading
+    green "OK") when at least one type failed on the last visit.
+
+### Bug Fixes
+
+- **AzureArmService — incorrect RP in `listUserKubeconfig` 403 error** — The error message and
+  code comment cited `Microsoft.HybridContainerService` as the required resource provider
+  permission. The correct action is
+  `Microsoft.Kubernetes/connectedClusters/provisionedClusterInstances/listUserKubeconfig/action`.
+  The message now accurately names the right RP and notes that the built-in
+  "AKS Arc Cluster User Role" does **not** cover this action (it targets the HybridContainerService
+  RP instead). A custom role with the `Microsoft.Kubernetes` action is required.
+
+---
+
 ## v0.9.4-beta — 2026-03-31
 
 ### Performance
