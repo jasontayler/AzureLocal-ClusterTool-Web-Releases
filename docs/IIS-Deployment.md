@@ -82,6 +82,33 @@ Run `iisreset` after installing the bundle before creating sites.
 
 > **Critical:** The "No Managed Code" setting on the app pool does NOT break the app. It just means IIS doesn't load the classic .NET framework pipeline. ASP.NET Core uses its own module regardless of this setting.
 
+### Critical SignalR settings (must be set — do not skip)
+
+Blazor Server uses a persistent SignalR WebSocket connection for every open browser tab. IIS recycles the worker process by default on two triggers that **silently drop all active sessions**:
+
+| Setting | Default | Required value | Why |
+|---|---|---|---|
+| `processModel.idleTimeout` | 20 min | `00:00:00` (never) | IIS terminates the process after 20 min with no HTTP requests. Kills all circuits. |
+| `recycling.periodicRestart.time` | 29 h (1740 min) | `00:00:00` (disabled) | Worker process restarts on a timer. New process discards all SignalR connection IDs — clients get "connection could not be found on server" and fall back to slow long polling. |
+
+Both settings are applied automatically by `Setup-IIS.ps1` and `Setup-IIS-WinAuth.ps1`.
+
+To verify or fix manually on an existing site:
+```powershell
+Import-Module WebAdministration
+$pool = "HCIPortalPool"   # or AZLManagementWinPool, etc.
+
+Set-ItemProperty "IIS:\AppPools\$pool" -Name processModel.idleTimeout          -Value "00:00:00"
+Set-ItemProperty "IIS:\AppPools\$pool" -Name recycling.periodicRestart.time    -Value "00:00:00"
+
+# Verify
+(Get-ItemProperty "IIS:\AppPools\$pool").processModel.idleTimeout
+(Get-ItemProperty "IIS:\AppPools\$pool").recycling.periodicRestart.time
+# Both must show 00:00:00
+```
+
+> **Symptom if missed:** Users see Blazor disconnects every ~29 hours. The browser console shows `Server timeout elapsed without receiving a message` followed by `connection could not be found on the server` and a fallback to Long Polling. WAS event log will show `worker process serving application pool 'X' was shut down due to the following reason: 'Periodic Restart Time Limit Exceeded'`.
+
 ---
 
 ## gMSA Requirements
@@ -403,6 +430,9 @@ Invoke-Command -ComputerName azlocalmgmt.jase.org {
 | Sign-in redirects back to sign-in | Entra app registration missing redirect URI `https://azlocalmgmt.jase.org/signin-oidc` |
 | App pool stops immediately after start | gMSA not retrievable on app server (`Test-ADServiceAccount` returns False) |
 | Robocopy fails in Deploy-ToIIS.ps1 | Ensure PS remoting works to azlocalmgmt.jase.org and your account has write rights to C:\apps |
+| Blazor disconnects every ~29 hours; browser console shows "connection could not be found on server" then falls back to Long Polling | IIS periodic restart (`recycling.periodicRestart.time`) not disabled — see Critical SignalR settings above |
+| Blazor disconnects every ~20 min when site is idle (no active users) | IIS idle timeout (`processModel.idleTimeout`) not disabled — see Critical SignalR settings above |
+| Blazor disconnects frequently on one network but not another | Corporate proxy intercepting WebSocket traffic — see Proxy Bypass below |
 
 ### HTTP 503 — App Pool Stopped: Diagnosis Steps
 
@@ -481,3 +511,37 @@ Edit `C:\apps\hci-portal\web.config` on the server:
 ```
 
 Recycle the app pool, reproduce the error, check `C:\apps\hci-portal\logs\stdout_*.log`. Set back to `false` after diagnosing — stdout logging has a performance cost.
+
+### Proxy Bypass — Blazor WebSocket disconnects on specific networks
+
+Blazor Server uses a persistent WebSocket (`wss://`). If a corporate proxy intercepts it, the proxy's own session lifetime (typically 30–60 min) terminates the connection regardless of keepalive settings.
+
+**Diagnose — run on an affected client machine:**
+```powershell
+# If this returns the proxy address instead of the original URL, traffic is going through the proxy
+[System.Net.WebRequest]::GetSystemWebProxy().GetProxy("http://vos-azlweb01.yourdomain.net.au")
+```
+
+**Common cause:** Windows proxy bypass lists use `*.domain.net.au` which only matches **one level deep**. A server at `vos-azlweb01.retail.ad.domain.net.au` has four levels and falls through to the proxy despite the bypass rule existing.
+
+**Fix — add sub-domain levels to the bypass list:**
+
+PAC file (add before the catch-all `return "PROXY ..."`):
+```javascript
+if (shExpMatch(host, "*.domain.net.au"))           { return "DIRECT"; }
+if (shExpMatch(host, "*.ad.domain.net.au"))        { return "DIRECT"; }
+if (shExpMatch(host, "*.retail.ad.domain.net.au")) { return "DIRECT"; }
+```
+
+GPO / registry `ProxyOverride` value:
+```
+*.domain.net.au;*.ad.domain.net.au;*.retail.ad.domain.net.au;<local>
+```
+
+After the PAC/GPO change, verify on the client:
+```powershell
+# Must return the original URL (not the proxy) to confirm bypass is working
+[System.Net.WebRequest]::GetSystemWebProxy().GetProxy("http://vos-azlweb01.yourdomain.net.au")
+```
+
+> The app-side `serverTimeout` (120 s) and `KeepAliveInterval` (10 s) settings tolerate brief proxy delays but cannot overcome a proxy hard-terminating sessions. The bypass is the correct fix for corporate LAN-to-LAN traffic.

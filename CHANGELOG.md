@@ -4,6 +4,41 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.7-beta — 2026-04-01
+
+### Bug Fixes
+
+- **Blazor disconnects every ~29 hours** — IIS app pool `recycling.periodicRestart.time`
+  defaults to 1740 minutes (29 hours). When the worker process recycles on this timer, all
+  active SignalR circuit IDs are discarded. Clients attempting to reconnect receive "connection
+  could not be found on the server" and fall back to slow long polling. Fixed by setting
+  `periodicRestart.time = 00:00:00` (disabled) in `Setup-IIS.ps1` and `Setup-IIS-WinAuth.ps1`.
+  To apply immediately on an existing server without redeploying, run on the IIS machine:
+  `Set-ItemProperty "IIS:\AppPools\<PoolName>" -Name recycling.periodicRestart.time -Value "00:00:00"`
+
+- **Blazor client-side serverTimeout too short** — Blazor JS auto-derives `serverTimeout`
+  as `2 x KeepAliveInterval`. With `KeepAliveInterval = 10 s` (set in v0.9.6), the client
+  used a 20 s timeout. A single delayed WebSocket ping from a corporate proxy or busy server
+  then caused an immediate disconnect. Fixed by configuring `Blazor.start()` in `App.razor`
+  with an explicit `serverTimeout: 120000` (120 s) and `keepAliveInterval: 10000` (10 s),
+  using `autostart="false"` on `blazor.web.js` so the circuit config applies before the
+  hub connection is established.
+
+### Documentation and Scripts
+
+- **`Setup-IIS-WinAuth.ps1`** — added `processModel.idleTimeout = 00:00:00` and
+  `recycling.periodicRestart.time = 00:00:00`, which were present in `Setup-IIS.ps1`
+  but missing from the WinAuth variant.
+
+- **`IIS-Deployment.md`** — added a "Critical SignalR settings" subsection under App Pool
+  Configuration with a table explaining `idleTimeout` and `periodicRestart.time`, the
+  symptoms if they are not set, and manual fix commands. Added three new troubleshooting
+  table rows (periodic restart disconnect, idle disconnect, proxy disconnect) and a new
+  "Proxy Bypass" section explaining the multi-level wildcard bypass problem with diagnosis
+  commands and PAC/GPO fix examples.
+
+---
+
 ## v0.9.6-beta — 2026-04-01
 
 ### Bug Fixes
