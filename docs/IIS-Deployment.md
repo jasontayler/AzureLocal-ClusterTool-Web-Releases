@@ -336,6 +336,70 @@ After starting the app pool, browse to the app and check:
 
 ---
 
+## Performance Tuning
+
+The application is designed to scale horizontally across many clusters with minimal resource
+usage. The defaults are appropriate for most deployments. This section explains the key
+settings and when to change them.
+
+### RunspacePool size (`Clusters:RunspacePoolMax`)
+
+Each cluster connection owns an independent PowerShell RunspacePool. The pool size controls
+how many PS operations on the **same cluster** can execute in parallel. Operations that exceed
+the pool size queue and wait — they do not fail.
+
+**Default: 5.** This is the right value for the vast majority of deployments:
+
+| Scenario | Behaviour with default (5) |
+|---|---|
+| 5 users click Refresh on the same cluster simultaneously | All 5 served in parallel — no queuing |
+| 50 users each managing a different cluster | 50 independent pools, each with 5 slots — zero cross-cluster contention |
+| 10 users all hit the same cluster at once | First 5 served immediately; next 5 queue briefly (~1-3 s) |
+
+Each runspace corresponds to one `wsmprovhost.exe` process on the cluster nodes. With
+`RunspacePoolMax=5` and the ClusterConnectionPool LRU cap of 50 active clusters, the worst-
+case total `wsmprovhost.exe` count per node is **50 x 5 = 250** — well within Windows WinRM
+limits.
+
+**To change**, add or edit in `appsettings.Production.json`:
+
+```json
+"Clusters": {
+  "RunspacePoolMax": 5
+}
+```
+
+| Value | When to use |
+|---|---|
+| `3` | Very low traffic; single admin; want minimal footprint on cluster nodes |
+| `5` | Default — covers up to ~8-10 simultaneous active users per cluster comfortably |
+| `8` | 10+ users regularly on the same cluster seeing slow page loads |
+| `10` | High-traffic shared cluster (monitor `wsmprovhost.exe` count on nodes after changing) |
+
+### PostgreSQL connection pool (`Maximum Pool Size`)
+
+Npgsql's default pool size of 100 collides with PostgreSQL's default `max_connections=100`,
+causing `FATAL: sorry, too many clients already` under any concurrency. The app enforces
+`Maximum Pool Size=20` automatically in code regardless of the connection string setting.
+
+For a Blazor Server app doing simple cluster-config reads and audit-log writes, 20 connections
+provides thousands of DB operations per second — far more than any realistic load. Do not
+increase this unless PostgreSQL's `max_connections` has been raised and you have a measured
+reason to do so.
+
+### Active cluster LRU cap (`ClusterConnectionPool.MaxActiveConnections`)
+
+The pool keeps at most **50 clusters** connected simultaneously. When a 51st cluster is
+accessed, the least-recently-used cluster is disconnected. Subsequent access to an evicted
+cluster reconnects transparently.
+
+This is a compile-time constant (`const int MaxActiveConnections = 50` in
+`ClusterConnectionPool.cs`). For deployments managing more than 50 frequently-accessed
+clusters simultaneously, increase this value and rebuild. For most organisations, 50 is
+far more than enough — only clusters being actively viewed hold a connection.
+
+---
+
 ## Deployment Workflow
 
 ### First time

@@ -4,6 +4,66 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.8-beta — 2026-04-02
+
+### New
+
+- **`Clusters:RunspacePoolMax` configurable** — The PowerShell RunspacePool size per cluster
+  is now configurable via `appsettings.json` (`"Clusters": { "RunspacePoolMax": 5 }`).
+  Previously hardcoded to 5. The default remains 5, which is the right value for most
+  deployments (up to ~8-10 simultaneous active users per cluster without queuing, with
+  zero cross-cluster contention). The `appsettings.json` comment block explains the
+  capacity model in detail and gives guidance for when to increase or decrease the value.
+  A full performance tuning section has been added to `docs/IIS-Deployment.md`.
+
+### Bug Fixes
+
+- **Blazor disconnects still occurring after v0.9.7 deploy** — `Deploy-ToIIS.ps1` copies
+  application files and recycles the app pool but never applied the critical IIS settings
+  (`idleTimeout=0`, `periodicRestart.time=0`). Those settings were only written by
+  `Setup-IIS.ps1`, which is only run once during initial server setup. Any deployment using
+  `Deploy-ToIIS.ps1` on a server where those settings had drifted or were never applied
+  left the pool in its default state (29-hour periodic recycle, 20-minute idle timeout).
+  Fixed by adding step 7b to `Deploy-ToIIS.ps1`: on every deploy it now applies both
+  `processModel.idleTimeout=00:00:00` and `recycling.periodicRestart.time=00:00:00` to
+  all app pools on the target server via PS remoting. This is idempotent — re-applying an
+  already-correct setting produces no change.
+
+- **"An error occurred using the connection to database"** — PostgreSQL's default
+  `max_connections=100` was being exhausted by Npgsql's default `Maximum Pool Size=100`.
+  When the app fully utilised its connection pool it consumed all available PostgreSQL
+  connections, causing every subsequent request to fail with
+  `FATAL: sorry, too many clients already`. Fixed by capping `Maximum Pool Size=20` via
+  `NpgsqlConnectionStringBuilder` in `Program.cs` (applied regardless of what is in the
+  server's `appsettings.Production.json`) and adding the parameter to the connection string
+  template. Additionally, `Keepalive=60` and `ConnectionIdleLifetime=300` are also
+  injected programmatically to prevent idle connections being silently dropped by
+  firewalls or NAT devices.
+
+- **`wsmprovhost.exe` accumulation on cluster nodes** — WinRM provider-host processes were
+  accumulating on cluster nodes (observed growing from 117 to 291 rapidly) due to several
+  compounding issues in `WebHyperVService`:
+  (1) `GetWindowsServicesAsync`, `ServiceOperationAsync`, `GetBitLockerStatusAsync`, and
+  the `GetSecurityFeaturesAsync` fallback strategy each created fresh per-node WinRM
+  connections on every call instead of reusing the per-node runspace cache, producing N new
+  `wsmprovhost.exe` processes per page load.
+  (2) `GetBitLockerStatusAsync` called `rs.Close(); rs.Dispose()` in a `finally` block
+  after pulling the runspace from the cache, destroying the cached entry and forcing a new
+  WinRM connection on every subsequent call.
+  (3) The per-node runspace cache had no proactive cleanup — entries could only be evicted
+  on the next cache access, meaning connections accumulated indefinitely when the site was
+  idle or a user navigated away.
+  (4) `IdleTimeout` was 300 s (5 min), so any abandoned connection from an unclean shutdown
+  lingered on the cluster node for 5 minutes before the server cleaned it up.
+  Fixed by: converting all four methods to use `GetOrCreateCachedRunspace` (reusing
+  existing connections); removing the destructive `finally` in `GetBitLockerStatusAsync`;
+  adding a 30-second `PeriodicTimer` background task in `ConnectAsync` that proactively
+  sweeps and closes stale (TTL-expired or broken-state) cache entries; reducing
+  `RunspaceCacheTtl` from 90 s to 60 s and `IdleTimeout` from 300,000 ms to 120,000 ms
+  (maintaining the required 2x safety margin between the two).
+
+---
+
 ## v0.9.7-beta — 2026-04-01
 
 ### Bug Fixes
