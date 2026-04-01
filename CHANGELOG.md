@@ -4,6 +4,50 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.6-beta — 2026-04-01
+
+### Bug Fixes
+
+- **Virtual Machines page missing VMs** — `GetVirtualMachinesAsync` previously ran `Get-VM`
+  via the cluster RunspacePool, which executes on whichever single node owns the WinRM
+  endpoint at the time. VMs hosted on other nodes were never returned. The method now
+  performs a two-phase query: first `Get-ClusterNode` via RunspacePool to discover all node
+  names, then parallel `Get-VM` calls to each node directly via `GetOrCreateCachedRunspace`.
+  Results are merged and deduplicated by VM GUID. A failed node is logged as a warning and
+  skipped — remaining nodes still return their VMs. Falls back to the cluster address for
+  standalone Hyper-V hosts where `Get-ClusterNode` is unavailable.
+
+- **SignalR disconnects every 30-90 seconds** — Blazor Server `KeepAliveInterval` was 15 s
+  (default). Corporate proxies and load balancers commonly have a 30-60 s WebSocket idle cut.
+  Reduced to 10 s pings with `ClientTimeoutInterval` extended to 60 s. Added
+  `DisconnectedCircuitRetentionPeriod = 5 min` so brief disconnects restore page state rather
+  than forcing a cold reload. IIS app pool `idleTimeout` set to 0 in `Setup-IIS.ps1` to
+  prevent IIS killing the worker process during quiet periods (which dropped all circuits).
+
+- **Per-node WinRM `PSRemotingTransportException` on node actions** — The per-node runspace
+  cache TTL was 5 minutes. WinRM's default server-side shell idle timeout is 3 minutes, so
+  cached runspaces frequently expired server-side while still appearing `Opened` client-side.
+  TTL reduced to 90 s (safely below the 3-minute server kill). Added `PSRemotingTransportException`
+  retry in `Nodes.razor` `RunNodeActionAsync`: evicts broken pool entry and retries once with a
+  fresh connection, transparent to the user.
+
+- **Empty node name crash** — `PauseClusterNodeAsync`, `ResumeClusterNodeAsync`, and
+  `FailbackClusterNodeAsync` could be called with an empty node name when a `ClusterNode`
+  snapshot entry had no `Name` value. All three now guard against empty names and return
+  early with a warning log rather than firing `Suspend-ClusterNode ""` at the cluster.
+
+- **PostgreSQL `FATAL: canceling authentication due to timeout`** — Npgsql connection pool
+  was bulk-reconnecting after a prior transient failure invalidated idle connections.
+  Added `Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60` to all
+  PostgreSQL connection string defaults. `Keepalive=60` sends heartbeats every 60 s,
+  preventing idle connections from expiring silently and triggering bulk reconnects.
+
+- **PostgreSQL `Host=localhost` IPv6 fallback on Windows** — Windows resolves `localhost` to
+  `::1` (IPv6) first. Changed all default connection strings to `Host=127.0.0.1` to force
+  direct IPv4 and eliminate `EventId 20004` noise from IPv6 retry attempts.
+
+---
+
 ## v0.9.5-beta — 2026-03-31
 
 ### Performance

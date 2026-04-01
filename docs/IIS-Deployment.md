@@ -1,4 +1,4 @@
-# IIS Deployment Guide — Azure Local HCI Web Portal
+﻿# IIS Deployment Guide — Azure Local HCI Web Portal
 
 ## Overview
 
@@ -262,7 +262,7 @@ Reload PostgreSQL after editing: `pg_ctl reload` or restart the `postgresql-x64-
 ```json
 "Database": {
   "Provider": "PostgreSQL",
-  "ConnectionString": "Host=localhost;Database=hciportal;Username=hci_app;Password=your_strong_password"
+  "ConnectionString": "Host=127.0.0.1;Database=hciportal;Username=hci_app;Password=your_strong_password;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
 },
 "DataProtection": {
   "KeyPath": "C:\\apps\\hci-portal-data\\dp-keys"

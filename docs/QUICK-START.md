@@ -1,4 +1,4 @@
-# Quick Start — Azure Local Cluster Tool (Web)
+﻿# Quick Start — Azure Local Cluster Tool (Web)
 
 This guide gets you from a fresh Windows Server to a running portal in about 30 minutes.
 For full details on every step, see the [IIS Deployment Guide](IIS-Deployment.md).
@@ -71,7 +71,7 @@ Open `AzureLocal.ClusterTool.Web\appsettings.json` and fill in the placeholders:
   },
   "Database": {
     "Provider":         "PostgreSQL",
-    "ConnectionString": "Host=localhost;Database=hciportal;Username=hci_app;Password=changeme"
+    "ConnectionString": "Host=127.0.0.1;Database=hciportal;Username=hci_app;Password=changeme;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
   }
 }
 ```
