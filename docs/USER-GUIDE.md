@@ -1,7 +1,7 @@
 ﻿# Azure Local Management (ALM) — User Guide
 
 > **Audience:** Cluster operators and administrators.  
-> **App URL:** Set by your administrator during IIS setup — typically `https://azlocalmgmt.<your-domain>/`  
+> **App URL:** Set by your administrator during IIS setup — typically `https://azlmgmt.<your-domain>/`  
 > **Authentication:** Microsoft Entra ID (Azure AD) single sign-on — no username/password prompt inside the app.
 
 ---
@@ -1141,16 +1141,16 @@ A: ARM extension upgrades are asynchronous. The `202 Accepted` response means th
 A: Go to [Admin → Clusters](#20-admin--clusters) (HciAdmin required) and click **+ Add Cluster**.
 
 **Q: Custom role changes aren't taking effect immediately.**  
-A: Role changes are cached for up to 5 minutes. For instant effect, ask an administrator to recycle the IIS app pool (`HCIPortalPool`) on the server.
+A: Role changes are cached for up to 5 minutes. For instant effect, ask an administrator to recycle the IIS app pool (`AZLManagementPool`) on the server.
 
 **Q: Is there an option for users on domain-joined machines who can't use MFA?**  
 A: Yes — a second Windows Authentication site can be deployed alongside the primary Entra ID site. Domain-joined browsers receive silent Kerberos SSO with no login prompt. See [Windows Authentication Deployment](#26-windows-authentication-deployment) for details.
 
 **Q: I'm on the Windows Auth URL but I'm still getting a sign-in prompt.**  
 A: Work through this checklist in order:
-1. **HTTP SPNs missing** — most common cause. Run `setspn -L JASE\hci-web-svc$` on the server; you should see `HTTP/azlocalmgmt-win.jase.org` and `HTTP/azlocalmgmt-win`. If missing, run `Setup-IIS-WinAuth.ps1` again (step 5b now auto-registers them).
-2. **Machine not domain-joined** — NTLM fallback will prompt once; enter `JASE\username` + password.
-3. **Browser not passing Kerberos automatically** — for Edge/IE add `azlocalmgmt-win.jase.org` to the Local Intranet zone. For Chrome it inherits IE zone settings. For Firefox add the URL to `network.negotiate-auth.trusted-uris` in `about:config`.
+1. **HTTP SPNs missing** — most common cause. Run `setspn -L DOMAIN\azlmgmt-svc$` on the server; you should see `HTTP/azlmgmt-win.yourdomain.com` and `HTTP/azlmgmt-win`. If missing, run `Setup-IIS-WinAuth.ps1` again (step 5b now auto-registers them).
+2. **Machine not domain-joined** — NTLM fallback will prompt once; enter `DOMAIN\username` + password.
+3. **Browser not passing Kerberos automatically** — for Edge/IE add `azlmgmt-win.yourdomain.com` to the Local Intranet zone. For Chrome it inherits IE zone settings. For Firefox add the URL to `network.negotiate-auth.trusted-uris` in `about:config`.
 4. **`useAppPoolCredentials` not set** — run `Deploy-ToIIS.ps1` which applies this setting in step 8 on every deploy.
 
 **Q: My group was given a custom role but I still can't see anything.**  
@@ -1163,7 +1163,7 @@ A: The **background collector** did not successfully sync data for this cluster 
 A: By default, VM state is refreshed approximately every 2 minutes, cluster nodes every 4 minutes, cluster info and roles every 10 minutes, storage pools/virtual disks every 20 minutes, and solution updates/physical disks every 40 minutes (all approximate; intervals are auto-scaled with cluster count). These intervals are configurable in **Admin → Settings** under *Background Collector*. In auto mode the interval scales up automatically when multiple clusters are registered so total WinRM load stays constant.
 
 **Q: The background collector shows a red "Circuit open" status in Admin → Diagnostics. What should I do?**  
-A: The circuit breaker trips after 5 consecutive poll failures to prevent the poller from hammering an unreachable cluster. Common causes: WinRM not reachable (firewall, cluster down), gMSA Kerberos ticket invalid, or credentials changed. Check network connectivity and WinRM access from the app server, then recycle `HCIPortalPool` in IIS Manager to reset the circuit immediately.
+A: The circuit breaker trips after 5 consecutive poll failures to prevent the poller from hammering an unreachable cluster. Common causes: WinRM not reachable (firewall, cluster down), gMSA Kerberos ticket invalid, or credentials changed. Check network connectivity and WinRM access from the app server, then recycle `AZLManagementPool` in IIS Manager to reset the circuit immediately.
 
 ---
 
@@ -1173,10 +1173,10 @@ The app supports a **second IIS site** running Windows Authentication (Kerberos/
 
 | Site | URL | Authentication | Typical users |
 |---|---|---|---|
-| Primary | `https://azlocalmgmt.jase.org` | Entra ID (SSO) | Cloud/external users, MFA required |
-| Windows Auth | `http://azlocalmgmt-win.jase.org` (HTTP by default) | Kerberos/NTLM | Domain-joined machines, no MFA prompt |
+| Primary | `https://azlmgmt.yourdomain.com` | Entra ID (SSO) | Cloud/external users, MFA required |
+| Windows Auth | `http://azlmgmt-win.yourdomain.com` (HTTP by default) | Kerberos/NTLM | Domain-joined machines, no MFA prompt |
 
-> **HTTPS on the Windows Auth site:** HTTP is the default. Run `Add-HttpsBinding.ps1 -SiteName HCIPortalWinAuth` once a certificate is available to enable HTTPS.
+> **HTTPS on the Windows Auth site:** HTTP is the default. Run `Add-HttpsBinding.ps1 -SiteName AZLManagementWinAuth` once a certificate is available to enable HTTPS.
 
 ### How sign-in works
 
@@ -1198,7 +1198,7 @@ To get an AD group's SID, run on any domain controller:
 # Returns: S-1-5-21-...-xxxx
 ```
 
-Then paste the SID into `C:\apps\hci-portal\appsettings.WinAuth.json` on the app server.
+Then paste the SID into `C:\apps\azlmgmt\appsettings.WinAuth.json` on the app server.
 
 ### Fine-grained RBAC
 
@@ -1223,33 +1223,33 @@ Users who need the full Arc ARM data (extension upgrade buttons, Arc machine sta
 The Windows Auth site is set up by running `Setup-IIS-WinAuth.ps1` on the app server **after** `Setup-IIS.ps1` and the first `Deploy-ToIIS.ps1` deploy have already been completed.
 
 ```powershell
-# On azlocalmgmt.jase.org, run as Domain Admin
+# On the app server, run as Domain Admin
 .\scripts\Setup-IIS-WinAuth.ps1
 ```
 
 The script:
-1. Creates the `HCIPortalWinPool` app pool (same gMSA identity as the Entra site)
+1. Creates the `AZLManagementWinPool` app pool (same gMSA identity as the Entra site)
 2. Sets `ASPNETCORE_ENVIRONMENT = WinAuth` on the pool so the overlay config is loaded
-3. Creates the `HCIPortalWinAuth` IIS site on **port 80** (HTTP) pointing at `C:\apps\hci-portal`
+3. Creates the `AZLManagementWinAuth` IIS site on **port 80** (HTTP) pointing at `C:\apps\azlmgmt`
 4. Disables Anonymous Authentication and enables Windows Authentication on the site
-5. Registers `HTTP/azlocalmgmt-win.jase.org` and `HTTP/azlocalmgmt-win` SPNs on the gMSA (required for Kerberos)
+5. Registers `HTTP/azlmgmt-win.yourdomain.com` and `HTTP/azlmgmt-win` SPNs on the gMSA (required for Kerberos)
 
 After running the script:
-1. Populate AD group SIDs in `C:\apps\hci-portal\appsettings.WinAuth.json`  
+1. Populate AD group SIDs in `C:\apps\azlmgmt\appsettings.WinAuth.json`  
    *(Leave all three values empty to allow any authenticated domain user — safest starting point)*
-2. Verify `AllowedHosts` in `C:\apps\hci-portal\appsettings.json` includes `azlocalmgmt-win.jase.org` — both hostnames must be listed or the app returns HTTP 400
-3. Add a DNS A record: `azlocalmgmt-win.jase.org` → server IP
+2. Verify `AllowedHosts` in `C:\apps\azlmgmt\appsettings.json` includes `azlmgmt-win.yourdomain.com` — both hostnames must be listed or the app returns HTTP 400
+3. Add a DNS A record: `azlmgmt-win.yourdomain.com` → server IP
 4. Run `Deploy-ToIIS.ps1` once to deploy the latest binaries if not done already
-5. Test from a domain-joined machine: `http://azlocalmgmt-win.jase.org/`
-6. *(Optional)* Run `Add-HttpsBinding.ps1 -SiteName HCIPortalWinAuth` for HTTPS
+5. Test from a domain-joined machine: `http://azlmgmt-win.yourdomain.com/`
+6. *(Optional)* Run `Add-HttpsBinding.ps1 -SiteName AZLManagementWinAuth` for HTTPS
 
 ### Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | `ERR_CONNECTION_REFUSED` | Site bound to wrong port, or Default Web Site competing on port 80 | Check IIS bindings — site must be on port 80 (or 443 for HTTPS). Stop Default Web Site if needed. |
-| Credential prompt loops — never accepts password | Missing HTTP SPNs on gMSA (`SEC_E_NO_CREDENTIALS`) | Run `setspn -S HTTP/azlocalmgmt-win.jase.org JASE\hci-web-svc$` and `setspn -S HTTP/azlocalmgmt-win JASE\hci-web-svc$`, then recycle `HCIPortalWinPool` |
-| `HTTP 400 Bad Request — Invalid Hostname` | `AllowedHosts` in `appsettings.json` does not include the WinAuth hostname | Add `azlocalmgmt-win.jase.org` to `AllowedHosts` in `appsettings.json`; `Deploy-ToIIS.ps1` will keep it in sync |
+| Credential prompt loops — never accepts password | Missing HTTP SPNs on gMSA (`SEC_E_NO_CREDENTIALS`) | Run `setspn -S HTTP/azlmgmt-win.yourdomain.com DOMAIN\azlmgmt-svc$` and `setspn -S HTTP/azlmgmt-win DOMAIN\azlmgmt-svc$`, then recycle `AZLManagementWinPool` |
+| `HTTP 400 Bad Request — Invalid Hostname` | `AllowedHosts` in `appsettings.json` does not include the WinAuth hostname | Add `azlmgmt-win.yourdomain.com` to `AllowedHosts` in `appsettings.json`; `Deploy-ToIIS.ps1` will keep it in sync |
 | Prompt loop only on HTTPS (not HTTP) | `UseHttpsRedirection()` redirects HTTP→HTTPS; IIS re-challenges on the redirected HTTPS connection | Already fixed in code — ensure you are running the latest deployed version |
 | `401.2 Unauthorized` with no prompt | `useAppPoolCredentials` not set — IIS tries the machine account key, not the gMSA | Run `Deploy-ToIIS.ps1` (step 8 re-applies this setting) or set manually in IIS Manager |
 
@@ -1285,7 +1285,7 @@ Shows the current state of the **background poller** — the in-process service 
 | 🔴 Circuit open until HH:mm:ss | Too many consecutive failures — poller is skipping this cluster until the retry time |
 | ⚫ Never polled | App just started; first poll hasn't run yet (~15 s after startup) |
 
-**Circuit breaker reset:** Recycle the `HCIPortalPool` app pool in IIS Manager. The circuit resets on startup and the poller retries immediately.
+**Circuit breaker reset:** Recycle the `AZLManagementPool` app pool in IIS Manager. The circuit resets on startup and the poller retries immediately.
 
 **Collector settings** are configurable in **Admin → Settings** under the *Background Collector* group:
 
@@ -1351,7 +1351,7 @@ choco install sqlite
 **Step 2 — Run the migration SQL**
 
 ```powershell
-$db = "C:\apps\hci-portal-data\app.db"
+$db = "C:\apps\azlmgmt-data\app.db"
 sqlite3.exe $db @"
 CREATE TABLE IF NOT EXISTS LatestSnapshots (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1408,12 +1408,12 @@ sqlite3.exe $db ".indexes"
 
 **Step 4 — Recycle the app pool**
 
-Recycle `HCIPortalPool` in IIS Manager, or:
+Recycle `AZLManagementPool` in IIS Manager, or:
 
 ```powershell
-Invoke-Command -ComputerName azlocalmgmt.jase.org -ScriptBlock {
+Invoke-Command -ComputerName azlmgmt.yourdomain.com -ScriptBlock {
     Import-Module WebAdministration
-    Restart-WebAppPool HCIPortalPool
+    Restart-WebAppPool AZLManagementPool
 }
 ```
 

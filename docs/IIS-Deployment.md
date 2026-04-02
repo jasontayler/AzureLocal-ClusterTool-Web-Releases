@@ -16,7 +16,7 @@ Browser → HTTPS → IIS (w3wp.exe running as gMSA) → WinRM → Cluster nodes
 |---|---|
 | OS | Windows Server 2019 or 2022 |
 | RAM | 4 GB (2 GB free for the app) |
-| Disk | 2 GB free in C:\apps\hci-portal |
+| Disk | 2 GB free in C:\apps\azlmgmt |
 | Network | LAN access to cluster nodes on port 5985 (or 5986 for HTTPS) |
 | Domain | Must be domain-joined (required for Kerberos WinRM auth to cluster nodes; applies to both gMSA and standard service account deployments) |
 | WinRM | WinRM client must be enabled on the app server |
@@ -72,10 +72,10 @@ Run `iisreset` after installing the bundle before creating sites.
 
 | Setting | Value | Why |
 |---|---|---|
-| Name | `HCIPortalPool` | Logical name |
+| Name | `AZLManagementPool` | Logical name |
 | .NET CLR Version | No Managed Code | ASP.NET Core doesn't use the CLR app pool |
 | Pipeline Mode | Integrated | Required for ANCM in-process |
-| Identity | `JASE\hci-web-svc$` (gMSA) or `JASE\svc-hciportal` (standard account) | This is what WinRM authenticates as |
+| Identity | `DOMAIN\azlmgmt-svc$` (gMSA) or `DOMAIN\svc-azlmgmt` (standard account) | This is what WinRM authenticates as |
 | Identity password | Empty for gMSA; set for standard account | AD manages gMSA passwords automatically; standard accounts require manual rotation |
 | 32-bit | False | App is 64-bit |
 | Start Automatically | True | |
@@ -96,7 +96,7 @@ Both settings are applied automatically by `Setup-IIS.ps1` and `Setup-IIS-WinAut
 To verify or fix manually on an existing site:
 ```powershell
 Import-Module WebAdministration
-$pool = "HCIPortalPool"   # or AZLManagementWinPool, etc.
+$pool = "AZLManagementPool"   # or AZLManagementWinPool, etc.
 
 Set-ItemProperty "IIS:\AppPools\$pool" -Name processModel.idleTimeout          -Value "00:00:00"
 Set-ItemProperty "IIS:\AppPools\$pool" -Name recycling.periodicRestart.time    -Value "00:00:00"
@@ -121,16 +121,16 @@ The gMSA must be configured in Active Directory **before** running `Setup-IIS.ps
 
 ```powershell
 # Run on the app server — should return the gMSA object
-Test-ADServiceAccount -Identity hci-web-svc
+Test-ADServiceAccount -Identity azlmgmt-svc
 ```
 
 If this returns `False`, the app server's computer account hasn't been added to the gMSA's retrieval principals:
 
 ```powershell
 # Run as Domain Admin
-Set-ADServiceAccount -Identity hci-web-svc `
+Set-ADServiceAccount -Identity azlmgmt-svc `
     -PrincipalsAllowedToRetrieveManagedPassword (
-        Get-ADGroup "HCI-AppServers"  # or individual computer: Get-ADComputer "azlocalmgmt"
+        Get-ADGroup "HCI-AppServers"  # or individual computer: Get-ADComputer "azlmgmt"
     )
 ```
 
@@ -140,7 +140,7 @@ The gMSA needs to be a local Administrator on each cluster node (or on a JEA end
 
 ```powershell
 # Run on each cluster node, or deploy via GPO to the cluster OU
-Add-LocalGroupMember -Group "Administrators" -Member "JASE\hci-web-svc$"
+Add-LocalGroupMember -Group "Administrators" -Member "DOMAIN\azlmgmt-svc$"
 ```
 
 ### Verify WinRM works from the app server as the gMSA service account
@@ -188,7 +188,7 @@ If your environment does not support gMSA (non-domain, workgroup, or AD gMSA cap
 1. **Create the account in Active Directory:**
    ```powershell
    # Run as Domain Admin
-   New-ADUser -Name "svc-hciportal" -SamAccountName "svc-hciportal" `
+   New-ADUser -Name "svc-azlmgmt" -SamAccountName "svc-azlmgmt" `
        -AccountPassword (Read-Host -AsSecureString "Password") `
        -PasswordNeverExpires $true -Enabled $true
    ```
@@ -197,17 +197,13 @@ If your environment does not support gMSA (non-domain, workgroup, or AD gMSA cap
 2. **Grant the account local admin on each cluster node** (same as gMSA):
    ```powershell
    # Run on each cluster node, or deploy via GPO
-   Add-LocalGroupMember -Group "Administrators" -Member "JASE\svc-hciportal"
+   Add-LocalGroupMember -Group "Administrators" -Member "DOMAIN\svc-azlmgmt"
    ```
 
-3. **Edit `Setup-IIS.ps1` config section:**
+3. **Run `Setup-IIS.ps1` with the service account parameters:**
    ```powershell
-   $serviceAccountType     = "Standard"
-   $serviceAccount         = "JASE\svc-hciportal"
-   $serviceAccountPassword = "YourPasswordHere"   # or prompt: Read-Host -AsSecureString
+   .\Setup-IIS.ps1 -serviceAccountType Standard -serviceAccount "DOMAIN\svc-azlmgmt" -serviceAccountPassword "YourPasswordHere"
    ```
-
-4. **Run `Setup-IIS.ps1`** — it will set the app pool identity and apply NTFS permissions using the plain account name (no SID workaround needed for standard accounts).
 
 5. **Leave `CredentialSource = "gMSA"`** in the cluster config in the app (or leave it blank to use the default). No changes in `appsettings.json` or the Admin Clusters UI.
 
@@ -217,19 +213,18 @@ When the service account password changes:
 
 ```powershell
 # Option A: Update via IIS Manager on the server
-# Application Pools -> HCIPortalPool -> Advanced Settings -> Identity -> Set password
+# Application Pools -> AZLManagementPool -> Advanced Settings -> Identity -> Set password
 
 # Option B: Re-run the setup script with the new password
-# Edit $serviceAccountPassword in Setup-IIS.ps1, then:
-.\Setup-IIS.ps1
+.\Setup-IIS.ps1 -serviceAccountType Standard -serviceAccount "DOMAIN\svc-azlmgmt" -serviceAccountPassword "NewPassword"
 # Script is idempotent -- it will update the processModel on the existing pool
 ```
 
 After updating, recycle the app pool:
 ```powershell
-Invoke-Command -ComputerName azlocalmgmt.jase.org {
+Invoke-Command -ComputerName azlmgmt.yourdomain.com {
     Import-Module WebAdministration
-    Restart-WebItem "IIS:\AppPools\HCIPortalPool"
+    Restart-WebItem "IIS:\AppPools\AZLManagementPool"
 }
 ```
 
@@ -263,9 +258,9 @@ psql -U postgres
 At the `postgres=#` prompt:
 
 ```sql
-CREATE USER hci_app WITH PASSWORD 'your_strong_password';
-CREATE DATABASE hciportal OWNER hci_app;
-GRANT ALL PRIVILEGES ON DATABASE hciportal TO hci_app;
+CREATE USER azlmgmt_app WITH PASSWORD 'your_strong_password';
+CREATE DATABASE azlmgmt OWNER azlmgmt_app;
+GRANT ALL PRIVILEGES ON DATABASE azlmgmt TO azlmgmt_app;
 \q
 ```
 
@@ -277,9 +272,9 @@ For the gMSA identity to authenticate to a local PostgreSQL instance, add it to 
 
 ```
 # In pg_hba.conf (usually C:\Program Files\PostgreSQL\17\data\pg_hba.conf)
-# Allow the hci_app user from localhost with scram-sha-256 (PG 17 default)
-host    hciportal    hci_app    127.0.0.1/32    scram-sha-256
-host    hciportal    hci_app    ::1/128          scram-sha-256
+# Allow the azlmgmt_app user from localhost with scram-sha-256 (PG 17 default)
+host    azlmgmt    azlmgmt_app    127.0.0.1/32    scram-sha-256
+host    azlmgmt    azlmgmt_app    ::1/128          scram-sha-256
 ```
 
 Reload PostgreSQL after editing: `pg_ctl reload` or restart the `postgresql-x64-17` service.
@@ -289,14 +284,14 @@ Reload PostgreSQL after editing: `pg_ctl reload` or restart the `postgresql-x64-
 ```json
 "Database": {
   "Provider": "PostgreSQL",
-  "ConnectionString": "Host=127.0.0.1;Database=hciportal;Username=hci_app;Password=your_strong_password;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
+  "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app;Password=your_strong_password;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
 },
 "DataProtection": {
-  "KeyPath": "C:\\apps\\hci-portal-data\\dp-keys"
+  "KeyPath": "C:\\apps\\azlmgmt-data\\dp-keys"
 },
 ```
 
-> **Important:** `DataProtection:KeyPath` is required when using PostgreSQL (there is no DB file path to derive it from automatically). The directory must exist and be writable by the app pool identity. The `Deploy-ToIIS.ps1` script creates `C:\apps\hci-portal-data` with the correct permissions.
+> **Important:** `DataProtection:KeyPath` is required when using PostgreSQL (there is no DB file path to derive it from automatically). The directory must exist and be writable by the app pool identity. The `Setup-Prerequisites.ps1` script creates `C:\apps\azlmgmt-data` with the correct permissions.
 
 ### Migrate an existing SQLite database to PostgreSQL
 
@@ -314,13 +309,13 @@ Then run the migration:
 
 ```powershell
 # Stop the app pool first to prevent writes during migration
-Stop-WebAppPool -Name 'HCIPortalPool'
+Stop-WebAppPool -Name 'AZLManagementPool'
 
 # Run from the scripts\ folder (prompts for PG password interactively)
 pwsh .\Migrate-SqliteToPgsql.ps1
 
-# Update appsettings.json to use PostgreSQL (see above), then:
-Start-WebAppPool -Name 'HCIPortalPool'
+# Update appsettings.Production.json to use PostgreSQL (see above), then:
+Start-WebAppPool -Name 'AZLManagementPool'
 ```
 
 The script discovers all tables dynamically, handles SQLite-to-PostgreSQL type conversions
@@ -404,37 +399,39 @@ far more than enough — only clusters being actively viewed hold a connection.
 
 ### First time
 
-1. **On the app server** — copy and run `scripts\Setup-IIS.ps1`:
+1. **On the app server** — copy and run `scripts\Setup-Prerequisites.ps1` (first time only), then `scripts\Setup-IIS.ps1`:
    ```powershell
-   # Copy script to server then run
-   \\azlocalmgmt.jase.org\c$\scripts\Setup-IIS.ps1
-   # Or: Copy-Item scripts\Setup-IIS.ps1 \\azlocalmgmt.jase.org\c$\temp\ then RDP and run
+   # Copy scripts to server then run
+   \\azlmgmt.yourdomain.com\c$\scripts\Setup-Prerequisites.ps1
+   # Restart if prompted
+   \\azlmgmt.yourdomain.com\c$\scripts\Setup-IIS.ps1
+   # Or: Copy-Item scripts\Setup-*.ps1 \\azlmgmt.yourdomain.com\c$\temp\ then RDP and run
    ```
 
-2. **Install the ASP.NET Core Hosting Bundle** if ANCM is not already present (script will tell you if it's missing).
+2. **Install the ASP.NET Core Hosting Bundle** — handled by `Setup-Prerequisites.ps1`. If ANCM is missing, the setup script will prompt for manual install or try winget.
 
 3. **On the app server** - run `scripts\Add-HttpsBinding.ps1` to create the TLS certificate and HTTPS binding:
    ```powershell
-   .\Add-HttpsBinding.ps1
+   .\Add-HttpsBinding.ps1 -HostHeader azlmgmt.yourdomain.com
    ```
    This creates a self-signed cert valid for 3 years and adds port 443 binding to the IIS site.
 
 4. **In Entra Portal** - add redirect URIs to the app registration (Authentication blade):
-   - `https://azlocalmgmt.jase.org/signin-oidc`
-   - `https://azlocalmgmt.jase.org/signout-callback-oidc`
+   - `https://azlmgmt.yourdomain.com/signin-oidc`
+   - `https://azlmgmt.yourdomain.com/signout-callback-oidc`
 
 5. **From dev machine** - run deploy:
    ```powershell
-   .\scripts\Deploy-ToIIS.ps1 -Credential (Get-Credential)
+   .\scripts\Deploy-ToIIS.ps1 -targetServer azlmgmt.yourdomain.com -Credential (Get-Credential)
    ```
 
-6. **Browse to** `https://azlocalmgmt.jase.org` - you should be redirected to Entra ID sign-in.
+6. **Browse to** `https://azlmgmt.yourdomain.com` - you should be redirected to Entra ID sign-in.
 
 ### Every subsequent deploy (code changes)
 
 ```powershell
 cd F:\github\AzureLocal-ClusterTool-Web
-.\scripts\Deploy-ToIIS.ps1
+.\scripts\Deploy-ToIIS.ps1 -targetServer azlmgmt.yourdomain.com
 ```
 
 The script stops the app pool, mirrors the published files, restarts the pool. Takes ~30-60 seconds.
@@ -443,12 +440,12 @@ The script stops the app pool, mirrors the published files, restarts the pool. T
 
 ```powershell
 # Edit the file directly on the server
-notepad \\azlocalmgmt.jase.org\c$\apps\hci-portal\clusters.json
+notepad \\azlmgmt.yourdomain.com\c$\apps\azlmgmt\clusters.json
 
 # Then recycle the app pool for changes to take effect (ClusterRegistry loads at startup)
-Invoke-Command -ComputerName azlocalmgmt.jase.org {
+Invoke-Command -ComputerName azlmgmt.yourdomain.com {
     Import-Module WebAdministration
-    Restart-WebItem "IIS:\AppPools\HCIPortalPool"
+    Restart-WebItem "IIS:\AppPools\AZLManagementPool"
 }
 ```
 
@@ -459,7 +456,7 @@ Invoke-Command -ComputerName azlocalmgmt.jase.org {
 1. Obtain a certificate (domain cert from AD CS, Let's Encrypt via win-acme, or import a PFX):
    ```powershell
    # Import a PFX
-   $cert = Import-PfxCertificate -FilePath "hci-portal.pfx" `
+   $cert = Import-PfxCertificate -FilePath "azlmgmt.pfx" `
                -CertStoreLocation Cert:\LocalMachine\My `
                -Password (Read-Host -AsSecureString "PFX password")
    ```
@@ -467,17 +464,17 @@ Invoke-Command -ComputerName azlocalmgmt.jase.org {
 2. Add the HTTPS binding in IIS:
    ```powershell
    Import-Module WebAdministration
-   New-WebBinding -Name "HCIPortal" -Protocol https -Port 443 `
-       -HostHeader "azlocalmgmt.jase.org" -SslFlags 1
+   New-WebBinding -Name "AZLManagement" -Protocol https -Port 443 `
+       -HostHeader "azlmgmt.yourdomain.com" -SslFlags 1
 
    # Bind the cert (requires netsh for SNI bindings)
-   netsh http add sslcert hostnameport="azlocalmgmt.jase.org:443" `
+   netsh http add sslcert hostnameport="azlmgmt.yourdomain.com:443" `
        certhash=$($cert.Thumbprint) appid="{$(New-Guid)}" certstorename=MY
    ```
 
 3. Remove the HTTP binding (optional — or keep for internal redirect):
    ```powershell
-   Remove-WebBinding -Name "HCIPortal" -Protocol http -Port 80
+   Remove-WebBinding -Name "AZLManagement" -Protocol http -Port 80
    ```
 
 ---
@@ -491,9 +488,9 @@ Invoke-Command -ComputerName azlocalmgmt.jase.org {
 | HTTP 500.30 (app failed to start) | Check Windows Event Log → Application for `IIS AspNetCore Module` errors |
 | HTTP 403 Forbidden | Request Filtering or authentication misconfigured |
 | Cluster page loads but VM list is empty | gMSA not in Administrators on cluster node; WinRM not enabled on nodes |
-| Sign-in redirects back to sign-in | Entra app registration missing redirect URI `https://azlocalmgmt.jase.org/signin-oidc` |
+| Sign-in redirects back to sign-in | Entra app registration missing redirect URI `https://azlmgmt.yourdomain.com/signin-oidc` |
 | App pool stops immediately after start | gMSA not retrievable on app server (`Test-ADServiceAccount` returns False) |
-| Robocopy fails in Deploy-ToIIS.ps1 | Ensure PS remoting works to azlocalmgmt.jase.org and your account has write rights to C:\apps |
+| Robocopy fails in Deploy-ToIIS.ps1 | Ensure PS remoting works to the app server and your account has write rights to C:\apps |
 | Blazor disconnects every ~29 hours; browser console shows "connection could not be found on server" then falls back to Long Polling | IIS periodic restart (`recycling.periodicRestart.time`) not disabled — see Critical SignalR settings above |
 | Blazor disconnects every ~20 min when site is idle (no active users) | IIS idle timeout (`processModel.idleTimeout`) not disabled — see Critical SignalR settings above |
 | Blazor disconnects frequently on one network but not another | Corporate proxy intercepting WebSocket traffic — see Proxy Bypass below |
@@ -505,13 +502,13 @@ Invoke-Command -ComputerName azlocalmgmt.jase.org {
 **Step 1 — Check app pool state**
 ```powershell
 Import-Module WebAdministration
-Get-WebAppPool -Name HCIPortalPool | Select-Object Name, State, ManagedRuntimeVersion
+Get-WebAppPool -Name AZLManagementPool | Select-Object Name, State, ManagedRuntimeVersion
 ```
 If State is `Stopped`, try to start it manually and watch if it stops again immediately:
 ```powershell
-Start-WebAppPool -Name HCIPortalPool
+Start-WebAppPool -Name AZLManagementPool
 Start-Sleep -Seconds 3
-(Get-WebAppPool -Name HCIPortalPool).State   # should be "Started"
+(Get-WebAppPool -Name AZLManagementPool).State   # should be "Started"
 ```
 
 **Step 2 — Check the Windows Event Log for the crash reason**
@@ -537,16 +534,16 @@ If nothing is returned: **the ASP.NET Core Hosting Bundle is not installed.** Do
 
 **Step 4 — Check the gMSA is retrievable**
 ```powershell
-Test-ADServiceAccount -Identity hci-web-svc
+Test-ADServiceAccount -Identity azlmgmt-svc
 # Must return True. False means app pool cannot obtain a Kerberos ticket.
 ```
 If False, add the app server computer account to the gMSA retrieval principals (see gMSA section above).
 
 **Step 5 — Enable stdout logging and check the startup log**
 
-Edit `C:\apps\hci-portal\web.config`, set `stdoutLogEnabled="true"`, recycle the pool, browse again, then check:
+Edit `C:\apps\azlmgmt\web.config`, set `stdoutLogEnabled="true"`, recycle the pool, browse again, then check:
 ```powershell
-Get-ChildItem C:\apps\hci-portal\logs\stdout_*.log | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | Get-Content
+Get-ChildItem C:\apps\azlmgmt\logs\stdout_*.log | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | Get-Content
 ```
 This shows the exact .NET exception if the app is crashing before it can serve requests.
 
@@ -560,12 +557,12 @@ Get-EventLog -LogName Application -Source "IIS AspNetCore Module V2" -Newest 10
 Get-EventLog -LogName System -Source "Microsoft-Windows-IIS*" -Newest 10
 
 # App stdout logs (if enabled in web.config)
-# C:\apps\hci-portal\logs\stdout_*.log
+# C:\apps\azlmgmt\logs\stdout_*.log
 ```
 
 ### Enable stdout logging temporarily (for startup crash diagnosis)
 
-Edit `C:\apps\hci-portal\web.config` on the server:
+Edit `C:\apps\azlmgmt\web.config` on the server:
 ```xml
 <aspNetCore processPath=".\AzureLocal.ClusterTool.Web.exe"
             arguments=""
@@ -574,7 +571,7 @@ Edit `C:\apps\hci-portal\web.config` on the server:
             hostingModel="inprocess">
 ```
 
-Recycle the app pool, reproduce the error, check `C:\apps\hci-portal\logs\stdout_*.log`. Set back to `false` after diagnosing — stdout logging has a performance cost.
+Recycle the app pool, reproduce the error, check `C:\apps\azlmgmt\logs\stdout_*.log`. Set back to `false` after diagnosing — stdout logging has a performance cost.
 
 ### Proxy Bypass — Blazor WebSocket disconnects on specific networks
 

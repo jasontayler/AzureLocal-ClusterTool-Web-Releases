@@ -71,15 +71,14 @@ Open `AzureLocal.ClusterTool.Web\appsettings.json` and fill in the placeholders:
   },
   "Database": {
     "Provider":         "PostgreSQL",
-    "ConnectionString": "Host=127.0.0.1;Database=hciportal;Username=hci_app;Password=changeme;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
+    "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app;Password=changeme;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
   }
 }
 ```
 
 > **Database options:**
-> - **PostgreSQL** — recommended; free, no row-count limits. Run `scripts\Setup-PostgreSQL.ps1` or configure manually.
-> - **SQLite** — good for single-server / low-traffic installs. Set `"Provider": "Sqlite"` and `"ConnectionString": "Data Source=C:\\apps\\hci-portal-data\\app.db"`.
-> - **SQL Server** — enterprise environments. Set `"Provider": "SqlServer"`.
+> - **PostgreSQL** — recommended; free, no row-count limits. Run `scripts\Setup-Prerequisites.ps1` or configure manually.
+> - **SQL Server** — enterprise environments. Set `"Provider": "SqlServer"`. #noting this is not 100% tested recommend PostgreSQL 
 
 ---
 
@@ -104,35 +103,43 @@ Rename `clusters.json.example` to `clusters.json` and add your cluster(s):
 
 ---
 
-## Step 5 — Run the IIS Setup Script (first time only)
+## Step 5 — Run the IIS Setup Scripts (first time only)
 
 On the app server, open **PowerShell as Administrator** and run:
 
 ```powershell
 cd C:\temp\alm-release\scripts
 
+# 1. Install prerequisites (IIS features, ANCM, PostgreSQL, create directories)
+.\Setup-Prerequisites.ps1 -serviceAccount "DOMAIN\azlmgmt-svc$"
+
+# Restart if prompted after feature installation, then re-run
+
+# 2. Create the IIS site and application pool
 .\Setup-IIS.ps1 `
-    -SiteName    "HCIPortal" `
-    -AppPoolName "HCIPortalPool" `
-    -PhysicalPath "C:\apps\hci-portal" `
-    -HostHeader  "azlocalmgmt.yourdomain.com"
+    -siteName      "AZLManagement" `
+    -appPoolName   "AZLManagementPool" `
+    -physicalPath  "C:\apps\azlmgmt" `
+    -hostHeader    "azlmgmt.yourdomain.com" `
+    -serviceAccount "DOMAIN\azlmgmt-svc$"
 ```
 
-This script:
-- Creates the IIS site and application pool
-- Copies the app files to `PhysicalPath`
-- Sets the app pool identity to `NetworkService` (update to your gMSA after setup)
-- Configures ASPNETCORE_ENVIRONMENT
+`Setup-IIS.ps1`:
+- Validates IIS features and ASP.NET Core Module are installed
+- Creates the IIS site and application pool running as the service account
+- Sets NTFS permissions on the app and data directories
+- Configures ASPNETCORE_ENVIRONMENT and SignalR-safe recycle settings
 
-> **Set the gMSA identity:** After the script runs, open IIS Manager → Application Pools →
-> `HCIPortalPool` → Advanced Settings → Identity → Set to `DOMAIN\your-gmsa-account$`
+> **Service account:** Replace `DOMAIN\azlmgmt-svc$` with your gMSA or standard service account.
+> The gMSA must be created in AD and given local admin rights on each cluster node.
+> For a standard account, also pass `-serviceAccountPassword "yourpassword"`.
 
 ---
 
 ## Step 6 — Add HTTPS Binding (recommended)
 
 ```powershell
-.\Add-HttpsBinding.ps1 -SiteName "HCIPortal" -Hostname "azlocalmgmt.yourdomain.com"
+.\Add-HttpsBinding.ps1 -SiteName "AZLManagement" -HostHeader "azlmgmt.yourdomain.com"
 ```
 
 A self-signed certificate is created automatically. Replace with a CA-signed certificate or
@@ -142,7 +149,7 @@ Let's Encrypt certificate for production. Entra ID requires HTTPS for redirect U
 
 ## Step 7 — First Sign-In
 
-1. Navigate to `https://azlocalmgmt.yourdomain.com` in a browser
+1. Navigate to `https://azlmgmt.yourdomain.com` in a browser
 2. Sign in with your Entra ID account (must be a member of one of the groups you configured)
 3. You will be redirected to the home page showing your registered clusters
 4. Click a cluster to connect and begin managing it

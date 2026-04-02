@@ -62,6 +62,20 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
   `RunspaceCacheTtl` from 90 s to 60 s and `IdleTimeout` from 300,000 ms to 120,000 ms
   (maintaining the required 2x safety margin between the two).
 
+- **Blazor circuits disconnecting on PostgreSQL DB blips** — EF Core's retry policy
+  (3 retries x 30 s command timeout + 5 s delays) could block a Blazor hub thread for up
+  to ~100 s on any transient DB hiccup. SignalR's `ClientTimeoutInterval` is 60 s, so any
+  block longer than that killed the circuit with "Server returned an error on close",
+  causing the browser log cascade of SignalR errors followed by long-polling timeouts.
+  `RbacService.LoadSnapshot()` compounded this as a synchronous `_loadLock.Wait()` + EF
+  query on the circuit thread with the same full-timeout exposure.
+  Fixed by: reducing EF Core command timeout from 30 s to 15 s and max retries from 3 to 2
+  (worst case ~35 s — well within the 60 s SignalR window); adding a 5 s command timeout
+  override in `RbacService.LoadSnapshot()` so a DB blip falls through to pass-through mode
+  in under 13 s rather than up to 90 s; fixing the `MaxPoolSize` enrichment guard to also
+  handle Npgsql's `0` default (unlimited), and setting `MinPoolSize=1` to keep a warm
+  connection after idle periods. Connection string template updated accordingly.
+
 ---
 
 ## v0.9.7-beta — 2026-04-01
