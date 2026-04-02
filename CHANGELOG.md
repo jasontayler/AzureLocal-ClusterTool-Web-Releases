@@ -4,6 +4,41 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.9-beta — 2026-04-02
+
+### Bug Fixes
+
+- **Blazor circuits still disconnecting after v0.9.8 deploy** — Evidence from Windows
+  Application Event Log (Event 1000, Category `Microsoft.EntityFrameworkCore.Database.Command`,
+  EventId 20102) showed `Failed executing DbCommand (34,002ms)` with SQL targeting
+  `LatestSnapshots` and `SnapshotHistories`. The 34s duration is the exact signature of
+  EF Core's retry policy (2 retries x 15s command timeout + delays). The source was
+  `ClusterPollerService` — its three DB helper methods (`UpsertSnapshotAsync`,
+  `GetOrCreateHealthAsync`, `SaveHealthAsync`) each create their own `DbContext` but never
+  set a command timeout override, so they inherited the global 15s. With `MaxConcurrentPolls=3`
+  and 4 parallel data types per cluster, up to 12 background write operations could each
+  hold a DB connection for 34s simultaneously. This approached the `MaxPoolSize=20` ceiling,
+  starving Blazor circuit threads waiting for a connection and causing them to exceed
+  `ClientTimeoutInterval=60s`. The Event 1000 flood was not process crashes — the EventLog
+  logging provider (`"EventLog": { "LogLevel": { "Default": "Error" } }`) routes all EF Core
+  Error-level log entries to Windows Application Event Log, which looks alarming but is
+  just structured logging.
+  Fixed by adding `db.Database.SetCommandTimeout(5)` (guarded with `db.Database.IsRelational()`
+  to protect in-memory tests) to all three poller DB helpers. A simple upsert to these tables
+  should complete in <100ms; 5s is generous. If a genuine timeout occurs, the background
+  service skips that write and retries on the next poll cycle — poller data is ephemeral.
+
+- **`rapidFailProtection = True` on IIS app pools** — IIS rapid-fail protection monitors
+  for crash bursts and disables the app pool if too many failures occur within a time window.
+  The EF Core Error log flood described above could conceivably trigger this on some servers.
+  More broadly, Blazor Server holds long-lived SignalR connections that IIS should not
+  mistake for a crash loop under any load spike.
+  Fixed by adding `Set-ItemProperty ... failure.rapidFailProtection $false` to step 7b of
+  `Deploy-ToIIS.ps1`, applied to all pools alongside `idleTimeout` and `periodicRestart.time`
+  on every deploy.
+
+---
+
 ## v0.9.8-beta — 2026-04-02
 
 ### New
