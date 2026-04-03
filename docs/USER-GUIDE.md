@@ -1239,7 +1239,8 @@ After running the script:
    *(Leave all three values empty to allow any authenticated domain user — safest starting point)*
 2. Verify `AllowedHosts` in `C:\apps\azlmgmt\appsettings.json` includes `azlmgmt-win.yourdomain.com` — both hostnames must be listed or the app returns HTTP 400
 3. Add a DNS A record: `azlmgmt-win.yourdomain.com` → server IP
-4. Run `Deploy-ToIIS.ps1` once to deploy the latest binaries if not done already
+4. Run `scripts\Install.ps1` once to deploy the app binaries if not done already
+   (or `Install.ps1 -Upgrade` if you already have a previous version installed)
 5. Test from a domain-joined machine: `http://azlmgmt-win.yourdomain.com/`
 6. *(Optional)* Run `Add-HttpsBinding.ps1 -SiteName AZLManagementWinAuth` for HTTPS
 

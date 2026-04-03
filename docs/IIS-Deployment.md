@@ -420,21 +420,41 @@ far more than enough — only clusters being actively viewed hold a connection.
    - `https://azlmgmt.yourdomain.com/signin-oidc`
    - `https://azlmgmt.yourdomain.com/signout-callback-oidc`
 
-5. **From dev machine** - run deploy:
+5. **Deploy the app binaries** — choose one:
+
+   **Release ZIP** (recommended for most deployments):
    ```powershell
+   # From the extracted ZIP's scripts\ folder on the app server
+   .\Install.ps1
+   ```
+   This copies app files to `C:\apps\azlmgmt` and places `appsettings.Production.json` and `clusters.json` from the templates. Edit those files, then run Setup-IIS.ps1.
+
+   **From source (developer workflow):**
+   ```powershell
+   # From your dev machine with .NET SDK installed
    .\scripts\Deploy-ToIIS.ps1 -targetServer azlmgmt.yourdomain.com -Credential (Get-Credential)
    ```
+   This publishes a fresh build and mirrors it to the server in one step.
 
 6. **Browse to** `https://azlmgmt.yourdomain.com` - you should be redirected to Entra ID sign-in.
 
 ### Every subsequent deploy (code changes)
 
+**Release ZIP upgrade** (on the app server, from the extracted ZIP's `scripts\` folder):
+```powershell
+.\Install.ps1 -Upgrade
+# If your pool has a non-default name:
+.\Install.ps1 -Upgrade -AppPoolName "HCIPortalPool" -WinAuthPoolName "HCIPortalWinPool"
+```
+
+**Developer workflow** (from dev machine with .NET SDK, building from source):
 ```powershell
 cd F:\github\AzureLocal-ClusterTool-Web
 .\scripts\Deploy-ToIIS.ps1 -targetServer azlmgmt.yourdomain.com
 ```
 
-The script stops the app pool, mirrors the published files, restarts the pool. Takes ~30-60 seconds.
+Both approaches stop the app pool, replace the files, and restart the pool. `Install.ps1 -Upgrade`
+preserves `appsettings.Production.json` and `clusters.json` automatically. Takes ~30-60 seconds.
 
 ### Updating clusters.json on the server (add/remove clusters)
 
@@ -490,7 +510,7 @@ Invoke-Command -ComputerName azlmgmt.yourdomain.com {
 | Cluster page loads but VM list is empty | gMSA not in Administrators on cluster node; WinRM not enabled on nodes |
 | Sign-in redirects back to sign-in | Entra app registration missing redirect URI `https://azlmgmt.yourdomain.com/signin-oidc` |
 | App pool stops immediately after start | gMSA not retrievable on app server (`Test-ADServiceAccount` returns False) |
-| Robocopy fails in Deploy-ToIIS.ps1 | Ensure PS remoting works to the app server and your account has write rights to C:\apps |
+| Robocopy fails during upgrade | Ensure the app pool is stopped and your account has write rights to the app folder |
 | Blazor disconnects every ~29 hours; browser console shows "connection could not be found on server" then falls back to Long Polling | IIS periodic restart (`recycling.periodicRestart.time`) not disabled — see Critical SignalR settings above |
 | Blazor disconnects every ~20 min when site is idle (no active users) | IIS idle timeout (`processModel.idleTimeout`) not disabled — see Critical SignalR settings above |
 | Blazor disconnects frequently on one network but not another | Corporate proxy intercepting WebSocket traffic — see Proxy Bypass below |

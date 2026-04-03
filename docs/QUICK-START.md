@@ -25,11 +25,12 @@ For full details on every step, see the [IIS Deployment Guide](IIS-Deployment.md
 The extracted folder contains:
 
 ```
-AzureLocal.ClusterTool.Web/   ← the app binaries
-scripts/                       ← IIS and deployment scripts
-docs/                          ← user guide and deployment documentation
-appsettings.json               ← configuration file (edit this first)
-clusters.json.example          ← starting cluster list (rename and edit)
+AzureLocal.ClusterTool.Web/    app binaries
+scripts/                       setup and install scripts (run these on the app server)
+docs/                          user guide and deployment documentation
+appsettings.template.json      configuration template — Install.ps1 copies this into place
+clusters.json.example          starting cluster list — Install.ps1 copies this into place
+CHANGELOG.md                   release notes
 ```
 
 ---
@@ -53,9 +54,10 @@ clusters.json.example          ← starting cluster list (rename and edit)
 
 ---
 
-## Step 3 — Edit appsettings.json
+## Step 3 — Edit appsettings.Production.json
 
-Open `AzureLocal.ClusterTool.Web\appsettings.json` and fill in the placeholders:
+`scripts\Install.ps1` (run in Step 5) copies `appsettings.template.json` to `AzureLocal.ClusterTool.Web\appsettings.Production.json` for you.
+Open that file and fill in the placeholders:
 
 ```json
 {
@@ -84,7 +86,8 @@ Open `AzureLocal.ClusterTool.Web\appsettings.json` and fill in the placeholders:
 
 ## Step 4 — Configure Clusters
 
-Rename `clusters.json.example` to `clusters.json` and add your cluster(s):
+`scripts\Install.ps1` (run in Step 5) also creates `AzureLocal.ClusterTool.Web\clusters.json` from the example file.
+Open it and add your cluster(s):
 
 ```json
 [
@@ -103,19 +106,25 @@ Rename `clusters.json.example` to `clusters.json` and add your cluster(s):
 
 ---
 
-## Step 5 — Run the IIS Setup Scripts (first time only)
+## Step 5 — Install the App and Configure IIS (first time only)
 
 On the app server, open **PowerShell as Administrator** and run:
 
 ```powershell
 cd C:\temp\alm-release\scripts
 
-# 1. Install prerequisites (IIS features, ANCM, PostgreSQL, create directories)
+# 1. Install prerequisites (IIS features, ANCM, PostgreSQL)
 .\Setup-Prerequisites.ps1 -serviceAccount "DOMAIN\azlmgmt-svc$"
 
 # Restart if prompted after feature installation, then re-run
 
-# 2. Create the IIS site and application pool
+# 2. Copy app binaries and place config files
+.\Install.ps1
+# This copies AzureLocal.ClusterTool.Web\ to C:\apps\azlmgmt\ and creates
+# appsettings.Production.json and clusters.json from the templates.
+# Edit those two files now (Steps 3 and 4 above) before continuing.
+
+# 3. Create the IIS site and application pool
 .\Setup-IIS.ps1 `
     -siteName      "AZLManagement" `
     -appPoolName   "AZLManagementPool" `
@@ -161,15 +170,22 @@ the URL you are browsing to (including `https://` and no trailing slash).
 
 ## Upgrading
 
-Pull the latest release ZIP, extract, and from the `scripts` folder run:
+Download the latest release ZIP, extract it, and from the `scripts` folder run:
 
 ```powershell
-.\Deploy-ToIIS.ps1 -Credential (Get-Credential)
+# Default app pool name (AZLManagementPool)
+.\Install.ps1 -Upgrade
+
+# If your pool has a different name
+.\Install.ps1 -Upgrade -AppPoolName "HCIPortalPool" -WinAuthPoolName "HCIPortalWinPool"
 ```
 
-This publishes the new build and recycles the app pool. No database changes are needed
-for minor/patch upgrades. For major upgrades, check the [Changelog](../CHANGELOG.md) for
-any required database migration steps.
+This stops the app pool(s), replaces the binaries, and restarts. `appsettings.Production.json`
+and `clusters.json` are preserved. No database changes are needed for minor/patch upgrades.
+For major upgrades, check the [Changelog](../CHANGELOG.md) for any required migration steps.
+
+> **Developer workflow:** If you are building from source, use `Deploy-ToIIS.ps1` instead —
+> it publishes, compiles, and deploys in one step directly from the source tree.
 
 ---
 

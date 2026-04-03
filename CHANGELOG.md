@@ -54,6 +54,22 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
   Switched to `InvokeLogged(ps)` so both steps appear separately, making it possible to
   distinguish slow cluster WMI response from slow Hyper-V enumeration on a specific node.
 
+### Deployment
+
+- **New `Install.ps1` script** — The release ZIP now includes `scripts\Install.ps1`, the
+  missing step between extracting the ZIP and running `Setup-IIS.ps1`. It handles both
+  first-time installs and upgrades:
+  - **First time:** copies app binaries to the install path, places `appsettings.Production.json`
+    and `clusters.json` from the bundled templates so both files are ready to edit.
+  - **Upgrade** (`-Upgrade`): stops the configured app pool(s) by name, replaces binaries
+    via robocopy `/MIR /XF`, preserves `appsettings.Production.json` and `clusters.json`,
+    then restarts the pools. Config is never overwritten.
+  - `Setup-Prerequisites.ps1` is also now included in the release ZIP.
+- **Documentation updated** — `QUICK-START.md`, `IIS-Deployment.md`, and `USER-GUIDE.md`
+  updated to reflect the new install flow. The upgrade section in the quick start now shows
+  `Install.ps1 -Upgrade` as the primary path. `Deploy-ToIIS.ps1` is retained for developers
+  building from source.
+
 ---
 
 ## v0.9.9-beta — 2026-04-02
