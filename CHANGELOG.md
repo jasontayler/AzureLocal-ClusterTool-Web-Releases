@@ -4,6 +4,58 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.10-beta — 2026-04-03
+
+### Performance
+
+- **Persistent poller WinRM connections** — `ClusterPollerService` previously created and
+  disposed a `WebHyperVService` on every poll visit. This threw away the entire per-node
+  runspace cache on every cycle, causing a cold WinRM connect penalty (~5s) before every
+  VM and Node collection. The poller now holds a `_pollerConnections` dictionary of
+  long-lived `WebHyperVService` instances per cluster. Connections are reused across poll
+  visits and only recreated on connection failure (circuit-breaker pattern). Observed
+  improvement: AZL-NUC-CL02 VM poll time dropped from 5,163ms to 24ms.
+
+- **Extended per-node runspace TTL for poller (60s → 300s)** — The per-node runspace cache
+  TTL was 60s, shorter than the VM poll interval (120s) and Node poll interval (240s).
+  For single-node clusters this meant the cache always expired between polls — cold connect
+  on every cycle even with persistent connections. The poller now passes `nodeCacheTtl: 300s`
+  when constructing its `WebHyperVService` instances. Page-tier connections retain the 60s
+  default (unchanged behaviour for interactive users). `wsMan.IdleTimeout` now scales
+  automatically to `2 * nodeCacheTtl` to maintain adequate server-side margin.
+
+### Bug Fixes
+
+- **Nodes page missing CPU/memory/uptime data** — The poller was collecting
+  `GetClusterNodesAsync(enrichStats: false)`, storing a lightweight snapshot (State/DrainStatus
+  only) to the DB. `SnapshotService` served this snapshot to the Nodes page when fresh
+  (within the stale threshold of ~12 minutes), resulting in empty CPU%, Memory, and Uptime
+  columns with no error or visual indicator. Data only appeared after the snapshot went stale
+  or the user forced a Refresh. Fixed by removing `enrichStats: false` from the poller —
+  with warm 300s persistent runspaces the additional CIM query per node costs ~100ms against
+  a 600s poll interval.
+
+- **Exponential backoff for consistently-failing collection types** — When a collection type
+  fails (e.g. `Get-SolutionUpdate` on a standalone Hyper-V host, `RunDriftDetection` on a
+  non-HCI cluster), `MarkPolled` was never called, leaving `lastPoll = DateTime.MinValue`
+  forever. Every subsequent visit saw the type as always-due, triggering repeated 9-minute
+  hangs and 90-130 second DriftDetection timeouts on every poll cycle — monopolizing the
+  poll slot and blocking all other collection types.
+  Fixed by adding `MarkFailed(clusterName, dataType)` to `CollectorTypeScheduler` with
+  exponential backoff: 1 → 2 → 4 → 8 → 16 → 32 → 60 min (capped). `GetDueTypes` skips
+  types on backoff. `MarkPolled` on the next success clears the backoff. The per-type
+  catch block in `ClusterPollerService` now calls `MarkFailed` on every collection exception.
+
+### Diagnostics
+
+- **Per-node Get-VM duration now visible in PsCallLog** — `GetVirtualMachinesAsync` step 2
+  (the per-node `Get-VM` script via direct runspace) was using raw `ps.Invoke()`, making it
+  invisible in Admin > Perf Debug. Only the step 1 `Get-ClusterNode` duration was shown.
+  Switched to `InvokeLogged(ps)` so both steps appear separately, making it possible to
+  distinguish slow cluster WMI response from slow Hyper-V enumeration on a specific node.
+
+---
+
 ## v0.9.9-beta — 2026-04-02
 
 ### Bug Fixes
@@ -34,8 +86,20 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
   More broadly, Blazor Server holds long-lived SignalR connections that IIS should not
   mistake for a crash loop under any load spike.
   Fixed by adding `Set-ItemProperty ... failure.rapidFailProtection $false` to step 7b of
-  `Deploy-ToIIS.ps1`, applied to all pools alongside `idleTimeout` and `periodicRestart.time`
-  on every deploy.
+  `Deploy-ToIIS.ps1` and to `Setup-IIS.ps1` / `Setup-IIS-WinAuth.ps1`, applied to all
+  pools alongside `idleTimeout` and `periodicRestart.time`.
+
+- **`wsmprovhost.exe` accumulation from background poller** — `ClusterPollerService`
+  calls `GetClusterNodesAsync()` on every poll visit. That method fans out to each
+  cluster node via `GetOrCreateCachedRunspace` (one WinRM connection per node, one
+  `wsmprovhost.exe` per node on the cluster) to collect CPU/memory/uptime via
+  `FetchNodeStats`. The poller snapshot only needs `State` and `DrainStatus` from
+  `Get-ClusterNode` (which runs via the RunspacePool cluster connection, no direct
+  per-node connection); the per-node enrichment is unused in the snapshot and was
+  creating N extra `wsmprovhost.exe` connections per Nodes poll cycle.
+  Fixed by adding an `enrichStats` parameter (default `true`) to `GetClusterNodesAsync`.
+  The poller now calls `GetClusterNodesAsync(enrichStats: false)`. Pages that call the
+  method directly get full enrichment as before.
 
 ---
 
