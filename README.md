@@ -1,9 +1,12 @@
 # Azure Local Cluster Tool — Web
 
-> **Beta v0.9.0** — This release is available for wider testing. Please report bugs and
-> feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/issues).
+> **Beta v0.9.12** — This release is available for wider testing. Please report bugs and
+> feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues).
 
-A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)** clusters and Hyper-V hosts from any browser. Provides VM operations, node management, storage monitoring, network (ATC intents), solution updates, Azure Arc status, and more — without needing Remote Desktop or multiple PowerShell windows.
+A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)** clusters and
+Hyper-V hosts from any browser. Provides VM operations, node management, storage monitoring,
+network (ATC intents), solution updates, alerting, Azure Arc status, and more — without needing
+Remote Desktop or multiple PowerShell windows.
 
 > **Companion desktop app:** [AzureLocal_Cluster_ManagementTool](https://github.com/jasontayler/AzureLocal_Cluster_ManagementTool) — a standalone WPF version of the same tool.
 
@@ -13,25 +16,27 @@ A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)
 
 | Area | Capabilities |
 |---|---|
-| **Virtual Machines** | List, Start, Stop, Force Stop, Restart, Suspend, Live Migrate |
-| **Cluster Nodes** | Live stats, Pause/Drain, Resume, Failback |
+| **Virtual Machines** | List, Start, Stop, Force Stop, Restart, Suspend, Live Migrate; VM detail (NICs, disks, integration services, snapshots); Configure CPU and memory; VM performance metrics (CPU%, memory, VHD IOPS/latency, network) |
+| **Virtual Switches** | Hyper-V virtual switch inventory per node — type, SET, management OS adapters |
+| **Cluster Nodes** | Live CPU, memory and uptime stats; OS build + display version; Pause/Drain, Resume, Failback |
 | **Cluster Roles** | List, Start, Stop, Move (failover to node) |
-| **AKS on Azure Local** | Provisioned cluster overview (ARM-sourced) |
-| **Cluster Info** | Quorum, S2D status, health faults |
-| **Storage** | Pools, virtual disks, physical disks, Storage QoS volumes |
-| **Network** | Physical adapters, ATC intents + status, cluster networks, logical networks (ARM), SMB health |
-| **Events** | Cluster event log with CSV export |
-| **Remote Log Viewer** | Browse and read log files directly from cluster nodes |
-| **Solution Updates** | List updates and runs, start an update, live streaming monitor |
-| **Azure Arc** | Registration status, Arc Machines, Arc Extensions, Cluster Extensions |
-| **Arc Resource Bridge** | Appliance status + Azure Local Sites |
-| **Custom Locations** | ARM-sourced custom location inventory |
+| **Cluster Info** | Quorum mode and witness, S2D status, health faults, Cluster Shared Volumes |
+| **Storage** | Storage pools, virtual disks, physical disks; Storage QoS volumes with read/write IOPS and latency |
+| **Network** | Physical adapters with driver info; ATC intents + live status; cluster networks; logical networks (ARM); SMB health |
+| **Events** | Cluster event log viewer with CSV export |
+| **Remote Log Viewer** | Browse and tail log files directly from cluster nodes; auto-refresh with line interval picker |
+| **Solution Updates** | List available updates, view runs, start an update, live streaming progress monitor; ARM catalog source when configured |
+| **Azure Arc** | Registration and portal properties; Arc Machines; Arc Extensions (with upgrade detection); Cluster Extensions; Arc Resource Bridge appliance and Azure Local Sites; Custom Locations |
 | **Agent Services** | View and control HCI agent services (wssdagent / mochostagent) |
-| **Admin — Clusters** | Multi-cluster CRUD management |
-| **Admin — Audit Log** | Full audit trail of all mutating operations, CSV export, purge |
-| **Admin — Settings** | Encrypted app settings (ARM auth mode, SPN credentials) |
-| **Admin — Roles (RBAC)** | Fine-grained per-resource-type access control via Entra security groups |
-| **Background Collector** | Automatic background polling — VM, node, cluster state written to local DB; pages load instantly from cache; amber stale banner + force-refresh when collector falls behind |
+| **Alerting** | Rules engine with configurable thresholds and cooldown; Teams webhook and SMTP email delivery; maintenance windows to suppress alerts during planned work; alert history with acknowledgement; VM name glob pattern filtering for VM stop alerts |
+| **Fleet Status** | Multi-cluster dashboard — aggregate VM/node/health/update status with snapshot freshness grid; zero WinRM calls (DB reads only) |
+| **Admin — Clusters** | Multi-cluster CRUD management with audit trail |
+| **Admin — Alerts** | Alert rule management — create, edit, enable/disable rules; alert history viewer |
+| **Admin — Audit Log** | Full audit trail of all mutating operations, CSV export, configurable retention purge |
+| **Admin — Settings** | Encrypted app-level settings in DB (ARM auth mode, SPN credentials, SMTP, webhook) — grouped collapsible UI |
+| **Admin — Roles (RBAC)** | Fine-grained per-resource-type access control via Entra security groups; role badges in top bar |
+| **Admin — Perf Debug** | Live call log of the last 500 WinRM/CIM/ARM/Local operations with duration and transport type badge |
+| **Background Collector** | Automatic background polling with per-type schedules and exponential back-off; circuit breaker per cluster; pages load instantly from cache; amber stale banner when data is old |
 
 ---
 
@@ -40,108 +45,56 @@ A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)
 | Item | Value |
 |---|---|
 | Framework | .NET 10.0 Blazor Server |
-| Authentication | Microsoft Entra ID SSO (`Microsoft.Identity.Web`) |
+| Authentication | Microsoft Entra ID SSO (`Microsoft.Identity.Web`) or Windows Authentication (second site) |
 | Authorisation | Entra security groups + fine-grained custom RBAC |
-| PowerShell | `Microsoft.PowerShell.SDK` 7.5.4 — WinRM via `WSManConnectionInfo` |
-| Database | EF Core 9 — SQLite (default) or SQL Server |
+| PowerShell | `Microsoft.PowerShell.SDK` 7.5.4 — local RSAT + CIM API + WinRM where required |
+| Database | EF Core 9 — PostgreSQL (recommended), SQLite, or SQL Server |
 | Hosting | IIS (InProcess) with gMSA service account |
 
 ---
 
 ## Prerequisites
 
-- Windows Server with IIS and the [ASP.NET Core Hosting Bundle](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) (.NET 10)
-- A [group Managed Service Account (gMSA)](docs/IIS-Deployment.md) — or a standard Windows service account
-- An **Entra ID app registration** with `groupMembershipClaims: SecurityGroup` and redirect URIs configured
-- WinRM access from the app server to the cluster nodes (HTTP 5985 or HTTPS 5986)
+- **Windows Server** (2022 or later) with IIS installed
+- **No separate .NET runtime required** — the release ZIP is a self-contained win-x64 build
+- A **group Managed Service Account (gMSA)** — or a standard Windows service account — with WinRM access to the cluster nodes
+- RSAT tools on the app server (installed by `scripts\Setup-Prerequisites.ps1`): `RSAT-Hyper-V-Tools` and `RSAT-Clustering-PowerShell`
+- An **Entra ID app registration** with `groupMembershipClaims: SecurityGroup` and HTTPS redirect URIs — OR Windows Authentication if using the WinAuth site
+- WinRM access from the app server to each cluster node (port 5985 HTTP or 5986 HTTPS)
+
+See [docs/QUICK-START.md](docs/QUICK-START.md) for a step-by-step guide from zero to a running portal.
 
 ---
 
 ## Getting Started
 
-### Run locally (dev)
+### Quickest path
+
+1. Download the latest release ZIP from the [Releases](../../releases) page
+2. Extract and edit `appsettings.json` (Entra credentials, group Object IDs, database connection string)
+3. On the app server, run `scripts\Setup-Prerequisites.ps1` then `scripts\Setup-IIS.ps1`
+4. Browse to `https://<your-server>` and sign in
+
+See [docs/QUICK-START.md](docs/QUICK-START.md) for full step-by-step instructions.  
+See [docs/IIS-Deployment.md](docs/IIS-Deployment.md) for gMSA setup, HTTPS binding, Entra registration, and troubleshooting.
+
+### Windows Authentication (second site)
+
+An optional second IIS site (`HCIPortalWinAuth`) can be configured for internal users on the domain,
+bypassing Entra sign-in entirely. Run `scripts\Setup-IIS-WinAuth.ps1` after the primary site is working.
+Browser SSO applies — domain users are signed in automatically with their Windows credentials.
+
+### Upgrading
+
+Download the new release ZIP, extract, and from the `scripts` folder on your dev machine:
 
 ```powershell
-git clone https://github.com/jasontayler/AzureLocal-ClusterTool-Web.git
-cd AzureLocal-ClusterTool-Web
-dotnet run
-```
-
-Set `AzureAd:*` and `Groups:*` values in `appsettings.Development.json` (copy from `appsettings.json`).
-
-### Deploy to IIS
-
-```powershell
-# First-time server setup (run as Domain Admin on the IIS server)
-.\scripts\Setup-IIS.ps1 -SiteName "HCIPortal" -AppPoolName "HCIPortalPool" `
-    -PhysicalPath "C:\apps\hci-portal" -HostHeader "azlocalmgmt.yourdomain.com"
-
-# Deploy from dev machine
-cd scripts
 .\Deploy-ToIIS.ps1 -Credential (Get-Credential)
 ```
 
-See [docs/IIS-Deployment.md](docs/IIS-Deployment.md) for the full setup guide including gMSA configuration, HTTPS binding, and Entra app registration.
-
-#### Upgrading an existing installation
-
-If you already have a `app.db` database from a version prior to the background collector feature, you must add the three new tables before (or immediately after) deploying. `EnsureCreated` only runs on a **new** database file — it will not modify an existing one.
-
-Download `sqlite3.exe` from **https://www.sqlite.org/download.html** (Windows `sqlite-tools-win-x64-*.zip`) and run on the IIS server:
-
-```powershell
-$db = "C:\apps\hci-portal-data\app.db"
-sqlite3.exe $db @"
-CREATE TABLE IF NOT EXISTS LatestSnapshots (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ClusterName TEXT NOT NULL,
-    DataType TEXT NOT NULL,
-    JsonData TEXT NOT NULL,
-    CollectedAt TEXT NOT NULL,
-    CollectDurationMs INTEGER NOT NULL DEFAULT 0,
-    UNIQUE(ClusterName, DataType)
-);
-CREATE TABLE IF NOT EXISTS SnapshotHistories (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ClusterName TEXT NOT NULL,
-    DataType TEXT NOT NULL,
-    JsonData TEXT NOT NULL,
-    CollectedAt TEXT NOT NULL,
-    CollectDurationMs INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS IX_SnapshotHistories_Cluster
-    ON SnapshotHistories (ClusterName, DataType, CollectedAt);
-CREATE TABLE IF NOT EXISTS CollectorHealths (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ClusterName TEXT NOT NULL,
-    LastSuccessAt TEXT,
-    LastFailureAt TEXT,
-    LastError TEXT,
-    LastPollDurationMs INTEGER NOT NULL DEFAULT 0,
-    LastPollCallCount INTEGER NOT NULL DEFAULT 0,
-    ConsecutiveFails INTEGER NOT NULL DEFAULT 0,
-    IsCircuitOpen INTEGER NOT NULL DEFAULT 0,
-    CircuitOpenUntil TEXT,
-    UNIQUE(ClusterName)
-);
-"@
-```
-
-If you are upgrading from a version before cluster disable was added, also add the `IsDisabled` column to the `Clusters` table. The command silently succeeds on a fresh install where the column already exists:
-
-```powershell
-# Safe to run on any install — silently ignored if column already exists
-sqlite3.exe $db "ALTER TABLE Clusters ADD COLUMN IsDisabled INTEGER NOT NULL DEFAULT 0;" 2>&1 | Out-Null
-```
-
-Verify the tables were created:
-
-```powershell
-sqlite3.exe $db ".tables"
-# Should include: LatestSnapshots  SnapshotHistories  CollectorHealths
-```
-
-Then recycle the app pool (`iisreset /noforce` or recycle `HCIPortalPool` in IIS Manager). The background collector starts automatically ~15 seconds after startup.
+**No manual database migration steps are needed.** The app applies all schema changes
+automatically on startup using safe, idempotent `ADD COLUMN IF NOT EXISTS` migrations — new columns
+are added without touching existing data. Simply deploy and recycle the app pool.
 
 ---
 
@@ -152,7 +105,7 @@ Key settings in `appsettings.json` on the server:
 ```json
 {
   "AzureAd": {
-    "TenantId":     "<your-tenant-id>",
+    "TenantId":     "<your-entra-tenant-id>",
     "ClientId":     "<your-app-registration-client-id>",
     "ClientSecret": "<client-secret>"
   },
@@ -162,50 +115,69 @@ Key settings in `appsettings.json` on the server:
     "HciAdmin":   "<entra-group-object-id>"
   },
   "Database": {
-    "Provider":         "Sqlite",
-    "ConnectionString": "Data Source=C:\\apps\\hci-portal-data\\app.db"
+    "Provider":         "PostgreSQL",
+    "ConnectionString": "Host=127.0.0.1;Database=hciportal;Username=hci_app;Password=CHANGE_ME"
+  },
+  "DataProtection": {
+    "KeyPath": "C:\\apps\\hci-portal-data\\dp-keys"
   }
 }
 ```
+
+Additional settings (ARM integration, SMTP, Teams webhook, Key Vault) are managed through
+**Admin → Settings** in the UI after first sign-in and are stored encrypted in the database.
+
+---
+
+## Database Providers
+
+| Provider | When to use | Notes |
+|---|---|---|
+| **PostgreSQL** (recommended) | Production; multi-server | No row-count limits; free and open source. Run `scripts\Setup-PostgreSQL.ps1` or configure manually. Set `DataProtection:KeyPath` to a persistent folder. |
+| **SQLite** | Single-server / low-traffic | Simple; single file. Connection string: `Data Source=C:\apps\hci-portal-data\app.db`. Key path is derived from the DB file location automatically. |
+| **SQL Server** | Enterprise / Azure SQL | Standard SQL Server connection string. Set `DataProtection:KeyPath` explicitly. |
+
+---
+
+## Authentication Modes
+
+| Mode | Setup | Use case |
+|---|---|---|
+| **Entra ID SSO** (primary site) | `Setup-IIS.ps1`; requires Entra app registration and HTTPS redirect URIs | External / multi-tenant access; browser sign-in via Microsoft account |
+| **Windows Authentication** (second site) | `Setup-IIS-WinAuth.ps1`; requires domain-joined browser | Internal LAN / domain users; transparent SSO — no sign-in prompt |
+
+Both sites connect to the same database and cluster list.
 
 ---
 
 ## Access Levels
 
+Three Entra security groups control base access:
+
 | Group | Access |
 |---|---|
 | **HciRead** | View all data |
 | **HciOperate** | View + perform VM/node/role operations |
-| **HciAdmin** | Full access including cluster admin, audit log, settings, and RBAC management |
+| **HciAdmin** | Full access including cluster admin, audit log, settings, RBAC management, and alerting |
 
-Fine-grained RBAC (per resource type, per named resource, per operation) can be configured via **Admin → Roles** once signed in as HciAdmin.
-
----
-
-## Testing
-
-```powershell
-dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
-```
-
-282 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
+Fine-grained RBAC — per resource type, per named resource (glob pattern), per operation — is
+configured via **Admin → Roles** after signing in as HciAdmin. When no role assignments exist
+the app runs in pass-through mode and only the three group policies apply.
 
 ---
 
-## Beta Feedback
+## Known Gaps
 
-This is a beta release. Please use [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/issues) to report bugs or suggest improvements. Use the provided issue templates — they include an area selector and version field which helps track down issues quickly.
-
-Known gaps in this release:
-- VM creation is not supported — existing VMs are managed only
-- SQL Server / Azure SQL providers have not been end-to-end tested against a live cluster
+- **VM creation** is not supported — the tool manages existing VMs only; use Windows Admin Center or PowerShell to provision new VMs
+- **Live Update Monitor** has not been fully validated against an active in-progress update run
 
 ---
 
 ## Documentation
 
+- [Quick Start](docs/QUICK-START.md) — zero to running in ~30 minutes
 - [User Guide](docs/USER-GUIDE.md) — feature walkthroughs for operators and administrators
-- [IIS Deployment Guide](docs/IIS-Deployment.md) — full server setup, gMSA, HTTPS, troubleshooting
+- [IIS Deployment Guide](docs/IIS-Deployment.md) — full server setup, gMSA, HTTPS, Entra registration, troubleshooting
 
 ---
 
