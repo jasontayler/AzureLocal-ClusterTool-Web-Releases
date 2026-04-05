@@ -70,7 +70,7 @@ See [docs/QUICK-START.md](docs/QUICK-START.md) for a step-by-step guide from zer
 
 ### Quickest path
 
-1. Download the latest release ZIP from the [Releases](../../releases) page
+1. Download the latest release ZIP from the [Releases](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/releases) page
 2. Extract and edit `appsettings.json` (Entra credentials, group Object IDs, database connection string)
 3. On the app server, run `scripts\Setup-Prerequisites.ps1` then `scripts\Setup-IIS.ps1`
 4. Browse to `https://<your-server>` and sign in
@@ -163,6 +163,17 @@ Three Entra security groups control base access:
 Fine-grained RBAC — per resource type, per named resource (glob pattern), per operation — is
 configured via **Admin → Roles** after signing in as HciAdmin. When no role assignments exist
 the app runs in pass-through mode and only the three group policies apply.
+
+---
+
+## Building and Testing
+
+```powershell
+dotnet build AzureLocal.ClusterTool.Web.csproj --configuration Release
+dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
+```
+
+294 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
 
 ---
 

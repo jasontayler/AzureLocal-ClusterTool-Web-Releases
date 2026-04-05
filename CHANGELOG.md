@@ -4,6 +4,210 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.12-rc1 — 2026-04-05
+
+### Performance — WinRM to Local PS + CIM Migration
+
+The primary focus of this release is eliminating `wsmprovhost.exe` (WinRM PS shell)
+spin-up overhead from the hot-path read operations. Most cluster queries now run on the
+**app server itself** using local RSAT modules with `-Cluster`/`-CimSession` parameters,
+or via the C# CIM API (`Microsoft.Management.Infrastructure`) without PowerShell at all.
+
+**Benchmark (cluster-level reads):** ~650ms average → ~36ms average (18x improvement).
+
+#### Architecture change
+
+| Transport | Before | After |
+|---|---|---|
+| `_pool` (WinRM RunspacePool) | All cluster reads + mutations | Mutations + ATC/ECE/Arc/Storage cmdlets with no CIM equivalent |
+| `_cimSession` (CIM to cluster) | Storage only (3 methods) | Cluster nodes, roles, networks, CSVs + storage |
+| `_localPool` (local RSAT PS) | Not present | VM reads, VM commands, FailoverClusters mutations, Hyper-V config ops, FetchNodeStats |
+| `_nodeCimSessionCache` (CIM per node) | Not present | VM reads step 2, FetchNodeStats, network adapters fallback |
+| `GetOrCreateCachedRunspace` (WinRM per-node) | Get-VM, FetchNodeStats, adapters | Get-NetAdapter only (NetAdapter module not on app server) |
+
+`wsmprovhost.exe` is now only spawned for operations that have no local alternative:
+WinRM RunspacePool for cluster mutations, direct runspaces for Get-NetAdapter.
+All other paths use WmiPrvSE.exe (CIM provider) or no remote process at all.
+
+#### Prerequisites
+
+`Setup-Prerequisites.ps1` now installs two additional RSAT features required by
+the app server:
+
+- `RSAT-Hyper-V-Tools` — provides Hyper-V PS module (Get-VM, Start-VM, etc.) locally
+- `RSAT-Clustering-PowerShell` — provides FailoverClusters PS module locally
+
+Run `scripts\Setup-Prerequisites.ps1` on the app server before or after upgrading.
+
+#### Methods migrated to `_localPool` (local RSAT + CimSession per node)
+
+| Method | Module | Transport |
+|---|---|---|
+| `GetVirtualMachinesAsync` step 2 | Hyper-V | `_localPool` + `GetOrCreateNodeCimSession` |
+| `ExecuteVMCommandAsync` | Hyper-V | `_localPool` + `GetOrCreateNodeCimSession` |
+| `RemoveSnapshotAsync` | Hyper-V | `_localPool` + `GetOrCreateNodeCimSession` |
+| `ResizeVHDAsync` | Hyper-V | `_localPool` + `GetOrCreateNodeCimSession` |
+| `SetVMProcessorAsync` | Hyper-V | `_localPool` + `GetOrCreateNodeCimSession` |
+| `SetVMMemoryAsync` | Hyper-V | `_localPool` + `GetOrCreateNodeCimSession` |
+| `MoveClusterSharedVolumeAsync` | FailoverClusters | `_localPool -Cluster` |
+| `StartClusterRoleAsync` | FailoverClusters | `_localPool -Cluster` |
+| `StopClusterRoleAsync` | FailoverClusters | `_localPool -Cluster` |
+| `PauseClusterNodeAsync` | FailoverClusters | `_localPool -Cluster` |
+| `ResumeClusterNodeAsync` | FailoverClusters | `_localPool -Cluster` |
+| `FailbackClusterNodeAsync` | FailoverClusters | `_localPool -Cluster` |
+| `MoveVMAsync` | FailoverClusters | `_localPool -Cluster` |
+| `FailoverClusterRoleAsync` | FailoverClusters | `_localPool -Cluster` |
+| `FetchNodeStats` | Hyper-V + Win32 | `_localPool` + `GetOrCreateNodeCimSession` |
+| `GetVirtualDisksAsync` (CSV sub-query) | FailoverClusters | `_localPool -Cluster` |
+
+#### Methods migrated to `_cimSession` (C# CIM API, no PS)
+
+| Method | CIM class | Namespace |
+|---|---|---|
+| `GetNodeNamesInternal` | `MSCluster_Node` | `root/MSCluster` |
+| `GetVirtualMachinesAsync` step 1 | `MSCluster_Node` | `root/MSCluster` |
+| `GetClusterNodesAsync` | `MSCluster_Node` | `root/MSCluster` |
+| `GetClusterRolesAsync` | `MSCluster_ResourceGroup` | `root/MSCluster` |
+| `GetClusterNetworksAsync` | `MSCluster_Network` | `root/MSCluster` |
+| `GetClusterSharedVolumesAsync` | `MSCluster_ClusterSharedVolume` + owner association | `root/MSCluster` |
+| `FetchNodeStats` (OS + CPU + registry) | `Win32_OperatingSystem`, `Win32_Processor`, `StdRegProv` | `root/cimv2` / `root/default` |
+
+Note: `FetchNodeStats` uses the C# CIM API directly (not CimCmdlets PS module) because
+PS7 Core cannot load `CimCmdlets` in some IIS/gMSA hosting configurations.
+
+#### `GetClusterInfoAsync` reverted to WinRM pool
+
+`GetClusterInfoAsync` was initially migrated to `_localPool` with `-Cluster` parameters.
+In production this caused 14–34 second durations (previously 160–400ms) because
+FailoverClusters `-Cluster <name>` from a non-member machine uses DCOM/RPC rather than
+WsMan — each of the 5–6 cmdlets in the script opens its own DCOM connection (no session
+reuse), resulting in much higher overhead than a single persistent WinRM session.
+**Reverted** to run on `_pool` (WinRM runspace on a cluster node) where all FailoverClusters
+cmdlets execute locally without `-Cluster`.
+
+#### `GetNetworkAdaptersAsync` reverted to per-node WinRM runspace
+
+`GetNetworkAdaptersAsync` was migrated to local PS + CimSession but then reverted because
+`Get-NetAdapter` / `Get-NetIPInterface` / `Get-NetAdapterRdma` come from the `NetAdapter`
+module which is not installed on the app server. The method was returned to
+`GetOrCreateCachedRunspace` (per-node WinRM) where the module is available on each cluster
+node. Driver properties (`DriverProvider`, `DriverVersionString`) added in the same step.
+
+#### Diagnostics improvements
+
+- **Perf Debug — Type column** — the `/admin/debug-perf` call log now shows a colour-coded
+  transport badge per entry: **WinRM** (slate), **CIM** (teal), **ARM** (purple),
+  **Local** (green). Local = `_localPool` invocations running on the app server.
+- **`[Local]` tag auto-appended** — `InvokeLogged()` detects when `ps.RunspacePool` is
+  the local pool and appends `[Local]` to the label automatically, making transport type
+  visible in the call log without manual tagging.
+
+#### Benchmark scripts
+
+Four new scripts in `scripts/perf/` for measuring and comparing transport approaches:
+- `Benchmark-A-RunspacePool.ps1` — times the WinRM RunspacePool pattern
+- `Benchmark-B-ComputerName.ps1` — times local modules with `-ComputerName`/`-Cluster`
+- `Benchmark-C-CimSession.ps1` — times CimSession (fresh per call vs. reused)
+- `Compare-Approaches.ps1` — runs A, B, C and outputs a side-by-side timing table
+
+### Features
+
+- **Alerting — Alert acknowledgement with RBAC** — fired alert history entries can now be
+  acknowledged by users who hold the `Op.Acknowledge` permission on the `AlertRules`
+  resource type (the default `Cluster Admin` role now includes this operation).
+  Acknowledging an alert marks it with the user's UPN, a timestamp, and an optional note.
+  Cooldown behaviour respects acknowledgements: acking an alert resets the cooldown window
+  so the next firing of the same rule sends a fresh notification rather than being
+  suppressed by the previous event.  
+  UI: acknowledged entries show a green check mark (hover for the note). An **Ack** button
+  is shown in the history table when the signed-in user has `Op.Acknowledge`. Clicking
+  opens a confirmation modal with an optional free-text note field.
+
+- **Alerting — VMUnexpectedStop VM name glob filter** — `VMUnexpectedStop` alert rules now
+  support an optional `VmNamePattern` field (shown in the rule editor when rule type is
+  `VM Stop`). Supports `*` (any sequence of characters) and `?` (single character), case-
+  insensitive. Leave blank to alert on all VMs. Examples: `PROD-*` alerts only on
+  production VMs; `*-SQL-*` alerts on any VM with `SQL` in the name. The pattern is shown
+  as a hint in the Cluster column of the rules table when set.
+
+- **Solution Updates — Get WinRM Data button** — when ARM is configured, a secondary
+  "Get WinRM Data" button appears in the toolbar allowing operators to fetch live
+  solution update data directly from the cluster via WinRM, complementing the faster
+  ARM-sourced primary refresh.
+
+- **Solution Updates — ARM catalog source** — when ARM is configured and cluster
+  coordinates are available, `SolutionUpdates` page loads the update catalog from
+  ARM (~1 second) instead of WinRM (~20–30 seconds). Falls back to WinRM snapshot
+  when ARM is not configured. Update runs remain WinRM.
+
+- **Network Adapters — Driver info** — `DriverProvider` and `DriverVersionString`
+  columns added to the Network Adapters page.
+
+### Bug Fixes
+
+- **Drift detection double WinRM hit** — the background poller was calling
+  `Get-SolutionUpdate` (9-minute cmdlet) redundantly before `RunDriftDetectionAsync`.
+  The poller now reads the cached installed release ID from DB via
+  `GetCachedInstalledReleaseIdAsync`, skipping the WinRM call.
+
+---
+
+## v0.9.11-beta — 2026-04-04
+
+### Testing
+
+- **GitHub Actions integration test workflow** (`integration-tests.yml`) — two-job CI pipeline:
+  - **Job 1 (ubuntu/xUnit):** builds on `ubuntu-latest`, runs all 294 xUnit unit and
+    integration tests via `dotnet test`. Triggers on push to `feature-*` and
+    `main` branches and on pull requests.
+  - **Job 2 (self-hosted k6 + Playwright):** runs on `GITHUBRUN` (Windows Server
+    self-hosted runner); executes k6 load test against the Entra ID site
+    (`https://azlocalmgmt.jase.org`), then Playwright E2E tests against the
+    WinAuth site (`https://azlocalmgmt-win.jase.org`). k6 uses
+    `insecureSkipTLSVerify: true` because the server uses a private CA certificate.
+
+- **Playwright E2E test suite** (`Tests/E2ETests/PageLoadTests.cs`) — 13 page-load
+  smoke tests covering all major cluster pages. Each test navigates to the page and
+  asserts that either a content element or an error box loads within 45 seconds.
+  Tests pass on the WinAuth site using Windows Authentication (no Entra sign-in required
+  for the CI runner host account).
+
+- **ClusterInfo page test selector fix** — `ClusterInfo_LoadsSummary` was waiting for
+  `.overview-card` but `ClusterInfoPage.razor` uses `info-card`/`info-grid` CSS classes
+  (not `overview-card`). Changed selector to `.info-card, .alert-error` to correctly
+  detect page load. All 13 tests now pass.
+
+### Scripts
+
+- **`scripts/New-AppServiceAccount.ps1`** — new script for automated AD service account
+  setup supporting both gMSA and standard domain accounts.
+  - `gMSA` mode (default): checks/creates the KDS root key, creates the gMSA with
+    30-day password rotation, sets retrieval principals (by computer object or AD group),
+    installs the gMSA on each app server via `Invoke-Command`, and adds the gMSA to
+    local Administrators on each cluster node.
+  - `Standard` mode: prompts for password with confirmation (or accepts `-Password`
+    for automation), creates the AD user, optionally sets `PasswordNeverExpires`, and
+    adds the account to local Administrators on each cluster node.
+  - PS5.1 compatible: no `??` operator, no inline if-expressions, ASCII-only strings
+    in values.
+  - On completion, prints next-step instructions pointing to `Setup-Prerequisites.ps1`
+    and `Setup-IIS.ps1`.
+
+### Documentation
+
+- **`docs/IIS-Deployment.md`** — gMSA Requirements and Standard Service Account sections
+  now each include an "Automated (recommended)" block showing how to run
+  `New-AppServiceAccount.ps1` before the existing manual steps. Manual steps retained
+  for environments where the script cannot be run.
+
+- **`docs/ARCHITECTURE.md`** — Service Dependency Map (section 5) updated to include
+  the background services introduced in v0.9.10-beta: `ClusterPollerService`,
+  `SnapshotService`, `AlertEngine`, `MaintenanceWindowService`, `CollectorTypeScheduler`,
+  `CompositeAlertSender`, `SmtpEmailSender`, `TeamsWebhookSender`, and
+  `DatabaseHealthCheck`.
+
+---
+
 ## v0.9.10-beta — 2026-04-03
 
 ### Performance

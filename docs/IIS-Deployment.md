@@ -20,7 +20,6 @@ Browser → HTTPS → IIS (w3wp.exe running as gMSA) → WinRM → Cluster nodes
 | Network | LAN access to cluster nodes on port 5985 (or 5986 for HTTPS) |
 | Domain | Must be domain-joined (required for Kerberos WinRM auth to cluster nodes; applies to both gMSA and standard service account deployments) |
 | WinRM | WinRM client must be enabled on the app server |
-| RSAT modules | `RSAT-Hyper-V-Tools` and `RSAT-Clustering-PowerShell` must be installed on the app server. Run `scripts\Setup-Prerequisites.ps1` — this is idempotent and safe to re-run on upgrades. Required since v0.9.12 (local PS migration). |
 
 ---
 
@@ -118,6 +117,20 @@ Set-ItemProperty "IIS:\AppPools\$pool" -Name recycling.periodicRestart.time    -
 
 The gMSA must be configured in Active Directory **before** running `Setup-IIS.ps1`.
 
+**Automated (recommended):** Use the included `scripts\New-AppServiceAccount.ps1` to create and configure the account in a single step. Run it on a Domain Controller or any machine with RSAT AD tools:
+
+```powershell
+# Creates azlmgmt-svc gMSA, grants azlmgmt computer account retrieval rights,
+# installs on the app server, and grants local admin on each cluster node.
+.\New-AppServiceAccount.ps1 `
+    -AppServerName "azlmgmt" `
+    -ClusterNodes  @("AZ-NUC-N1", "AZ-NUC-N2", "AZ-NUC-N3")
+```
+
+See `New-AppServiceAccount.ps1 -?` for all parameters including retrieval-group mode and standard account mode.
+
+**Manual steps** (if you cannot run the script or need to troubleshoot):
+
 ### Check gMSA is installed and retrievable on the app server
 
 ```powershell
@@ -167,6 +180,15 @@ $rs.Close()
 
 If your environment does not support gMSA (non-domain, workgroup, or AD gMSA capability not available), you can run the app as a regular domain service account instead. **No application code changes are required** — the credential logic is identity-agnostic.
 
+**Automated (recommended):** use `scripts\New-AppServiceAccount.ps1 -AccountType Standard`:
+
+```powershell
+.\New-AppServiceAccount.ps1 `
+    -AccountType "Standard" `
+    -AccountName "svc-azlmgmt" `
+    -ClusterNodes @("AZ-NUC-N1", "AZ-NUC-N2", "AZ-NUC-N3")
+```
+
 ### How it works
 
 `CredentialSource = "gMSA"` in `WebHyperVService` means "use the process identity, supply no explicit credential". The Kerberos ticket used for WinRM comes from whoever is running the IIS app pool — gMSA or standard account. The setting name is a misnomer; it applies to any process-identity approach.
@@ -185,6 +207,19 @@ If your environment does not support gMSA (non-domain, workgroup, or AD gMSA cap
 | Password management | None — AD rotates every 30 days automatically | You must rotate and update the app pool identity when the password changes |
 
 ### Setup steps for a standard service account
+
+**Automated (recommended):** use `scripts\New-AppServiceAccount.ps1 -AccountType Standard`:
+
+```powershell
+.\New-AppServiceAccount.ps1 `
+    -AccountType "Standard" `
+    -AccountName "svc-azlmgmt" `
+    -ClusterNodes @("AZ-NUC-N1", "AZ-NUC-N2", "AZ-NUC-N3")
+```
+
+The script creates the AD user, grants Administrators membership on each cluster node, then prints next-step instructions for `Setup-IIS.ps1`.
+
+**Manual steps** (if you cannot run the script):
 
 1. **Create the account in Active Directory:**
    ```powershell
@@ -601,10 +636,10 @@ Blazor Server uses a persistent WebSocket (`wss://`). If a corporate proxy inter
 **Diagnose — run on an affected client machine:**
 ```powershell
 # If this returns the proxy address instead of the original URL, traffic is going through the proxy
-[System.Net.WebRequest]::GetSystemWebProxy().GetProxy("http://vos-azlweb01.yourdomain.net.au")
+[System.Net.WebRequest]::GetSystemWebProxy().GetProxy("http://azlmgmnt.yourdomain.net.au")
 ```
 
-**Common cause:** Windows proxy bypass lists use `*.domain.net.au` which only matches **one level deep**. A server at `vos-azlweb01.retail.ad.domain.net.au` has four levels and falls through to the proxy despite the bypass rule existing.
+**Common cause:** Windows proxy bypass lists use `*.domain.net.au` which only matches **one level deep**. A server at `http://azlmgmnt.yourdomain.net.au` has four levels and falls through to the proxy despite the bypass rule existing.
 
 **Fix — add sub-domain levels to the bypass list:**
 
@@ -612,18 +647,18 @@ PAC file (add before the catch-all `return "PROXY ..."`):
 ```javascript
 if (shExpMatch(host, "*.domain.net.au"))           { return "DIRECT"; }
 if (shExpMatch(host, "*.ad.domain.net.au"))        { return "DIRECT"; }
-if (shExpMatch(host, "*.retail.ad.domain.net.au")) { return "DIRECT"; }
+
 ```
 
 GPO / registry `ProxyOverride` value:
 ```
-*.domain.net.au;*.ad.domain.net.au;*.retail.ad.domain.net.au;<local>
+*.domain.net.au;*.ad.domain.net.au;<local>
 ```
 
 After the PAC/GPO change, verify on the client:
 ```powershell
 # Must return the original URL (not the proxy) to confirm bypass is working
-[System.Net.WebRequest]::GetSystemWebProxy().GetProxy("http://vos-azlweb01.yourdomain.net.au")
+[System.Net.WebRequest]::GetSystemWebProxy().GetProxy("http://azlmgmnt.yourdomain.net.au")
 ```
 
 > The app-side `serverTimeout` (120 s) and `KeepAliveInterval` (10 s) settings tolerate brief proxy delays but cannot overcome a proxy hard-terminating sessions. The bypass is the correct fix for corporate LAN-to-LAN traffic.
