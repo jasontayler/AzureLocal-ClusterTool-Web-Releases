@@ -10,6 +10,7 @@ For full details on every step, see the [IIS Deployment Guide](IIS-Deployment.md
 | Requirement | Notes |
 |---|---|
 | Windows Server 2022+ with IIS | IIS role must be installed (`Install-WindowsFeature Web-Server -IncludeManagementTools`) |
+| RSAT PowerShell modules | `RSAT-Hyper-V-Tools` and `RSAT-Clustering-PowerShell` — run `scripts\Setup-Prerequisites.ps1` on the app server (first install and after major upgrades) |
 | No .NET runtime required | The build is self-contained |
 | gMSA service account | Must have WinRM access to cluster nodes. See [IIS Deployment Guide](IIS-Deployment.md) for setup. A standard Windows service account also works. |
 | WinRM open from the app server | Port 5985 (HTTP) or 5986 (HTTPS) to each cluster node |
@@ -74,13 +75,19 @@ Open that file and fill in the placeholders:
   "Database": {
     "Provider":         "PostgreSQL",
     "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app;Password=changeme;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
+  },
+  "DataProtection": {
+    "KeyPath": "C:\\apps\\azlmgmt-data\\dp-keys"
   }
 }
 ```
 
 > **Database options:**
 > - **PostgreSQL** — recommended; free, no row-count limits. Run `scripts\Setup-Prerequisites.ps1` or configure manually.
-> - **SQL Server** — enterprise environments. Set `"Provider": "SqlServer"`. #noting this is not 100% tested recommend PostgreSQL 
+> - **SQLite** — good for single-server / low-traffic installs. Set `"Provider": "Sqlite"` and `"ConnectionString": "Data Source=C:\\apps\\azlmgmt-data\\app.db"`. SQLite derives `DataProtection:KeyPath` from the DB file path automatically — you can omit the block.
+> - **SQL Server** — enterprise environments. Set `"Provider": "SqlServer"`.
+>
+> **`DataProtection:KeyPath`** is required for PostgreSQL and SQL Server. The directory must exist and must be writable by the app pool identity.
 
 ---
 

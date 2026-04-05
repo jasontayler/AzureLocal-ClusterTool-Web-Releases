@@ -20,6 +20,7 @@ Browser → HTTPS → IIS (w3wp.exe running as gMSA) → WinRM → Cluster nodes
 | Network | LAN access to cluster nodes on port 5985 (or 5986 for HTTPS) |
 | Domain | Must be domain-joined (required for Kerberos WinRM auth to cluster nodes; applies to both gMSA and standard service account deployments) |
 | WinRM | WinRM client must be enabled on the app server |
+| RSAT modules | `RSAT-Hyper-V-Tools` and `RSAT-Clustering-PowerShell` must be installed on the app server. Run `scripts\Setup-Prerequisites.ps1` — this is idempotent and safe to re-run on upgrades. Required since v0.9.12 (local PS migration). |
 
 ---
 

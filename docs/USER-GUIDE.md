@@ -38,6 +38,7 @@
 26. [Windows Authentication Deployment](#26-windows-authentication-deployment)
 27. [Admin — Diagnostics & Background Collector](#27-admin--diagnostics--background-collector)
 28. [Fleet Status Board](#28-fleet-status-board)
+29. [Admin — Alerts](#29-admin--alerts)
 
 ---
 
@@ -1513,3 +1514,125 @@ Click **▼ Snapshot Freshness** / **▶ Snapshot Freshness** to expand or colla
 - **Alternative to individual cluster browsing:** For read-only stakeholders who need a high-level view, the Fleet Status Board may be sufficient without ever visiting a per-cluster page.
 
 > **Note:** The Fleet Status Board only reflects data already collected by the background collector. If a cluster was added recently and has not been polled yet, it will show no data in the table until the first successful poll completes.
+
+---
+
+## 29. Admin — Alerts
+
+**Route:** `/admin/alerts`  
+**Access required:** HciAdmin (view and manage rules) · `Op.Acknowledge` to acknowledge fired alerts
+
+The Alerts page has two sections: **Alert Rules** (top) and **Alert History** (bottom).
+
+---
+
+### Alert Rules
+
+Lists every configured alert rule. Click **+ New Rule** to create one, or the **Edit** / **Delete** buttons on any row to modify or remove an existing rule.
+
+#### Rule fields
+
+| Field | Description |
+|---|---|
+| **Name** | Display name shown in the history table and in email/Teams notifications |
+| **Cluster** | Cluster this rule applies to, or `*` to apply to all clusters |
+| **Rule Type** | One of the four types — see below |
+| **Severity** | `Critical` (red) or `Warning` (orange) — reflected in notification colour |
+| **Threshold** | Minimum fault count before firing (ClusterHealthFault only; ignored for other types) |
+| **Cooldown (mins)** | Minimum minutes between repeated notifications for the same rule and cluster. Prevents alert floods. **Acknowledging an alert resets the cooldown** — the next firing sends a fresh notification. |
+| **Webhook URL** | Optional — Teams incoming webhook URL for this rule only. Overrides the global webhook URL in Settings. Leave blank to use the global URL. |
+| **Email To** | Optional — email recipient(s) for this rule only (comma-separated). Overrides the global `Smtp:ToAddress` in Settings. Leave blank to use the global address. |
+| **VM Name Pattern** | **VMUnexpectedStop only** — glob filter on VM names. Supports `*` (any sequence) and `?` (single character), case-insensitive. Leave blank to alert on all VMs. Examples: `PROD-*`, `*-SQL-*`. Shown as a hint in the Cluster column when set. |
+| **Enabled** | Toggle a rule on/off without deleting it |
+
+#### Rule types
+
+| Type | What triggers it |
+|---|---|
+| **Health Fault** | One or more active health faults on the cluster (from `Get-HealthFault`). Threshold controls how many faults are required before firing. |
+| **Node Offline** | Any cluster node moves to a state other than `Up`. Fires independently for each affected node. |
+| **Cluster Unreachable** | The background poller's circuit breaker trips — the cluster is unreachable for consecutive poll cycles. |
+| **VM Stop** | One or more VMs transition to the `Off` state unexpectedly (not triggered by a user action through the app). Use the `VmNamePattern` field to limit which VMs trigger the rule. |
+
+> **Health Fault threshold:** Setting threshold to `1` (default) fires on any fault. Setting it to `3` requires at least 3 simultaneous faults. Use a threshold of `1` for production clusters where any fault is actionable.
+
+#### Channels — how alerts are delivered
+
+Each rule fires through **both** channels simultaneously if both are configured. If a specific rule overrides a channel setting, the override takes precedence over the global setting.
+
+| Channel | Global setting location | Per-rule override field |
+|---|---|---|
+| Teams webhook | Admin → Settings → `Alerting:TeamsWebhookUrl` | Rule **Webhook URL** field |
+| Email (SMTP) | Admin → Settings → `Smtp:ToAddress` | Rule **Email To** field |
+
+If neither a per-rule override nor the global setting is configured, that channel is silently skipped for the rule — no error is shown. Configure at least one channel in Admin → Settings before creating rules.
+
+---
+
+### Alert History
+
+Shows the last 200 fired alert events. Use the filter dropdowns to narrow by cluster, rule type, or outcome.
+
+#### History columns
+
+| Column | Description |
+|---|---|
+| Time | UTC timestamp when the alert fired |
+| Cluster | Cluster that triggered the alert |
+| Rule | Rule name |
+| Type | Rule type badge |
+| Severity | Critical / Warning |
+| Message | Short description of what triggered the alert |
+| Outcome | `Sent` — at least one channel delivered successfully · `Failed` — all channels failed · `Suppressed` — within cooldown window |
+| Ack | Acknowledgement status — see below |
+
+#### Filtering
+
+Three dropdowns in the toolbar filter by Cluster, Rule Type, and Outcome. Click **Refresh** to re-query.
+
+---
+
+### Acknowledging Alerts
+
+Users with the `Op.Acknowledge` permission on the `AlertRules` resource type can acknowledge fired alerts directly from the history table.
+
+**To acknowledge an alert:**
+
+1. Locate the entry in the Alert History table. Unacknowledged `Sent` entries show an **Ack** button in the Ack column.
+2. Click **Ack** — a modal appears with an optional free-text note field.
+3. Enter a note (e.g. `"Investigated — storage rebalancing, expected"`) and click **Acknowledge**.
+
+Acknowledged entries show a green check mark in the Ack column. Hover over the check to read the note.
+
+**Effect on cooldown:** Acknowledging an alert resets the cooldown timer for that rule on that cluster. The next occurrence of the same alert condition will trigger a fresh notification immediately, rather than being suppressed by the previous event's cooldown. This is intentional — it prevents an operator from dismissing an alert and then missing a recurrence.
+
+#### Who can acknowledge
+
+By default, the `Cluster Admin` role includes `Op.Acknowledge` on `AlertRules`. To grant acknowledgement to other roles, add the `Acknowledge` operation to the `AlertRules` resource type in Admin → Custom Roles.
+
+---
+
+### Maintenance Windows
+
+> **Note:** Maintenance windows suppress alert notifications without requiring individual alert rules to be disabled.
+
+Configured in Admin → Settings (under *Background Collector → Maintenance Windows*). During a maintenance window:
+
+- The background poller continues collecting data normally.
+- `AlertEngine` evaluates rules normally.
+- Notification delivery (Teams webhook + email) is suppressed for any cluster inside its maintenance window.
+- Alert history entries are still written with outcome `Suppressed (maintenance)`.
+
+This prevents alert floods during planned maintenance (node firmware updates, storage rebalancing, update runs) without needing to disable and re-enable rules.
+
+---
+
+### RBAC for Alerts
+
+| Permission | What it controls |
+|---|---|
+| `AlertRules → View` | Can see the Alerts page, rules list, and history |
+| `AlertRules → Configure` | Can create, edit, and delete alert rules |
+| `AlertRules → Acknowledge` | Can acknowledge fired alert history entries |
+
+HciAdmin users always have all three permissions. Non-admin users need a custom role with the appropriate operations assigned on the `AlertRules` resource type.
