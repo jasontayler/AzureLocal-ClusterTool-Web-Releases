@@ -73,7 +73,7 @@ Open that file and fill in the placeholders:
   },
   "Database": {
     "Provider":         "PostgreSQL",
-    "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app;Password=changeme;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
+    "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app;Password=changeme"
   }
 }
 ```
