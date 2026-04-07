@@ -36,6 +36,28 @@ If no API key has been configured yet, it returns `503 Service Unavailable`.
 > The key is stored encrypted in the database. If you lose it, generate a new one.
 > Rotating the key invalidates all callers using the old key immediately.
 
+### API access on the Windows Authentication site
+
+The WinAuth site (`azlmgmt-win.yourdomain.com`) has IIS Anonymous Authentication
+disabled globally, which blocks API key requests before they reach the app.
+
+**One-time server fix** — run these two commands once in an elevated prompt on the IIS server,
+then recycle the WinAuth app pool:
+
+```powershell
+$appcmd = "$env:WINDIR\system32\inetsrv\appcmd.exe"
+& $appcmd unlock config /section:system.webServer/security/authentication/anonymousAuthentication
+& $appcmd unlock config /section:system.webServer/security/authentication/windowsAuthentication
+Restart-WebAppPool -Name "AZLManagementWinPool"
+```
+
+This unlocks the IIS authentication sections so the `<location path="api">` block in
+`web.config` can re-enable Anonymous Auth for the `/api` path only. The API key requirement
+is still enforced by the app — anonymous access is not granted without a valid key.
+
+> `Setup-IIS-WinAuth.ps1` performs this unlock automatically on new installations.
+> Existing installations set up before v0.9.12 require the manual commands above.
+
 ---
 
 ## Endpoints
