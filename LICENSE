@@ -1,0 +1,79 @@
+FREEWARE BINARY LICENSE
+
+Copyright (c) 2024-2026 Jason Tayler. All Rights Reserved.
+
+The compiled binary releases ("Software") distributed in this repository are
+the exclusive intellectual property of Jason Tayler ("Author"). This license
+governs your use of the Software and does not grant any rights to the
+underlying source code, which remains private and proprietary.
+
+
+PERMITTED USE
+
+Subject to the terms below, you may:
+
+  - Download, install, and run the Software free of charge.
+  - Use the Software to manage Azure Local / Azure Stack HCI clusters and
+    Hyper-V infrastructure that you own, operate, or are authorised to
+    administer within your own organisation.
+
+
+RESTRICTIONS
+
+The following are strictly prohibited without prior written consent from
+the Author:
+
+  1. Redistribution   - republishing, mirroring, hosting, or otherwise
+                        distributing copies of the Software to any third
+                        party via any channel.
+
+  2. Modification     - reverse-engineering, decompiling, disassembling, or
+                        creating derivative works based on the Software, in
+                        whole or in part.
+
+  3. Commercial use   - incorporating the Software into a paid product or
+                        service, reselling access to the Software, or using
+                        the Software on behalf of paying customers as part
+                        of a managed or hosted service offering.
+
+  4. Sublicensing     - granting any rights in the Software to any other
+                        party.
+
+
+FUTURE LICENSING
+
+This is a no-cost freeware license for the current release. The Author
+reserves the right to introduce commercial licensing tiers for future
+versions. Your rights under this license apply only to the specific release
+version you downloaded and do not extend to future versions, which may be
+subject to different license terms.
+
+
+OWNERSHIP
+
+All intellectual property rights in the Software, including but not limited
+to copyright, trade secrets, and any patents, remain solely and exclusively
+with the Author. This license conveys a limited right to use the compiled
+binary only and does not transfer any ownership rights to you.
+
+
+NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. THE ENTIRE RISK AS
+TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH YOU.
+
+IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING BUT NOT LIMITED TO
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+CONTACT
+
+For licensing enquiries, commercial use requests, or permission requests,
+please open an issue on this repository or contact the Author directly.
