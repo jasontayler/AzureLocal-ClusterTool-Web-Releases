@@ -135,6 +135,7 @@ Additional settings (ARM integration, SMTP, Teams webhook, Key Vault) are manage
 | Provider | When to use | Notes |
 |---|---|---|
 | **PostgreSQL** (recommended) | Production; multi-server | No row-count limits; free and open source. Run `scripts\Setup-PostgreSQL.ps1` or configure manually. Set `DataProtection:KeyPath` to a persistent folder. |
+| **SQLite** | Single-server / low-traffic | Simple; single file. Connection string: `Data Source=C:\apps\hci-portal-data\app.db`. Key path is derived from the DB file location automatically. |
 | **SQL Server** | Enterprise / Azure SQL | Standard SQL Server connection string. Set `DataProtection:KeyPath` explicitly. |
 
 ---
@@ -244,7 +245,6 @@ dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
 
 - **VM creation** is not supported — the tool manages existing VMs only; use Windows Admin Center or PowerShell to provision new VMs
 - **Live Update Monitor** has not been fully validated against an active in-progress update run
-- **SQL Server** has not been fully tested
 
 ---
 
