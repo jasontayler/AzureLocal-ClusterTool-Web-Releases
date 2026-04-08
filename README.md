@@ -258,4 +258,5 @@ dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
 
 ## License
 
-Proprietary — all rights reserved.
+Freeware — free to use within your own organisation. Redistribution, modification, and commercial
+resale are prohibited. See [LICENSE](LICENSE) for full terms.
