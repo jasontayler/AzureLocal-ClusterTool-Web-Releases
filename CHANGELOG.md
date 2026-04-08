@@ -4,6 +4,178 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.13-rc2 — 2026-04-08
+
+### New Features
+
+- **Fleet Status as the default home page** — The Fleet Status Board (`FleetStatus.razor`)
+  now serves both `/` (root) and `/status`, making it the first page every user sees after
+  sign-in. The previous home page (cluster health cards) is still available at `/clusters`.
+  The top-level navigation has been updated to match: Fleet Status is the first link,
+  Fleet VM Status sits below it as a sub-link, and All Clusters follows.
+
+  Summary pills on the Fleet Status Board are now **interactive toggle-filters**. Clicking
+  a pill filters the cluster table to matching clusters:
+  - **VMs Running** — clusters with any running VMs
+  - **VMs Off** — clusters with any VMs off
+  - **Nodes Up** — clusters where all nodes are Up
+  - **Health Faults** — clusters with at least one critical or warning fault
+  - **Updates** — clusters with ready, in-progress, or failed solution updates
+  - **Clusters** pill — clears the active filter and shows all clusters (always active when
+    no other filter is selected)
+
+  Clicking the currently active pill a second time also clears the filter. A "Clear filter"
+  hint bar appears while a filter is active and the Clusters pill count updates live to show
+  the filtered count.
+
+- **User Favourites and Saved Views on Fleet Status** — users can now personalise the Fleet
+  Status Board without any admin access:
+
+  - **Pin / Unpin** — click the pin icon on any cluster row to add it to your personal
+    Favourites list. Pins are stored per user in the database.
+  - **Favourites pill** — when you have pinned clusters, a Favourites filter pill appears
+    above the table. Clicking it filters the table to show only your pinned clusters.
+  - **Personal named views** — click **+ View** in the view bar to create a personal named
+    cluster filter. Views support three match types:
+    - **Explicit** — a hand-picked set of clusters selected by name from a checkbox list.
+    - **Wildcard** — a glob pattern (`*`, `?`) matched against cluster names (e.g. `PROD-*`).
+    - **Regex** — a full regular expression matched against cluster names.
+  - A live match-count preview is shown while creating a wildcard or regex view.
+  - Created views appear as labelled pills in the view bar. Click a view pill to filter the
+    table; click it again or click Favourites / All Clusters to clear it.
+  - **Delete a personal view** — click the `x` on the pill label, or remove it from the
+    create-view form.
+
+- **Admin — Shared Views** (`/admin/views`) — administrators and operators with the
+  `SharedViews / Configure` RBAC permission can create **global** and **group-scoped** named
+  views that are visible to all users (or to members of a specific Entra group) as view pills
+  on the Fleet Status Board:
+
+  - Shared views support the same Explicit / Wildcard / Regex match types as personal views,
+    with a live match-count preview in the admin create/edit forms.
+  - **Group views** appear only for users whose Entra group OID matches the view's group
+    label — useful for giving different teams their own pre-filtered fleet view.
+  - A new **Views** link has been added to the Admin section in the left navigation bar.
+  - **RBAC:** a new `SharedViews` resource type has been added. Create/Edit/Delete operations
+    require `Configure` permission on `SharedViews`. The `Admin — Roles` page now filters the
+    available op checkboxes to only the ops that are valid for each resource type, preventing
+    meaningless permission combinations.
+
+- **Fleet VM Status page** (`/status/vms`) — a new fleet-wide VM table showing every VM
+  across all registered clusters from background-collector snapshots (zero live WinRM calls).
+  Columns: Cluster, VM Name, State, Memory Assigned, Uptime, Node, OS. Interactive filters
+  above the table let operators quickly drill to VMs by state (Running / Off / Paused) or
+  search by name. A Uptime sort makes it easy to spot recently restarted VMs.
+
+- **Snapshot Freshness moved to dedicated Reports page** (`/reports/snapshot-freshness`) —
+  the collapsible freshness grid that previously lived inside Fleet Status has been promoted
+  to a full-page report with:
+  - A per-column tooltip showing the exact collection timestamp for each data type.
+  - A per-row stale-cluster warning banner listing all clusters with at least one stale type.
+  - A colour legend at the top defining green / orange / red / grey thresholds.
+  - RBAC guarded by the `Reports` resource type.
+  A plain link to the new report replaces the old collapsible grid in the Fleet Status status
+  bar. The **Snapshot Freshness** link is also available in the left navigation under Reports.
+
+- **Disk Replacement Wizard** (Physical Disks page, Storage section) — a **Replace** button
+  now appears on each physical disk row for operators with `Storage / Configure` permission
+  (HciOperate or higher). Clicking it opens a three-step guided modal:
+  1. **Pre-flight checks** — confirms the disk is not a Journal or Hot Spare tier, that the
+     storage pool is healthy, and lists the virtual disks that use this disk for a last check
+     before proceeding.
+  2. **Retire & Replace** — submits the retire command (`Set-PhysicalDisk -Usage Retired`)
+     and waits for the repair storage job to start, polling every 5 seconds.
+  3. **Monitor repair** — shows live repair job progress (percentage, elapsed time). Once
+     100% the page prompts the operator to physically swap the disk and refresh the page.
+  The wizard is controlled by the `DiskReplacementWizard` feature flag in Admin → Settings
+  and is only shown when the flag is enabled. The replace button is hidden entirely when the
+  feature is disabled or when the user lacks `Storage / Configure` permission.
+
+- **Cluster Health Settings page** (`/clusters/{n}/health-settings`) — new page in the
+  Cluster sub-navigation for viewing and editing Health Service settings directly on the
+  cluster via `Get-StorageHealthSetting` / `Set-StorageHealthSetting`.
+
+  - **Volume Capacity Thresholds card** — edit the Warning (default 80%) and Critical
+    (default 90%) percentage-full thresholds at which the Health Service raises a fault.
+  - **Available Memory Threshold card** — edit the minimum free memory percentage
+    (default 10%) before a health fault is raised on a node. The PS fractional value is
+    computed and shown live as you type.
+  - **Auto-pool New Disks card** — shows whether new physical disks are automatically
+    added to the storage pool (`System.Storage.PhysicalDisk.AutoPool.Enabled`), plus
+    whether the value is an active override or the system default.
+  - **Active Overrides table** — lists every setting that is explicitly overriding its
+    system default, with short name, category, raw/display values, and the default
+    value for comparison. Long XML blob values are truncated in the table for readability.
+  - **SDDC Management restart wizard** — after any save, a modal guides the operator
+    through Stop → 10 s countdown → Start of the SDDC Management cluster role so the
+    change takes effect without manual PowerShell.
+  - **Info banner** — a static advisory note that default values are appropriate for most
+    environments and changes should be made with care.
+  - **Access control:** View requires Storage `View` permission; editing cards require
+    Storage `Configure` permission (HciOperate or higher). Read-only users see the Active
+    Overrides table and info banner but no editing controls.
+
+### Bug Fixes
+
+- **SMTP alerts failing with port 25 unauthenticated relay** — `SmtpEmailSender` previously
+  used `StartTls` (mandatory STARTTLS) for all ports other than 465. Internal SMTP relays
+  that listen on port 25 and do not support STARTTLS caused `535 5.7.3 Authentication
+  unsuccessful` or "does not support non-STARTTLS" errors, preventing any alert email from
+  being delivered.
+  Fixed by auto-selecting the TLS mode from the configured port:
+  - Port 465 (or `SmtpUseSsl = true`) → `SslOnConnect`
+  - Port 25 → `None` (plain unauthenticated relay, no TLS)
+  - Port 587 / any other → `StartTls` (mandatory STARTTLS)
+  No configuration change is required for existing deployments using port 587 or 465.
+  Deployments using an internal port 25 relay only need to set `Smtp:Port = 25` in
+  Admin → Settings.
+
+- **Extension upgrade blocked by undiscoverable manual-mode extensions** — Arc machine
+  extension upgrades and cluster extension upgrades now show a **warning modal** before
+  proceeding whenever one or more selected extensions have `Upgrade Mode: Manual`. The
+  modal lists the affected extension names and explains that manual-mode extensions were
+  intentionally set to not auto-upgrade. The operator must explicitly confirm to continue.
+  Applies to both the **Arc Extensions** page and the **Cluster Extensions** page.
+
+- **Settings dropdowns always show the effective value** — Admin → Settings combo boxes
+  previously showed a blank option when a setting had never been saved, rather than
+  displaying the documented default. All dropdowns now default to the system default value
+  and the blank/placeholder option has been removed, making it clear what value is active.
+
+- **VM Uptime missing from Fleet VM Status** — the background poller was running with
+  `lightMode = true`, which skipped the `Uptime` property when building VM snapshots.
+  Disabled `lightMode` so `Uptime` is now included in every snapshot and available on the
+  Fleet VM Status page.
+
+- **Fleet Status pin buttons showing star/asterisk characters** — the Favourite pin icon
+  previously rendered as a raw Unicode star character (`★`) in some browsers due to missing
+  font fallback. The icon text is now set as a literal HTML entity so it renders correctly
+  across all browsers.
+
+- **Column alignment** — several numeric and metric columns that were right-aligned or
+  inconsistently placed have been changed to left-align for readability:
+  - VM Performance (CPU%, memory, VHD IOPS/latency/throughput, network)
+  - Virtual Disks (Size, Allocated) and Storage Pools (Total Size, Allocated Size)
+  - Fleet VM Status (Memory, CPU%) and Arc Machines (Cores, Memory)
+
+### Security
+
+- **API 500 responses no longer leak internal error details** — `ClustersApiController`
+  Add, Update, and Delete actions previously returned `ex.Message` verbatim in the HTTP 500
+  body. This could expose connection strings, server file paths, or internal class names to
+  API callers. The HTTP response now returns a generic message
+  (`"An internal error occurred. Check the audit log for details."`);
+  `ex.Message` is retained in the audit log `Detail` field (server-side only).
+
+- **`SkipCertValidation` defaults to `false`** — `ClusterConfig` and the `ClusterApiRequest`
+  DTO previously defaulted `SkipCertValidation = true`, meaning all clusters added via the
+  API without explicitly specifying the field skipped WinRM TLS certificate validation.
+  Changed default to `false` (secure-by-default). Existing clusters stored in the database
+  are not affected. Operators who use self-signed or internal-CA WinRM certificates must
+  explicitly set `skipCertValidation: true` when adding clusters via the API.
+
+---
+
 ## v0.9.12-rc1 — 2026-04-05
 
 ### Performance — WinRM to Local PS + CIM Migration
