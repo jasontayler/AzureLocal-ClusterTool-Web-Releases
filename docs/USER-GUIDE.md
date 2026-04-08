@@ -19,7 +19,6 @@
 7. [Cluster Roles](#7-cluster-roles)
 8. [AKS on Azure Local](#8-aks-on-azure-local)
 9. [Cluster Info](#9-cluster-info)
-   - [9a. Cluster Health Settings](#9a-cluster-health-settings)
 10. [Storage](#10-storage)
 11. [Storage QoS](#11-storage-qos)
 12. [Network](#12-network)
@@ -39,10 +38,7 @@
 26. [Windows Authentication Deployment](#26-windows-authentication-deployment)
 27. [Admin — Diagnostics & Background Collector](#27-admin--diagnostics--background-collector)
 28. [Fleet Status Board](#28-fleet-status-board)
-    - [28a. Fleet VM Status](#28a-fleet-vm-status)
 29. [Admin — Alerts](#29-admin--alerts)
-30. [Admin — Shared Views](#30-admin--shared-views)
-31. [Reports — Snapshot Freshness](#31-reports--snapshot-freshness)
 
 ---
 
@@ -62,10 +58,7 @@ After sign-in you are returned to the app home page. No separate app password is
 
 ## 2. Cluster Selection — Home Page
 
-**The default landing page is the [Fleet Status Board](#28-fleet-status-board) (`/`),** not the cluster picker.
-The cluster picker is at **All Clusters** (`/clusters`), accessible via the left navigation or by clicking **All Clusters** at any time.
-
-The cluster picker lists every cluster you have access to. Click any cluster card to connect and begin managing it. The selected cluster name appears in the left navigation bar for the rest of your session.
+The home page lists every cluster you have access to. Click any cluster card to connect and begin managing it. The selected cluster name appears in the left navigation bar for the rest of your session.
 
 Use the **Filter clusters...** search box to narrow the list by cluster name or address — useful when many clusters are registered.
 
@@ -83,9 +76,8 @@ The sidebar groups cluster links into labelled sections:
 
 | Link | Page |
 |---|---|
-| 📋 Fleet Status | Fleet-wide VM/node/health/updates dashboard — default home page (`/`) |
-| &nbsp;&nbsp;↳ 🖥️ Fleet VM Status | All VMs across all clusters from snapshot data (sub-link) |
-| 🏠 All Clusters | Cluster picker — select a cluster to manage (`/clusters`) |
+| 🏠 All Clusters | Return to the cluster picker home page |
+| 📋 Fleet Status | Fleet-wide VM/node/health/updates dashboard — all clusters, zero WinRM, DB-only |
 | 📊 Overview | Summary cards — VM, role health, and Azure Arc status at a glance |
 | **Compute** | |
 | 🖥️ Virtual Machines | Full VM list with actions |
@@ -98,7 +90,6 @@ The sidebar groups cluster links into labelled sections:
 | &nbsp;&nbsp;↳ 📊 Cluster Performance | Storage QoS and node performance metrics (sub-link) |
 | &nbsp;&nbsp;↳ 📡 Cluster Network | Cluster network health (sub-link) |
 | &nbsp;&nbsp;↳ 📋 Cluster Events | Windows cluster event log (sub-link) |
-| &nbsp;&nbsp;↳ ⚙️ Health Settings | Health Service threshold settings and active overrides (sub-link) |
 | ⚓️ AKS | AKS on Azure Local clusters — ARM-sourced overview |
 | **Storage** | |
 | 💾 Storage | Storage pools, virtual disks, physical disks — includes Storage QoS tab |
@@ -118,7 +109,7 @@ The sidebar groups cluster links into labelled sections:
 Several page groups share a tab strip directly below the page heading, so you can switch between related pages without going back to the sidebar:
 
 - **Virtual Machines group:** Virtual Machines · VM Performance · Virtual Switches
-- **Cluster group:** Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings
+- **Cluster group:** Cluster Info · Nodes · Roles · Storage · Performance · Events
 - **Storage group:** Storage · Storage QoS
 - **Network group:** Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks
 - **Azure Arc group:** Registration · Arc Machines · Arc Extensions · Cluster Extensions
@@ -133,8 +124,7 @@ Several page groups share a tab strip directly below the page heading, so you ca
 | 📓 Audit Log | Complete history of all operator actions |
 | 🔑 Settings | Encrypted application settings (ARM auth, SPN credentials) |
 | 🛡️ Custom Roles | Fine-grained RBAC role management |
-| �️ Shared Views | Create and manage global/group-scoped named cluster views for Fleet Status |
-| �🔬 Diagnostics | PS/WinRM call log, cluster perf debug, background collector health |
+| 🔬 Diagnostics | PS/WinRM call log, cluster perf debug, background collector health |
 
 **Custom role nav visibility**
 
@@ -284,7 +274,7 @@ Lists all Hyper-V virtual switches across every node in the cluster.
 **Route:** `/clusters/{name}/nodes`  
 **Access required:** HciRead (view) · HciOperate (Pause/Resume)
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > **Custom role filtering:** Name patterns apply to node names. If your role does not include View access to Nodes, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -312,7 +302,7 @@ The **Connect** column shows an **RDP** button for each node. Clicking it downlo
 **Route:** `/clusters/{name}/roles`  
 **Access required:** HciRead (view) · HciOperate (Start/Stop/Move)
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > **Custom role filtering:** Name patterns apply to role/group names. If your role does not include View access to Roles, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -393,7 +383,7 @@ The AKS page shows ARM-sourced data only: cluster state, node pools, network/sec
 **Route:** `/clusters/{name}/info`  
 **Access required:** HciRead
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > If your custom role does not include View access to this resource type, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -406,63 +396,9 @@ A summary page showing:
 
 ---
 
-## 9a. Cluster Health Settings
-
-**Route:** `/clusters/{name}/health-settings`  
-**Access required:** HciRead (view) · HciOperate (edit, requires `Configure` permission on Storage)
-
-> Part of the **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab group.
-
-> **Note:** The default values for all settings are appropriate for most environments. Only change these if you have a specific operational reason — incorrect values can affect fault detection, alerting thresholds, and how the cluster reports its health state.
-
-Viewable by any HciRead user. Editing controls are only shown to users who have the `Configure` operation on the Storage resource type (HciOperate or higher by default).
-
-### Editable Settings
-
-#### Volume Capacity Thresholds
-
-The percentage of a volume's capacity used before the Health Service raises a fault.
-
-| Setting | Default | Description |
-|---|---|---|
-| Warning at | 80% | A volume Warning fault is raised when usage reaches this percentage |
-| Critical at | 90% | A volume Critical fault is raised when usage reaches this percentage |
-
-Enter values and click **Save Thresholds.** You will be prompted to restart the SDDC Management role.
-
-#### Available Memory Threshold
-
-The minimum percentage of total memory that must remain free on each cluster node before the Health Service raises a fault.
-
-| Setting | Default | Description |
-|---|---|---|
-| Minimum free | 10% | Free-memory fault threshold. Increase on memory-constrained nodes to reduce false-positive faults. |
-
-The page computes and shows the raw fractional PS value as you type. Click **Save Memory Threshold.** You will be prompted to restart the SDDC Management role.
-
-#### Auto-pool New Disks
-
-Shows whether new physical disks are automatically added to the storage pool when detected. This setting is read-only — it shows whether an override is active and whether the system default or an explicit value is in effect.
-
-### Active Overrides Table
-
-Lists every setting that currently has an explicit value overriding its system default. Columns show the short setting name, category, raw value (truncated), human-readable display value, and the default for comparison. When no overrides are active, a green indicator confirms all settings are at their system defaults.
-
-### SDDC Management Restart Wizard
-
-After saving any setting, a modal guides you through restarting the **SDDC Management** cluster role so the change takes effect:
-
-1. The wizard stops the SDDC Management role.
-2. Waits 10 seconds.
-3. Starts the role again.
-
-You can click **Skip Restart** to apply the setting without restarting — the change will take effect on the next natural service restart.
-
----
-
 ## 10. Storage
 
-**Route:** `/clusters/{name}/storage`
+**Route:** `/clusters/{name}/storage`  
 **Access required:** HciRead
 
 Three sections displayed on the page. Use the **Storage / Storage QoS** tab strip at the top to switch to the QoS volumes view.
@@ -500,26 +436,6 @@ Three sections displayed on the page. Use the **Storage / Storage QoS** tab stri
 | Size | Raw capacity |
 | Bus Type | SAS / SATA / NVMe etc. |
 | Media Type | SSD / HDD |
-
-### Disk Replacement Wizard
-
-For operators with **Storage / Configure** permission (HciOperate or higher), a **Replace** button appears in the Actions column on each physical disk row. The wizard guides you through retiring a failed or degraded disk safely in three steps:
-
-**Step 1 — Pre-flight checks**
-The wizard verifies conditions before allowing you to proceed:
-- The disk's current usage tier is not Journal or Hot Spare (replacing those requires special handling).
-- The storage pool is in a Healthy or Warning state (Critical pools are blocked).
-- The virtual disks that depend on this physical disk are listed so you can confirm before continuing.
-
-**Step 2 — Retire and start repair**
-After confirmation the wizard submits `Set-PhysicalDisk -Usage Retired` on the cluster node and polls every 5 seconds until a Storage Repair job appears. The job ID and current status are shown while polling.
-
-**Step 3 — Monitor repair progress**
-Once the repair job starts, the wizard shows live percentage progress and elapsed time. When repair reaches 100% the wizard prompts you to physically remove and replace the disk, then refresh the page to confirm the new disk has been detected.
-
-> **Feature flag:** The Replace button and wizard are only shown when the `DiskReplacementWizard` feature flag is enabled in Admin → Settings → Storage. The flag is disabled by default. Enable it under Admin → Settings before use.
-
-> **Access control:** The Replace button is hidden entirely when the signed-in user lacks `Storage / Configure` permission, regardless of the feature flag.
 
 ---
 
@@ -601,7 +517,7 @@ If ARM is not configured, the tab shows a message indicating ARM credentials are
 **Route:** `/clusters/{name}/events`  
 **Access required:** HciRead
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 Shows the cluster event log — by default the 200 most recent entries. Each entry shows:
 
@@ -731,9 +647,8 @@ Shows extensions installed on each Arc-enabled machine (e.g. AzureMonitorWindows
 
 1. Tick one or more rows (or use the header checkbox to select all).
 2. Click **⇡ Upgrade Selected (N)** in the toolbar.
-3. If any selected extension has **Upgrade Mode: Manual**, a warning modal will appear listing the affected extension names and asking for confirmation — manual-mode extensions are intentionally set to not auto-upgrade, so you must confirm you want to override that. Click **Upgrade Anyway** to proceed or **Cancel** to review your selection.
-4. Extensions on the same machine are batched into a single ARM call. ARM responds with `202 Accepted` immediately — the actual rollout takes several minutes per machine.
-5. Refresh the page after a few minutes to see updated provisioning states.
+3. Extensions on the same machine are batched into a single ARM call. ARM responds with `202 Accepted` immediately — the actual rollout takes several minutes per machine.
+4. Refresh the page after a few minutes to see updated provisioning states.
 
 > **Auto-upgrade extensions** are upgraded automatically by the platform whenever a new version is available. Manual-upgrade extensions stay at their installed version indefinitely unless you trigger an upgrade here.
 
@@ -766,9 +681,8 @@ Columns include name, publisher, extension type, version, aggregate state (rolle
 
 1. Tick one or more extension rows.
 2. Click **⇡ Upgrade Selected (N)**.
-3. If any selected extension has **Upgrade Mode: Manual**, a warning modal will appear listing the affected extension names — confirm to proceed or cancel to review your selection.
-4. Each selected extension triggers one ARM POST call. ARM responds with `202 Accepted` — rollout is asynchronous and may take several minutes per node in the cluster.
-5. Refresh after a few minutes to see updated aggregate state.
+3. Each selected extension triggers one ARM POST call. ARM responds with `202 Accepted` — rollout is asynchronous and may take several minutes per node in the cluster.
+4. Refresh after a few minutes to see updated aggregate state.
 
 #### Required ARM permissions (cluster extensions)
 
@@ -992,22 +906,6 @@ Controls how the Azure Arc pages authenticate to Azure Resource Manager.
 | Action SPN Tenant ID | Azure ARM Authentication (Action SPN) | Entra tenant ID for the action SPN (usually the same as the read SPN tenant) |
 | Action SPN Client ID | Azure ARM Authentication (Action SPN) | Application (client) ID for the action SPN |
 | Action SPN Client Secret | Azure ARM Authentication (Action SPN) | Client secret for the action SPN (encrypted at rest) |
-
-### Email / SMTP settings
-
-| Setting | Group | Description |
-|---|---|---|
-| SMTP Host | Alerting | Hostname or IP of the outbound SMTP server |
-| SMTP Port | Alerting | Port number. TLS mode is selected automatically: **25** = no TLS (plain relay), **465** = SSL/TLS, **587 or other** = STARTTLS |
-| SMTP Use SSL | Alerting | Set `true` to force SSL/TLS regardless of port (equivalent to port 465 behaviour) |
-| SMTP Username | Alerting | Login username — leave blank for unauthenticated relay (port 25) |
-| SMTP Password | Alerting | Login password (encrypted at rest) — leave blank for unauthenticated relay |
-| SMTP From Address | Alerting | Sender address shown in alert emails |
-| SMTP From Name | Alerting | Sender display name |
-| SMTP To Address | Alerting | Default recipient address for alerts. Can be overridden per rule. |
-| SMTP Subject Prefix | Alerting | Optional prefix prepended to every alert email subject line |
-
-> **Port 25 internal relay:** Many on-premises environments have an internal SMTP relay on port 25 that does not require authentication and does not support TLS. Set `SMTP Port = 25` and leave Username/Password blank. The app will connect without TLS. For external SMTP providers (Microsoft 365, Google Workspace, etc.) use port 587 or 465 with credentials.
 
 ### Action SPN (optional dual-SPN mode)
 
@@ -1539,66 +1437,25 @@ sqlite3.exe $db "SELECT ClusterName, ConsecutiveFails, IsCircuitOpen FROM Collec
 
 ## 28. Fleet Status Board
 
-**Route:** `/` (default home page) and `/status`
+**Route:** `/status`  
 **Access required:** HciRead (or higher)
 
-The Fleet Status Board is the **default landing page** after sign-in. It provides a zero-WinRM,
-read-only overview of all registered clusters in a single page. All data comes from the
-background collector's database snapshots — no live WinRM connections are made when the
-page loads, so it renders in under 100 ms regardless of cluster count.
+The Fleet Status Board provides a **zero-WinRM, read-only overview of all registered clusters** in a single page. All data comes from the background collector's database snapshots — no live WinRM connections are made when the page loads.
 
 ---
 
-### Summary Pills (Interactive Filters)
+### Summary Pills
 
-A row of coloured pills at the top of the page shows fleet-wide totals. Each pill is a
-**toggle-filter button** — clicking it filters the cluster table to matching clusters:
+A row of coloured pills at the top of the page shows fleet-wide totals:
 
-| Pill | What it counts | Filter effect |
-|---|---|---|
-| Clusters | Total registered clusters in the current view | Clears the active filter (always shown; count updates live) |
-| Favourites | Clusters you have pinned | Show only your pinned clusters |
-| VMs Running | VMs in Running state across all clusters | Show clusters with any running VMs |
-| VMs Off | VMs in Off state | Show clusters with any VMs off |
-| Nodes Up | Cluster nodes reported Up | Show clusters where all nodes are Up |
-| Health Faults | Active health faults (red if > 0) | Show clusters with at least one fault |
-| Updates | Clusters with pending/in-progress/failed updates | Show affected clusters |
-
-Clicking the currently active pill a second time clears the filter. A "Clear filter" hint bar
-appears below the pills while a filter is active.
-
----
-
-### Saved Views (Favourites and Named Views)
-
-**Favourites (personal pins)**
-
-Click the **pin icon** on any cluster row to pin it to your Favourites. Pins are stored per
-user in the database. When you have at least one pinned cluster, a **Favourites** pill
-appears in the filter bar. Click it to filter the table to your pinned clusters only.
-
-**Personal named views**
-
-Click **+ View** (shown at the right of the view pills) to create a personal named cluster
-filter. Three match types are supported:
-
-| Match type | How it works |
+| Pill | What it counts |
 |---|---|
-| Explicit | Pick clusters by name from a checkbox list |
-| Wildcard | Enter a glob pattern — `*` matches any sequence, `?` matches one character (e.g. `PROD-*`) |
-| Regex | Enter a regular expression matched against cluster names (case-insensitive) |
-
-A live match-count preview is shown while you type a wildcard or regex pattern. Once saved,
-the view appears as a labelled pill in the filter bar. Click it to filter; click it again,
-or click Favourites / All Clusters, to clear the filter. Delete a view by clicking the `x`
-on its pill.
-
-**Shared views (admin-created)**
-
-Administrators can create **global** or **group-scoped** named views via
-[Admin → Shared Views](#30-admin--shared-views). Global views appear as view pills for all
-users. Group views appear only for members of the specified Entra group. Shared views appear
-alongside your personal views in the filter bar.
+| VMs Running | Total VMs in Running state across all clusters |
+| VMs Off | Total VMs in Off state |
+| Nodes Up | Total cluster nodes reported Up |
+| Health Faults | Total active health faults (red if > 0) |
+| Updates Available | Total clusters with at least one pending solution update |
+| Clusters | Total registered clusters included in the view |
 
 ---
 
@@ -1608,9 +1465,9 @@ One row per cluster. Columns:
 
 | Column | Description |
 |---|---|
-| Cluster | Cluster name, hyperlinked to its Overview page; pin icon to add to Favourites |
+| Cluster | Cluster name, hyperlinked to its `/clusters/{name}/overview` page |
 | VMs | Running / Off / Paused counts |
-| Nodes | Nodes Up / Total (dot: green = all up, orange = some down, red = majority down) |
+| Nodes | Nodes Up / Total (coloured dot: green = all up, orange = some down, red = majority down) |
 | Health | Fault summary: Critical / Warning count with traffic-light dot; green if no faults |
 | Updates | Failed / In-progress / Available count / Current (all-green) |
 | Collector | Status dot from the background collector health record |
@@ -1620,67 +1477,43 @@ Click a cluster name to navigate directly to its Overview page.
 
 ---
 
-### Snapshot Freshness
+### Snapshot Freshness Grid
 
-Snapshot freshness is now a dedicated report at `/reports/snapshot-freshness`. A link to the
-report is shown in the Fleet Status status bar. See
-[Reports — Snapshot Freshness](#31-reports--snapshot-freshness) for details.
+A collapsible section (collapsed by default) showing a grid of **9 data types × all clusters**. Each cell shows a coloured dot and age label for that cluster's most recent snapshot of that type.
 
----
-
-### Use Cases
-
-- **Morning health check:** Open the Fleet Status Board before starting work to see at a
-  glance if any cluster has faults, stale data, or collector problems.
-- **Focused views:** Pin your most-managed clusters as Favourites, or create a named view
-  for a set of production clusters using a wildcard like `PROD-*`.
-- **Shared team dashboard:** An administrator can create a group-scoped shared view aligned
-  to a team's Entra group so every team member sees a pre-filtered fleet on sign-in.
-- **Pre-maintenance scan:** Confirm all nodes are Up and no updates are failing before
-  scheduling a maintenance window.
-- **Read-only stakeholders:** For users who need a high-level view, the Fleet Status Board
-  may be sufficient without ever visiting a per-cluster page.
-
-> **Note:** The Fleet Status Board only reflects data already collected by the background
-> collector. If a cluster was recently added and has not been polled yet, it will show no
-> data until the first successful poll completes.
-
----
-
-## 28a. Fleet VM Status
-
-**Route:** `/status/vms`
-**Access required:** HciRead (or higher)
-
-A fleet-wide VM table showing every virtual machine across all registered clusters, sourced
-entirely from background-collector snapshots — no live WinRM calls are made on page load.
-
-### Columns
-
-| Column | Description |
+| Dot colour | Meaning |
 |---|---|
-| Cluster | Cluster name — hyperlinked to the cluster's Overview page |
-| VM Name | Virtual machine name |
-| State | Running / Off / Paused / Saved with traffic-light dot |
-| Memory Assigned | Memory currently assigned to the VM (GB) |
-| Uptime | How long the VM has been running since last power-on |
-| Node | Cluster node currently hosting the VM |
-| OS | Operating system as reported by Integration Services |
+| 🟢 Green | Fresh — age is less than 50% of the stale threshold |
+| 🟠 Orange | Ageing — age is between 50% and 100% of the threshold |
+| 🔴 Red | Stale — age exceeds the stale threshold |
+| ⚫ Grey | No snapshot exists yet |
 
-### Filters
+**Stale thresholds per data type:**
 
-Clickable **state pills** above the table (Running, Off, Paused, Saved) act as toggle filters
-— click a pill to show only VMs in that state; click again to clear. A text **search box**
-filters by VM name across all clusters simultaneously.
+| Type | Threshold |
+|---|---|
+| VMs | 10 minutes |
+| Nodes | 15 minutes |
+| Cluster Info | 30 minutes |
+| Cluster Roles | 30 minutes |
+| Storage Pools | 1 hour |
+| Virtual Disks | 1 hour |
+| Physical Disks | 2 hours |
+| Solution Updates | 2 hours |
+| Arc Registration | 4 hours |
+
+Click **▼ Snapshot Freshness** / **▶ Snapshot Freshness** to expand or collapse the grid.
+
+---
 
 ### Use Cases
 
-- **Recently restarted VMs:** Sort by Uptime ascending to find VMs with short uptimes that
-  may have been unexpectedly restarted across all clusters at once.
-- **Capacity check:** Quickly see memory assigned across the whole fleet without navigating
-  to each cluster's VM page.
-- **State audit:** Filter to Off or Paused to confirm no production VMs are in an unexpected
-  powered-off state.
+- **Morning health check:** Open the Fleet Status Board before starting work to see at a glance if any cluster has faults, stale data, or collector problems.
+- **Collector monitoring:** The Collector column and freshness grid immediately show which clusters have polling problems without navigating to each cluster individually.
+- **Pre-maintenance scan:** Confirm all nodes are Up and no updates are failing before scheduling a maintenance window.
+- **Alternative to individual cluster browsing:** For read-only stakeholders who need a high-level view, the Fleet Status Board may be sufficient without ever visiting a per-cluster page.
+
+> **Note:** The Fleet Status Board only reflects data already collected by the background collector. If a cluster was added recently and has not been polled yet, it will show no data in the table until the first successful poll completes.
 
 ---
 
@@ -1803,118 +1636,3 @@ This prevents alert floods during planned maintenance (node firmware updates, st
 | `AlertRules → Acknowledge` | Can acknowledge fired alert history entries |
 
 HciAdmin users always have all three permissions. Non-admin users need a custom role with the appropriate operations assigned on the `AlertRules` resource type.
-
----
-
-## 30. Admin — Shared Views
-
-**Route:** `/admin/views`
-**Access required:** HciOperate (or higher) · `SharedViews / Configure` permission for create/edit/delete
-
-The Shared Views admin page lets administrators create curated named cluster views that
-appear as view pills on the [Fleet Status Board](#28-fleet-status-board) for some or all
-users.
-
-### View types
-
-| Type | Who sees it |
-|---|---|
-| **Global** | All signed-in users — visible on Fleet Status as a view pill regardless of group membership |
-| **Group** | Only members of a specific Entra security group (matched by the group's Object ID) |
-
-Group views are useful when different teams manage different subsets of clusters. Each team's
-group gets its own pre-filtered view of the clusters they care about.
-
-### Pattern types
-
-Shared views support the same three cluster-matching pattern types as personal views:
-
-| Pattern type | Behaviour |
-|---|---|
-| Explicit | A hand-picked list of cluster names selected via checkbox — exact match only |
-| Wildcard | A glob pattern using `*` (any sequence) and `?` (one character), matched case-insensitively against cluster names |
-| Regex | A .NET regular expression matched case-insensitively against cluster names |
-
-A live **match count** is shown in the create/edit form while you type a wildcard or regex
-pattern, so you can verify the filter before saving.
-
-### How to create a shared view
-
-1. Navigate to **Admin → Shared Views**.
-2. Click **+ Create View**.
-3. Enter a **View Name** — this becomes the pill label on the Fleet Status Board.
-4. Select **Global** or **Group** scope. For Group, paste the Entra group Object ID.
-5. Choose the **Pattern Type** and enter the cluster selection.
-6. Click **Save**.
-
-The view becomes immediately visible on Fleet Status for users matching the scope.
-
-### Editing and deleting shared views
-
-Click **Edit** on any row to modify the view name, scope, or pattern. Click **Delete** to
-remove it; the pill disappears from Fleet Status immediately for all affected users.
-
-### RBAC for Shared Views
-
-The `SharedViews` RBAC resource type controls access to the Admin → Shared Views page and
-its operations:
-
-| Permission | What it controls |
-|---|---|
-| `SharedViews → View` | Can see the Shared Views page and the list of shared views |
-| `SharedViews → Configure` | Can create, edit, and delete shared views |
-
-HciAdmin users always have both permissions. Assign `SharedViews → Configure` to roles for
-operators who should be allowed to manage shared views without full admin access.
-
----
-
-## 31. Reports — Snapshot Freshness
-
-**Route:** `/reports/snapshot-freshness`
-**Access required:** HciRead (or higher) · `Reports / View` permission
-
-A full-page report showing how recently each data type was collected for every registered
-cluster. Useful for monitoring background collector health across the fleet at a glance.
-
-### Grid layout
-
-The report is laid out as a grid of **data types (columns) × clusters (rows)**. Each cell
-shows:
-- A coloured dot indicating freshness (see below)
-- An age label (e.g. `3m`, `1h 12m`)
-- A tooltip on hover showing the exact collection timestamp
-
-### Freshness thresholds and colours
-
-| Dot colour | Meaning |
-|---|---|
-| Green | Fresh — age is less than 50% of the stale threshold for that data type |
-| Orange | Ageing — age is between 50% and 100% of the stale threshold |
-| Red | Stale — age exceeds the stale threshold |
-| Grey | No snapshot collected yet for this cluster/type combination |
-
-**Stale thresholds per data type:**
-
-| Type | Threshold |
-|---|---|
-| VMs | 10 minutes |
-| Nodes | 15 minutes |
-| Cluster Info | 30 minutes |
-| Cluster Roles | 30 minutes |
-| Storage Pools | 1 hour |
-| Virtual Disks | 1 hour |
-| Physical Disks | 2 hours |
-| Solution Updates | 2 hours |
-| Arc Registration | 4 hours |
-
-### Stale cluster warning
-
-If any cluster has at least one stale data type, a warning banner at the top of the report
-lists those clusters by name. This immediately identifies clusters where the background
-collector is failing or overdue without having to scan the full grid.
-
-### Navigation
-
-A link to this report is shown in the Fleet Status status bar. It is also accessible
-directly from the left navigation bar under **Reports → Snapshot Freshness**.

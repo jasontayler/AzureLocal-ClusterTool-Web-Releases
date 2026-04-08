@@ -1,14 +1,12 @@
 # Azure Local Cluster Tool — Web
 
-> **Beta v0.9.12** — This release is available for wider testing. Please report bugs and
+> **Pre-release candidate v0.9.13-rc2** — Available for wider testing. Please report bugs and
 > feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues).
 
 A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)** clusters and
 Hyper-V hosts from any browser. Provides VM operations, node management, storage monitoring,
 network (ATC intents), solution updates, alerting, Azure Arc status, and more — without needing
 Remote Desktop or multiple PowerShell windows.
-
-> **Companion desktop app:** [AzureLocal_Cluster_ManagementTool](https://github.com/jasontayler/AzureLocal_Cluster_ManagementTool) — a standalone WPF version of the same tool.
 
 ---
 
@@ -168,6 +166,69 @@ the app runs in pass-through mode and only the three group policies apply.
 
 ---
 
+## Fleet Status — Saved Views
+
+The Fleet Status Board (`/`) supports three layers of cluster filtering that persist across
+sessions and can be shared across teams.
+
+### User Favourites
+
+Any signed-in user can **pin clusters** by clicking the pin icon on a cluster row. Pinned
+clusters are saved to the database per user. When at least one cluster is pinned, a
+**Favourites** pill appears in the filter bar — clicking it shows only your pinned clusters.
+Unpin by clicking the pin icon again.
+
+### Personal Named Views
+
+Click **+ View** in the filter bar to create a personal named cluster filter. Three match
+types are available:
+
+| Match type | Example | Behaviour |
+|---|---|---|
+| **Explicit** | *(checkbox list)* | Hand-pick clusters by name — exact match only |
+| **Wildcard** | `PROD-*` | Glob pattern — `*` matches any sequence, `?` matches one character |
+| **Regex** | `^(PROD\|DR)-` | .NET regular expression matched case-insensitively |
+
+A live **match count** preview is shown while typing a wildcard or regex pattern. Once saved,
+the view appears as a labelled pill. Click to filter; click again (or click All Clusters) to
+clear. Delete a personal view by clicking `x` on its pill.
+
+Personal views are private — only the creating user can see them.
+
+### Admin — Shared Views (`/admin/views`)
+
+HciAdmin users (and operators with `SharedViews / Configure` RBAC permission) can create
+**shared views** that appear as view pills for other users:
+
+| Scope | Who sees the pill |
+|---|---|
+| **Global** | All signed-in users |
+| **Group** | Only members of a specific Entra security group (matched by Object ID) |
+
+Shared views support the same three pattern types as personal views. They are managed via
+**Admin → Shared Views** and take effect immediately — no app restart or cache flush required.
+
+**Typical use cases:**
+
+- Create a `Production` global view with `PROD-*` so every operator sees a pre-filtered
+  production-only fleet from the moment they sign in.
+- Create per-team group views (`Sydney DC`, `DR Sites`) mapped to each team's Entra group OID
+  so each team sees only their clusters by default.
+- Admins can layer personal views on top of shared ones — the filter bar shows shared views,
+  Favourites, and personal views all in one row.
+
+**RBAC for Shared Views:**
+
+| Permission | Required for |
+|---|---|
+| `SharedViews → View` | Seeing the `/admin/views` page |
+| `SharedViews → Configure` | Creating, editing, and deleting shared views |
+
+HciAdmin users always have both. Grant `SharedViews / Configure` to HciOperate users who
+should manage views without needing full admin access.
+
+---
+
 ## Building and Testing
 
 ```powershell
@@ -175,7 +236,7 @@ dotnet build AzureLocal.ClusterTool.Web.csproj --configuration Release
 dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
 ```
 
-294 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
+318 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
 
 ---
 
