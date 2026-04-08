@@ -1,14 +1,12 @@
 # Azure Local Cluster Tool — Web
 
-> **Beta v0.9.12** — This release is available for wider testing. Please report bugs and
+> **Pre-release candidate v0.9.13-rc2** — Available for wider testing. Please report bugs and
 > feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues).
 
 A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)** clusters and
 Hyper-V hosts from any browser. Provides VM operations, node management, storage monitoring,
 network (ATC intents), solution updates, alerting, Azure Arc status, and more — without needing
 Remote Desktop or multiple PowerShell windows.
-
-> **Companion desktop app:** [AzureLocal_Cluster_ManagementTool](https://github.com/jasontayler/AzureLocal_Cluster_ManagementTool) — a standalone WPF version of the same tool.
 
 ---
 
@@ -21,7 +19,7 @@ Remote Desktop or multiple PowerShell windows.
 | **Cluster Nodes** | Live CPU, memory and uptime stats; OS build + display version; Pause/Drain, Resume, Failback |
 | **Cluster Roles** | List, Start, Stop, Move (failover to node) |
 | **Cluster Info** | Quorum mode and witness, S2D status, health faults, Cluster Shared Volumes |
-| **Storage** | Storage pools, virtual disks, physical disks; Storage QoS volumes with read/write IOPS and latency |
+| **Storage** | Storage pools, virtual disks, physical disks; Storage QoS volumes with read/write IOPS and latency; **Disk Replacement Wizard** — guided 3-step modal with pre-flight checks, retire command, and live repair job polling (feature-flag gated) |
 | **Network** | Physical adapters with driver info; ATC intents + live status; cluster networks; logical networks (ARM); SMB health |
 | **Events** | Cluster event log viewer with CSV export |
 | **Remote Log Viewer** | Browse and tail log files directly from cluster nodes; auto-refresh with line interval picker |
@@ -29,8 +27,11 @@ Remote Desktop or multiple PowerShell windows.
 | **Azure Arc** | Registration and portal properties; Arc Machines; Arc Extensions (with upgrade detection); Cluster Extensions; Arc Resource Bridge appliance and Azure Local Sites; Custom Locations |
 | **Agent Services** | View and control HCI agent services (wssdagent / mochostagent) |
 | **Alerting** | Rules engine with configurable thresholds and cooldown; Teams webhook and SMTP email delivery; maintenance windows to suppress alerts during planned work; alert history with acknowledgement; VM name glob pattern filtering for VM stop alerts |
-| **Fleet Status** | Multi-cluster dashboard — aggregate VM/node/health/update status with snapshot freshness grid; zero WinRM calls (DB reads only) |
+| **Fleet Status** | Default home page — multi-cluster dashboard with interactive filter pills (VMs Running, Nodes Up, Health Faults, Updates); user Favourites (pin clusters); personal named views (explicit / wildcard / regex); admin-created global and group-scoped shared views; zero WinRM calls (DB reads only) |
+| **Fleet VM Status** | Fleet-wide VM table across all clusters — state, memory, uptime, node; interactive state-filter pills and name search; snapshot data, no live WinRM |
+| **Snapshot Freshness** | Dedicated report page — per-data-type freshness grid with stale-cluster warning banner and exact timestamps on hover |
 | **Admin — Clusters** | Multi-cluster CRUD management with audit trail |
+| **Admin — Shared Views** | Create and manage global/group-scoped named cluster views for Fleet Status (explicit, wildcard, regex pattern types) |
 | **Admin — Alerts** | Alert rule management — create, edit, enable/disable rules; alert history viewer |
 | **Admin — Audit Log** | Full audit trail of all mutating operations, CSV export, configurable retention purge |
 | **Admin — Settings** | Encrypted app-level settings in DB (ARM auth mode, SPN credentials, SMTP, webhook) — grouped collapsible UI |
@@ -166,6 +167,69 @@ the app runs in pass-through mode and only the three group policies apply.
 
 ---
 
+## Fleet Status — Saved Views
+
+The Fleet Status Board (`/`) supports three layers of cluster filtering that persist across
+sessions and can be shared across teams.
+
+### User Favourites
+
+Any signed-in user can **pin clusters** by clicking the pin icon on a cluster row. Pinned
+clusters are saved to the database per user. When at least one cluster is pinned, a
+**Favourites** pill appears in the filter bar — clicking it shows only your pinned clusters.
+Unpin by clicking the pin icon again.
+
+### Personal Named Views
+
+Click **+ View** in the filter bar to create a personal named cluster filter. Three match
+types are available:
+
+| Match type | Example | Behaviour |
+|---|---|---|
+| **Explicit** | *(checkbox list)* | Hand-pick clusters by name — exact match only |
+| **Wildcard** | `PROD-*` | Glob pattern — `*` matches any sequence, `?` matches one character |
+| **Regex** | `^(PROD\|DR)-` | .NET regular expression matched case-insensitively |
+
+A live **match count** preview is shown while typing a wildcard or regex pattern. Once saved,
+the view appears as a labelled pill. Click to filter; click again (or click All Clusters) to
+clear. Delete a personal view by clicking `x` on its pill.
+
+Personal views are private — only the creating user can see them.
+
+### Admin — Shared Views (`/admin/views`)
+
+HciAdmin users (and operators with `SharedViews / Configure` RBAC permission) can create
+**shared views** that appear as view pills for other users:
+
+| Scope | Who sees the pill |
+|---|---|
+| **Global** | All signed-in users |
+| **Group** | Only members of a specific Entra security group (matched by Object ID) |
+
+Shared views support the same three pattern types as personal views. They are managed via
+**Admin → Shared Views** and take effect immediately — no app restart or cache flush required.
+
+**Typical use cases:**
+
+- Create a `Production` global view with `PROD-*` so every operator sees a pre-filtered
+  production-only fleet from the moment they sign in.
+- Create per-team group views (`Sydney DC`, `DR Sites`) mapped to each team's Entra group OID
+  so each team sees only their clusters by default.
+- Admins can layer personal views on top of shared ones — the filter bar shows shared views,
+  Favourites, and personal views all in one row.
+
+**RBAC for Shared Views:**
+
+| Permission | Required for |
+|---|---|
+| `SharedViews → View` | Seeing the `/admin/views` page |
+| `SharedViews → Configure` | Creating, editing, and deleting shared views |
+
+HciAdmin users always have both. Grant `SharedViews / Configure` to HciOperate users who
+should manage views without needing full admin access.
+
+---
+
 ## Building and Testing
 
 ```powershell
@@ -173,7 +237,7 @@ dotnet build AzureLocal.ClusterTool.Web.csproj --configuration Release
 dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
 ```
 
-294 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
+318 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
 
 ---
 
