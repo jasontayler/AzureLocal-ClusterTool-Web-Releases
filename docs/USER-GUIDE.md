@@ -19,6 +19,7 @@
 7. [Cluster Roles](#7-cluster-roles)
 8. [AKS on Azure Local](#8-aks-on-azure-local)
 9. [Cluster Info](#9-cluster-info)
+   - [9a. Cluster Health Settings](#9a-cluster-health-settings)
 10. [Storage](#10-storage)
 11. [Storage QoS](#11-storage-qos)
 12. [Network](#12-network)
@@ -90,6 +91,7 @@ The sidebar groups cluster links into labelled sections:
 | &nbsp;&nbsp;↳ 📊 Cluster Performance | Storage QoS and node performance metrics (sub-link) |
 | &nbsp;&nbsp;↳ 📡 Cluster Network | Cluster network health (sub-link) |
 | &nbsp;&nbsp;↳ 📋 Cluster Events | Windows cluster event log (sub-link) |
+| &nbsp;&nbsp;↳ ⚙️ Health Settings | Health Service threshold settings and active overrides (sub-link) |
 | ⚓️ AKS | AKS on Azure Local clusters — ARM-sourced overview |
 | **Storage** | |
 | 💾 Storage | Storage pools, virtual disks, physical disks — includes Storage QoS tab |
@@ -109,7 +111,7 @@ The sidebar groups cluster links into labelled sections:
 Several page groups share a tab strip directly below the page heading, so you can switch between related pages without going back to the sidebar:
 
 - **Virtual Machines group:** Virtual Machines · VM Performance · Virtual Switches
-- **Cluster group:** Cluster Info · Nodes · Roles · Storage · Performance · Events
+- **Cluster group:** Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings
 - **Storage group:** Storage · Storage QoS
 - **Network group:** Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks
 - **Azure Arc group:** Registration · Arc Machines · Arc Extensions · Cluster Extensions
@@ -274,7 +276,7 @@ Lists all Hyper-V virtual switches across every node in the cluster.
 **Route:** `/clusters/{name}/nodes`  
 **Access required:** HciRead (view) · HciOperate (Pause/Resume)
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > **Custom role filtering:** Name patterns apply to node names. If your role does not include View access to Nodes, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -302,7 +304,7 @@ The **Connect** column shows an **RDP** button for each node. Clicking it downlo
 **Route:** `/clusters/{name}/roles`  
 **Access required:** HciRead (view) · HciOperate (Start/Stop/Move)
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > **Custom role filtering:** Name patterns apply to role/group names. If your role does not include View access to Roles, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -383,7 +385,7 @@ The AKS page shows ARM-sourced data only: cluster state, node pools, network/sec
 **Route:** `/clusters/{name}/info`  
 **Access required:** HciRead
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > If your custom role does not include View access to this resource type, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -396,9 +398,63 @@ A summary page showing:
 
 ---
 
+## 9a. Cluster Health Settings
+
+**Route:** `/clusters/{name}/health-settings`  
+**Access required:** HciRead (view) · HciOperate (edit, requires `Configure` permission on Storage)
+
+> Part of the **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab group.
+
+> **Note:** The default values for all settings are appropriate for most environments. Only change these if you have a specific operational reason — incorrect values can affect fault detection, alerting thresholds, and how the cluster reports its health state.
+
+Viewable by any HciRead user. Editing controls are only shown to users who have the `Configure` operation on the Storage resource type (HciOperate or higher by default).
+
+### Editable Settings
+
+#### Volume Capacity Thresholds
+
+The percentage of a volume's capacity used before the Health Service raises a fault.
+
+| Setting | Default | Description |
+|---|---|---|
+| Warning at | 80% | A volume Warning fault is raised when usage reaches this percentage |
+| Critical at | 90% | A volume Critical fault is raised when usage reaches this percentage |
+
+Enter values and click **Save Thresholds.** You will be prompted to restart the SDDC Management role.
+
+#### Available Memory Threshold
+
+The minimum percentage of total memory that must remain free on each cluster node before the Health Service raises a fault.
+
+| Setting | Default | Description |
+|---|---|---|
+| Minimum free | 10% | Free-memory fault threshold. Increase on memory-constrained nodes to reduce false-positive faults. |
+
+The page computes and shows the raw fractional PS value as you type. Click **Save Memory Threshold.** You will be prompted to restart the SDDC Management role.
+
+#### Auto-pool New Disks
+
+Shows whether new physical disks are automatically added to the storage pool when detected. This setting is read-only — it shows whether an override is active and whether the system default or an explicit value is in effect.
+
+### Active Overrides Table
+
+Lists every setting that currently has an explicit value overriding its system default. Columns show the short setting name, category, raw value (truncated), human-readable display value, and the default for comparison. When no overrides are active, a green indicator confirms all settings are at their system defaults.
+
+### SDDC Management Restart Wizard
+
+After saving any setting, a modal guides you through restarting the **SDDC Management** cluster role so the change takes effect:
+
+1. The wizard stops the SDDC Management role.
+2. Waits 10 seconds.
+3. Starts the role again.
+
+You can click **Skip Restart** to apply the setting without restarting — the change will take effect on the next natural service restart.
+
+---
+
 ## 10. Storage
 
-**Route:** `/clusters/{name}/storage`  
+**Route:** `/clusters/{name}/storage`
 **Access required:** HciRead
 
 Three sections displayed on the page. Use the **Storage / Storage QoS** tab strip at the top to switch to the QoS volumes view.
@@ -517,7 +573,7 @@ If ARM is not configured, the tab shows a message indicating ARM credentials are
 **Route:** `/clusters/{name}/events`  
 **Access required:** HciRead
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Storage · Performance · Events · Health Settings** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 Shows the cluster event log — by default the 200 most recent entries. Each entry shows:
 
@@ -647,8 +703,9 @@ Shows extensions installed on each Arc-enabled machine (e.g. AzureMonitorWindows
 
 1. Tick one or more rows (or use the header checkbox to select all).
 2. Click **⇡ Upgrade Selected (N)** in the toolbar.
-3. Extensions on the same machine are batched into a single ARM call. ARM responds with `202 Accepted` immediately — the actual rollout takes several minutes per machine.
-4. Refresh the page after a few minutes to see updated provisioning states.
+3. If any selected extension has **Upgrade Mode: Manual**, a warning modal will appear listing the affected extension names and asking for confirmation — manual-mode extensions are intentionally set to not auto-upgrade, so you must confirm you want to override that. Click **Upgrade Anyway** to proceed or **Cancel** to review your selection.
+4. Extensions on the same machine are batched into a single ARM call. ARM responds with `202 Accepted` immediately — the actual rollout takes several minutes per machine.
+5. Refresh the page after a few minutes to see updated provisioning states.
 
 > **Auto-upgrade extensions** are upgraded automatically by the platform whenever a new version is available. Manual-upgrade extensions stay at their installed version indefinitely unless you trigger an upgrade here.
 
@@ -681,8 +738,9 @@ Columns include name, publisher, extension type, version, aggregate state (rolle
 
 1. Tick one or more extension rows.
 2. Click **⇡ Upgrade Selected (N)**.
-3. Each selected extension triggers one ARM POST call. ARM responds with `202 Accepted` — rollout is asynchronous and may take several minutes per node in the cluster.
-4. Refresh after a few minutes to see updated aggregate state.
+3. If any selected extension has **Upgrade Mode: Manual**, a warning modal will appear listing the affected extension names — confirm to proceed or cancel to review your selection.
+4. Each selected extension triggers one ARM POST call. ARM responds with `202 Accepted` — rollout is asynchronous and may take several minutes per node in the cluster.
+5. Refresh after a few minutes to see updated aggregate state.
 
 #### Required ARM permissions (cluster extensions)
 
@@ -906,6 +964,22 @@ Controls how the Azure Arc pages authenticate to Azure Resource Manager.
 | Action SPN Tenant ID | Azure ARM Authentication (Action SPN) | Entra tenant ID for the action SPN (usually the same as the read SPN tenant) |
 | Action SPN Client ID | Azure ARM Authentication (Action SPN) | Application (client) ID for the action SPN |
 | Action SPN Client Secret | Azure ARM Authentication (Action SPN) | Client secret for the action SPN (encrypted at rest) |
+
+### Email / SMTP settings
+
+| Setting | Group | Description |
+|---|---|---|
+| SMTP Host | Alerting | Hostname or IP of the outbound SMTP server |
+| SMTP Port | Alerting | Port number. TLS mode is selected automatically: **25** = no TLS (plain relay), **465** = SSL/TLS, **587 or other** = STARTTLS |
+| SMTP Use SSL | Alerting | Set `true` to force SSL/TLS regardless of port (equivalent to port 465 behaviour) |
+| SMTP Username | Alerting | Login username — leave blank for unauthenticated relay (port 25) |
+| SMTP Password | Alerting | Login password (encrypted at rest) — leave blank for unauthenticated relay |
+| SMTP From Address | Alerting | Sender address shown in alert emails |
+| SMTP From Name | Alerting | Sender display name |
+| SMTP To Address | Alerting | Default recipient address for alerts. Can be overridden per rule. |
+| SMTP Subject Prefix | Alerting | Optional prefix prepended to every alert email subject line |
+
+> **Port 25 internal relay:** Many on-premises environments have an internal SMTP relay on port 25 that does not require authentication and does not support TLS. Set `SMTP Port = 25` and leave Username/Password blank. The app will connect without TLS. For external SMTP providers (Microsoft 365, Google Workspace, etc.) use port 587 or 465 with credentials.
 
 ### Action SPN (optional dual-SPN mode)
 
