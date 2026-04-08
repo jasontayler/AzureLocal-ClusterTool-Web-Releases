@@ -21,7 +21,7 @@ Remote Desktop or multiple PowerShell windows.
 | **Cluster Nodes** | Live CPU, memory and uptime stats; OS build + display version; Pause/Drain, Resume, Failback |
 | **Cluster Roles** | List, Start, Stop, Move (failover to node) |
 | **Cluster Info** | Quorum mode and witness, S2D status, health faults, Cluster Shared Volumes |
-| **Storage** | Storage pools, virtual disks, physical disks; Storage QoS volumes with read/write IOPS and latency |
+| **Storage** | Storage pools, virtual disks, physical disks; Storage QoS volumes with read/write IOPS and latency; **Disk Replacement Wizard** — guided 3-step modal with pre-flight checks, retire command, and live repair job polling (feature-flag gated) |
 | **Network** | Physical adapters with driver info; ATC intents + live status; cluster networks; logical networks (ARM); SMB health |
 | **Events** | Cluster event log viewer with CSV export |
 | **Remote Log Viewer** | Browse and tail log files directly from cluster nodes; auto-refresh with line interval picker |
@@ -29,8 +29,11 @@ Remote Desktop or multiple PowerShell windows.
 | **Azure Arc** | Registration and portal properties; Arc Machines; Arc Extensions (with upgrade detection); Cluster Extensions; Arc Resource Bridge appliance and Azure Local Sites; Custom Locations |
 | **Agent Services** | View and control HCI agent services (wssdagent / mochostagent) |
 | **Alerting** | Rules engine with configurable thresholds and cooldown; Teams webhook and SMTP email delivery; maintenance windows to suppress alerts during planned work; alert history with acknowledgement; VM name glob pattern filtering for VM stop alerts |
-| **Fleet Status** | Multi-cluster dashboard — aggregate VM/node/health/update status with snapshot freshness grid; zero WinRM calls (DB reads only) |
+| **Fleet Status** | Default home page — multi-cluster dashboard with interactive filter pills (VMs Running, Nodes Up, Health Faults, Updates); user Favourites (pin clusters); personal named views (explicit / wildcard / regex); admin-created global and group-scoped shared views; zero WinRM calls (DB reads only) |
+| **Fleet VM Status** | Fleet-wide VM table across all clusters — state, memory, uptime, node; interactive state-filter pills and name search; snapshot data, no live WinRM |
+| **Snapshot Freshness** | Dedicated report page — per-data-type freshness grid with stale-cluster warning banner and exact timestamps on hover |
 | **Admin — Clusters** | Multi-cluster CRUD management with audit trail |
+| **Admin — Shared Views** | Create and manage global/group-scoped named cluster views for Fleet Status (explicit, wildcard, regex pattern types) |
 | **Admin — Alerts** | Alert rule management — create, edit, enable/disable rules; alert history viewer |
 | **Admin — Audit Log** | Full audit trail of all mutating operations, CSV export, configurable retention purge |
 | **Admin — Settings** | Encrypted app-level settings in DB (ARM auth mode, SPN credentials, SMTP, webhook) — grouped collapsible UI |
@@ -134,7 +137,6 @@ Additional settings (ARM integration, SMTP, Teams webhook, Key Vault) are manage
 | Provider | When to use | Notes |
 |---|---|---|
 | **PostgreSQL** (recommended) | Production; multi-server | No row-count limits; free and open source. Run `scripts\Setup-PostgreSQL.ps1` or configure manually. Set `DataProtection:KeyPath` to a persistent folder. |
-| **SQLite** | Single-server / low-traffic | Simple; single file. Connection string: `Data Source=C:\apps\hci-portal-data\app.db`. Key path is derived from the DB file location automatically. |
 | **SQL Server** | Enterprise / Azure SQL | Standard SQL Server connection string. Set `DataProtection:KeyPath` explicitly. |
 
 ---
@@ -181,6 +183,7 @@ dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
 
 - **VM creation** is not supported — the tool manages existing VMs only; use Windows Admin Center or PowerShell to provision new VMs
 - **Live Update Monitor** has not been fully validated against an active in-progress update run
+- **SQL Server** has not been fully tested
 
 ---
 

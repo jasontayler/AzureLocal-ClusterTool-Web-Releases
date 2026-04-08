@@ -7,6 +7,7 @@ This page lists confirmed bugs and known limitations in the current release. Che
 ---
 
 - Snapshot Freshness for Solution Updates shows Warning for stale date however data is not polled regualary as state changes do not occur frequently.
+- **SQL Server** has not been fully tested
 
 ---
 
