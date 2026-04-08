@@ -1,0 +1,40 @@
+name: Auto-close pull requests
+
+# This is a releases-only repository. Pull requests are not accepted.
+# Only the repository owner (jasontayler) publishes content here.
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  close-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close PR with explanation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "Thanks for your interest in Azure Local Cluster Tool!",
+                "",
+                "This is a **releases-only** repository — published binaries and documentation are distributed here, but the source code is maintained in a private repository.",
+                "",
+                "Pull requests are not accepted here. If you have found a bug or have a feature request, please [open an issue](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues/new/choose) instead.",
+                "",
+                "This pull request will now be closed automatically."
+              ].join("\n")
+            });
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              pull_number: context.issue.number,
+              state: "closed"
+            });
