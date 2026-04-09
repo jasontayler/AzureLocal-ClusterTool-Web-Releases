@@ -4,6 +4,81 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.9.13-rc3 — 2026-04-10
+
+### New Features
+
+- **Cluster Resources panel on Cluster Roles page** — clicking a role row in the Cluster
+  Roles table now expands an inline **Resources** sub-panel showing every cluster resource
+  owned by that role:
+
+  - Columns: State (colour dot), Name, Resource Type, Owner Node.
+  - **Start** action (Offline / Failed resources) and **Stop** action (Online resources,
+    with confirmation modal) per resource row.
+  - The sub-panel refreshes automatically after a Start or Stop action succeeds; it closes
+    when you click the same role row again or select a different role.
+  - The selected role row is highlighted while the panel is open.
+  - All Start / Stop actions are written to the Audit Log.
+
+- **Bulk Service Operations on the Services page** — the Agent Services page now supports
+  multi-select and bulk actions:
+
+  - A **checkbox column** with a Select All toggle in the header.
+  - A floating **Bulk actions bar** appears when one or more services are selected,
+    offering **Start Selected**, **Restart Selected**, and **Stop Selected** buttons.
+  - A **confirmation modal** lists all selected services grouped by node (with node counts)
+    before executing.
+  - Bulk actions run in parallel, with per-item entries
+    written to the Audit Log.
+  - Selection clears automatically on page refresh and after a bulk operation completes.
+
+- **Cluster filter on PS/WinRM/ARM Call Log** (Admin → Perf Debug) — the call log toolbar
+  now includes an **All clusters** dropdown that filters the table to a single cluster's
+  calls. Populates automatically from the distinct cluster names currently in the log
+  buffer; refreshes with the 5-second auto-refresh cycle.
+
+- **Cluster Resources inline expansion and resource loading** — several issues fixed after
+  the initial Cluster Resources panel was introduced:
+
+  - Inline row expansion failed to toggle correctly on second click; now fixed.
+  - `GetClusterResourcesAsync` was rewritten to use the C# CIM API against
+    `MSCluster_Resource` (root/MSCluster namespace) instead of chained PowerShell cmdlets.
+    This resolved intermittent empty-results issues caused by PS module availability,
+    pipeline ordering, and `Where-Object` filtering differences across cluster versions.
+  - The `OwnerGroup` filter now matches against the resource's `OwnerGroup` CIM property
+    rather than a PS-side pipeline, fixing the case where sub-resources of the wrong group
+    appeared in expanded panels.
+  - `MSCluster_Resource` state enum values are now mapped correctly:
+    `0=Unknown, 1=Online, 2=Offline, 3=PartialOnline, 4=Failed` — earlier code used
+    incorrect mappings that showed "Offline" for healthy Online resources.
+  - Health check ID stripping: action plan IDs embedded in resource health-check names
+    are stripped before display so names remain readable.
+  - Null-guard added for resources that return no `OwnerGroup` property.
+
+- **Start/Stop Cluster Resource reliability** — `StartClusterResourceAsync` and
+  `StopClusterResourceAsync` now execute on `_pool` (WinRM RunspacePool) with an explicit
+  `Import-Module FailoverClusters` at the start of the command. Previously they ran on
+  `_localPool` (local RSAT), which does not have the FailoverClusters module available in
+  all execution contexts, causing "command not recognized" failures.
+
+### Bug Fixes
+
+- **Cluster role state dot (Cluster Roles page) now reflects resource states** — the
+  coloured state indicator next to each cluster role is now derived from the states of its
+  member resources (worst-state wins: Failed → red, Offline → orange, all Online →
+  green) rather than relying solely on the `State` property of the cluster group itself,
+  which could remain "Partially Online" without changing colour.
+
+- **Snapshot freshness shows "N/A" for disabled feature types** — collector types that are
+  disabled in the cluster configuration (e.g. AKS when the cluster has no AKS deployment)
+  previously wrote a stale timestamp to the freshness grid immediately and kept the cell
+  orange. They now display "N/A" so operators can distinguish "not configured" from
+  "collection failed".
+
+- **Solution Update** Fixes in dispaly and execution of update runs.  
+
+---
+
 ## v0.9.13-rc2 — 2026-04-08
 
 ### New Features
@@ -116,6 +191,34 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
     Overrides table and info banner but no editing controls.
 
 ### Bug Fixes
+
+- **Diagnostics page returned HTTP 403 for users with View-only RBAC** — the page was
+  incorrectly decorated with `[Authorize(Policy = GroupPolicies.Operate)]` instead of
+  `GroupPolicies.Read`. Users in the HciRead group received a 403 when navigating to
+  Diagnostics even though the page is a read-only view. Fixed to `GroupPolicies.Read`.
+
+- **Solution Updates — health check panel improvements:**
+  - **Succeeded results now filtered out by default** — the Health Check results panel
+    previously showed all check results; passing checks cluttered the view when dozens of
+    components return Succeeded. A "Show passed" toggle now hides Succeeded entries by
+    default so only Warnings and Failures are shown.
+  - **PrepareOnly button** — a dedicated **PrepareOnly** action button has been added to
+    the Solution Updates page to run `Start-SolutionUpdate -PrepareOnly` separately from a
+    full update, giving operators a way to stage update packages without committing to the
+    full installation.
+  - **Run Invoke-Precheck button moved to health strip** — the button to trigger
+    `Invoke-SolutionUpdatePrecheck -SystemHealth` is now visible directly in the health
+    status bar at the top of the page rather than being buried inside the health check
+    panel. This makes it accessible whether the panel is expanded or collapsed.
+  - **Success count in health check panel** — the panel header now shows the count of
+    passed checks alongside the warning/failure counts.
+  - **Null-safe health check fetch** — `GetUpdateHealthCheckAsync` is now null-safe and
+    returns an empty list when the cluster response is missing a `properties` object,
+    preventing a null-reference exception on clusters that haven't run a health check yet.
+  - **`StartSolutionUpdateAsync` bails out cleanly on lookup failure** — if the service
+    cannot resolve the action plan instance ID for the target update, the method now returns
+    a clear error message and stops rather than throwing a null-reference exception that
+    surfaced as an unhandled error on the page.
 
 - **SMTP alerts failing with port 25 unauthenticated relay** — `SmtpEmailSender` previously
   used `StartTls` (mandatory STARTTLS) for all ports other than 465. Internal SMTP relays
