@@ -14,6 +14,14 @@
    - [1e. Resuming a Partially-Complete Replacement](#1e-resuming-a-partially-complete-replacement)
    - [1f. Audit Logging](#1f-audit-logging)
    - [1g. Known Limitations](#1g-known-limitations)
+2. [AKS Arc Support Tool](#2-aks-arc-support-tool)
+   - [2a. Enabling the Feature](#2a-enabling-the-feature)
+   - [2b. Required Permissions](#2b-required-permissions)
+   - [2c. Kerberos Delegation Prerequisite (RBCD)](#2c-kerberos-delegation-prerequisite-rbcd)
+   - [2d. Running Diagnostics](#2d-running-diagnostics)
+   - [2e. Running Remediation](#2e-running-remediation)
+   - [2f. Audit Logging](#2f-audit-logging)
+   - [2g. Known Limitations](#2g-known-limitations)
 
 ---
 
@@ -201,6 +209,150 @@ You can filter the Audit Log by action using the **Action** dropdown — `Retire
 | Repair job visibility | The job list shows all `MSFT_StorageJob` instances from the cluster — not just those created by retiring this specific disk. On busy clusters with concurrent rebuild activity, unrelated jobs may appear. |
 | No cancel after Step 1 | Once a disk is retired (Step 1), the **Cancel** / **×** button is no longer shown during the Remove step. This is intentional — a retired disk should proceed through to removal rather than being left in an indeterminate state. You can still close the wizard during Step 2 (Repair); the disk will remain in Retired state and the wizard will resume from Step 2 on next open. |
 | Requires WinRM | The `Set-PhysicalDisk` and `Remove-PhysicalDisk` commands run over WinRM to the cluster. Ensure WinRM connectivity is working correctly before using the wizard. |
+
+---
+
+## 2. AKS Arc Support Tool
+
+The AKS Arc Support Tool provides a guided interface for running Microsoft's `Support.AksArc` PowerShell module directly against an Azure Local cluster. It is intended for diagnosing and remediating known AKS Arc issues (Resource Bridge, MOC, network, certificate, and extension problems) without requiring direct node access or a separate PowerShell session.
+
+> **This feature requires Kerberos Resource-Based Constrained Delegation (RBCD) to be configured on each cluster node.** The `Support.AksArc` cmdlets internally WinRM from the cluster node to each other node. Without RBCD, these calls fail with "Access is denied". See [2c. Kerberos Delegation Prerequisite](#2c-kerberos-delegation-prerequisite-rbcd) before enabling the feature.
+
+---
+
+### 2a. Enabling the Feature
+
+The tool is disabled by default. An HciAdmin must enable it via **Admin > Settings**:
+
+1. Navigate to **Admin** > **Settings**.
+2. Locate the **Preview Features** section.
+3. Find **AKS Arc Support Tool (Preview)** and set it to **true**.
+4. Click **Save**.
+
+The **AKS Arc Support** nav link appears immediately in the **Tools** section for all users who have the required permission (see [2b. Required Permissions](#2b-required-permissions)).
+
+To disable the tool, set the value back to **false** and click **Save**.
+
+> The tool is independent of the AKS cluster-level feature flag (`AksOverview`). It can be used to diagnose and fix AKS Arc infrastructure problems even when the AKS overview page is not enabled for the cluster.
+
+---
+
+### 2b. Required Permissions
+
+| Requirement | Detail |
+|---|---|
+| Page access | **HciRead** group (or higher) — standard authenticated access |
+| Feature flag | `Features:AksArcSupportTool` must be set to **true** in Admin → Settings |
+| View diagnostics page | User must have **View** permission on the `Diagnostics` resource type in their custom RBAC role |
+| Run diagnostics or remediation | User must have **Operate** permission on the `Diagnostics` resource type |
+
+In pass-through mode (no custom RBAC roles assigned), all users in the **HciOperate** or **HciAdmin** group can run both diagnostics and remediation once the feature flag is enabled.
+
+---
+
+### 2c. Kerberos Delegation Prerequisite (RBCD)
+
+The `Test-SupportAksArcKnownIssues` and `Invoke-SupportAksArcRemediation` cmdlets internally WinRM from one cluster node to the other nodes. When the web app runs these cmdlets via WinRM, the connection uses a network logon token that cannot be re-delegated to a second hop. This is the classic Kerberos double-hop problem.
+
+**The only supported solution is Resource-Based Constrained Delegation (RBCD)** configured in Active Directory. This grants the cluster nodes permission to accept delegated Kerberos tickets from your service account.
+
+#### Setting up RBCD
+
+Run the following command **once per cluster** from a domain-joined machine with AD write access. Replace the service account identity as shown:
+
+**For a gMSA (e.g. `JASE\hci-web-svc$`):**
+```powershell
+$principal = Get-ADServiceAccount 'hci-web-svc$'
+Get-ClusterNode -Cluster 'AZ-NUC-CL01' | ForEach-Object {
+    Set-ADComputer $_.Name -PrincipalsAllowedToDelegateToAccount $principal
+}
+```
+
+**For a standard domain service account (e.g. `JASE\hci-svc-user`):**
+```powershell
+$principal = Get-ADUser 'hci-svc-user'
+Get-ClusterNode -Cluster 'AZ-NUC-CL01' | ForEach-Object {
+    Set-ADComputer $_.Name -PrincipalsAllowedToDelegateToAccount $principal
+}
+```
+
+Replace `hci-web-svc$` / `hci-svc-user` with the identity your IIS application pool runs as, and `AZ-NUC-CL01` with your cluster name or an individual node name.
+
+After running this command, wait up to 15 minutes for AD replication before testing. RBCD takes effect without a node restart.
+
+#### Why other approaches were rejected
+
+| Approach | Reason not used |
+|---|---|
+| CredSSP | gMSA accounts have no forwardable password — CredSSP cannot be used. Standard accounts could use CredSSP, but it requires app-server-side WinRM configuration and exposes credentials in a form that can be replayed. |
+| PSSessionConfiguration with -RunAs | Requires per-node setup on every cluster node; any new node must be manually configured before diagnostics will work. |
+| Saving elevated credentials in settings | Cluster admin credentials stored in the database represent unlimited blast radius if the database is compromised. |
+
+RBCD is a standard AD security feature with no special exposure. The delegated principal can obtain Kerberos service tickets for the cluster nodes but cannot access anything the service account itself is not authorised for.
+
+---
+
+### 2d. Running Diagnostics
+
+1. Navigate to the target cluster and open **Tools** > **AKS Arc Support** in the left navigation.
+2. Click **Run Diagnostic Check** to start Step 1.
+
+The tool installs the `Support.AksArc` module automatically on a cluster node if it is not already present (requires internet access from the cluster node to PSGallery). Installation typically takes 30–60 seconds on first run.
+
+`Test-SupportAksArcKnownIssues` then runs against the cluster. This may take several minutes. Progress is shown with a spinner.
+
+When complete, results are displayed in a colour-coded table:
+
+| Indicator | Meaning |
+|---|---|
+| Green (Passed) | Check passed — no action required |
+| Orange (Warning) | Check returned a warning — review the description |
+| Red (Failed) | Check failed — remediation may be needed |
+
+Review the **Description** column for details. If failures are present, proceed to Step 2 to run remediation.
+
+---
+
+### 2e. Running Remediation
+
+After diagnostics have run:
+
+1. Click **Run Remediation** in Step 2.
+2. A confirmation dialog appears listing the operation. Confirm to proceed.
+
+`Invoke-SupportAksArcRemediation` runs on the cluster. Output streams live to the page as the command executes. This command can take 5–15 minutes for a typical cluster.
+
+A **Cancel** button is available while remediation is running. Cancellation stops the web app from waiting for further output but does not interrupt the PowerShell command already executing on the cluster node.
+
+After remediation completes:
+
+- Re-run diagnostics (**Re-run Check** button) to confirm all failures are resolved.
+- If failures persist, check the output for specific error messages or contact Microsoft support.
+
+---
+
+### 2f. Audit Logging
+
+Both actions are written to the audit log (**Admin > Audit Log**):
+
+| Action | Triggered by | Resource type |
+|---|---|---|
+| `RunAksDiagnostics` | Clicking **Run Diagnostic Check** | `Diagnostics` |
+| `RunAksRemediation` | Confirming **Run Remediation** | `Diagnostics` |
+
+Each entry records the signed-in user (UPN, display name, object ID), the cluster name, the outcome (Success / Failure), the error detail on failure, and the duration in milliseconds.
+
+---
+
+### 2g. Known Limitations
+
+| Limitation | Detail |
+|---|---|
+| Requires RBCD | Without Kerberos RBCD delegation, the cmdlets fail with "Access is denied". The page shows inline RBCD instructions when this error is detected. See [2c. Kerberos Delegation Prerequisite](#2c-kerberos-delegation-prerequisite-rbcd). |
+| AKS must be deployed | `Test-SupportAksArcKnownIssues` and `Invoke-SupportAksArcRemediation` require AKS Arc to be deployed on the cluster. Running these tools on a cluster without AKS will produce cryptic errors. |
+| Module install requires internet | The `Support.AksArc` module is downloaded from PSGallery on first use. Cluster nodes must have outbound internet access (or a PSGallery proxy) for this to work. |
+| Single cluster at a time | The tool runs against the currently selected cluster. Navigate to a different cluster to run diagnostics against it. |
+| 5-minute timeout | The diagnostic check has a 5-minute execution timeout. Very large clusters or slow nodes may exceed this — the tool will show a timeout error but the command may still be running on the node. |
 
 ---
 
