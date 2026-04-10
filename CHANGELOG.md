@@ -6,6 +6,35 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ## v0.9.13-rc3 — 2026-04-10
 
+### Bug Fixes
+
+- **Solution update health check shows "No failures" despite real failures existing** —
+  `GetUpdateHealthCheckAsync` used `Get-SolutionUpdate -Id` to fetch the update, but the
+  `-Id` parameter does not accept ARM-sourced ID formats where the cluster stores the update
+  as `namespace/PackageName` (e.g. `redmond/Solution12.x`). The cmdlet silently returned
+  null, producing an empty result. Fixed to use `Where-Object` with a `-like '*/name'`
+  suffix pattern that matches both exact names and namespace-prefixed IDs. Same fix applied
+  to the ID lookup in `StartSolutionUpdateAsync` and `StartSolutionUpdatePrepareOnlyAsync`.
+
+- **NullReferenceException when clicking Prepare** — the `Start-SolutionUpdate -PrepareOnly`
+  call failed internally because the ID-resolution lookup (`Where-Object $_.ResourceId -eq`)
+  was an exact match and did not find the update when the cluster-native ResourceId has a
+  namespace prefix (e.g. `redmond/Solution12.x`). Added a `-like '*/name'` fallback to
+  all three update-action lookups so the native ID is resolved correctly before the cmdlet
+  is called.
+
+- **"Succeeded" health check items incorrectly shown in HealthCheck Errors panel** — the
+  status filter used `StartsWith("Success")` which does not catch `"Succeeded"` (they
+  diverge at position 5: `Succe**ss**` vs `Succe**ed**`). Updated all health check status
+  filters in `GetUpdateHealthCheckAsync`, `GetSolutionUpdatesAsync`, and
+  `GetSolutionUpdatesFromArmAsync` to use `StartsWith("SUCC")`, which correctly catches
+  SUCCESS, Succeeded, Successful and any other success-variant status strings.
+
+- **Prepare button description was incorrect** — the button tooltip and confirmation modal
+  stated "without running health checks or installing" but `Start-SolutionUpdate -PrepareOnly`
+  does run health checks. Corrected to "download, stage, and run health checks without
+  installing".
+
 ### New Features
 
 - **Cluster Resources panel on Cluster Roles page** — clicking a role row in the Cluster
