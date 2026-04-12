@@ -104,6 +104,11 @@ gMSA app pool process.
 winget install Microsoft.Azure.Kubelogin
 ```
 
+> **Minimum version: v0.2.0** — older versions contain a nil pointer bug in the PoP token cache
+> (Go runtime panic, exit code 2) that causes every `get-token` call to fail. Run
+> `kubelogin --version` after install; run `winget upgrade Microsoft.Azure.Kubelogin` if the
+> version shown is below v0.2.0.
+
 ### Make it available to the IIS gMSA process
 
 The IIS app pool identity uses the **machine-level PATH** only —
@@ -191,7 +196,8 @@ In the portal go to **Admin > Settings** and configure the SPN credentials:
 |---|---|---|
 | `Arc: SPN lacks listClusterUserCredential/action` | Missing "Azure Arc Enabled Kubernetes Cluster User Role" | Add Step 1 Role 1 |
 | `Arc: kubelogin not found` | kubelogin not in machine-level PATH | Copy binary to `C:\Windows\System32\` (Step 2) |
-| `Arc: kubelogin get-token failed (exit N): ...` | Bad SPN credentials or kubelogin version mismatch | Check client secret hasn't expired; verify kubelogin >= v0.2.x |
+| `Arc: kubelogin get-token failed (exit 2): panic: runtime error: invalid memory address or nil pointer dereference` | kubelogin version < v0.2.0 — PoP token cache nil pointer bug in MSAL Go v1.4.2 | Run `winget upgrade Microsoft.Azure.Kubelogin` then re-copy to `C:\Windows\System32\`; minimum supported version is v0.2.0 |
+| `Arc: kubelogin get-token failed (exit 1): ...` | Bad SPN credentials or expired client secret | Check client secret hasn't expired; verify tenant ID and client ID are correct |
 | `403 Forbidden: cannot list resource "namespaces"` | Missing "Azure Kubernetes Service Arc Cluster Admin Role" | Add Step 1 Role 3 — this is the most commonly missed role |
 | `Arc: AKS live data via Arc requires SPN auth mode` | Auth mode set to OBO | Set ARM Auth Mode = SPN in Admin > Settings |
 | Token acquired but k8s calls still fail | Role assignment propagation delay | Wait 2-5 minutes after adding the role assignment |

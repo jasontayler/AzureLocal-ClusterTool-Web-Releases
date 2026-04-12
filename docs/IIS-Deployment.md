@@ -289,7 +289,14 @@ The portal calls `kubelogin get-token` to acquire Proof-of-Possession tokens for
 ```powershell
 # Install via winget
 winget install Microsoft.Azure.Kubelogin
+```
 
+> **Minimum version: v0.2.0** — run `kubelogin --version` after install. Run
+> `winget upgrade Microsoft.Azure.Kubelogin` if the version shown is below v0.2.0.
+> Older versions contain a PoP token cache nil pointer bug that causes a Go runtime panic
+> (exit code 2) on every `get-token` call.
+
+```powershell
 # Copy to System32 so it is on the machine-level PATH
 Copy-Item (Get-Command kubelogin).Source "C:\Windows\System32\kubelogin.exe"
 

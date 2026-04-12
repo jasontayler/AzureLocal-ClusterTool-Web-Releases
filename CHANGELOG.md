@@ -22,6 +22,13 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ### Bug Fixes / Improvements
 
+- **kubelogin minimum version enforced** — `AzureArmService` now checks the installed kubelogin
+  version before calling `get-token`. Versions below v0.2.0 contain a nil pointer bug in the
+  PoP token cache (MSAL Go v1.4.2) that causes a Go runtime panic (exit code 2) on every call.
+  The app now surfaces a clear upgrade message instead of the raw panic stack trace.
+  `Setup-Prerequisites.ps1` also checks the version and auto-upgrades via winget if needed.
+  Minimum supported version is **v0.2.0**.
+
 - **Maintenance window accumulation** — when a cluster remained offline across multiple
   circuit-breaker cycles, a new maintenance window was created every 10 minutes. The poller
   now extends the existing poller-created window's end time rather than creating a new row.
