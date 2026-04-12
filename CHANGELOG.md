@@ -2,9 +2,8 @@
 
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
----
 
-## v0.10.1-rc1 — 2026-04-12
+## v0.10.1-rc1 — 2026-04-13
 
 ### New Features
 
@@ -42,6 +41,31 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
   calls (one for Jumbo frames, one for Flow Control) were merged into a single call, reducing
   the SMB health poll time by roughly half.
 
+- **Poller memory leak — unbounded cluster connections** — `ClusterPollerService` previously
+  held one `WebHyperVService` open indefinitely per registered cluster. Each instance owns
+  two RunspacePools, a CimSession, and a per-node runspace cache. With a large cluster estate
+  this exhausted virtual memory and caused the host OS and PostgreSQL to crash overnight.
+  After each poll, if the cluster's next scheduled visit is more than 2 minutes away the
+  connection is disposed immediately. `GetOrCreatePollerConnectionAsync` reconnects
+  transparently on the next cycle. At steady state only `MaxConcurrentPolls` (3) connections
+  are live regardless of total cluster count.
+
+- **Poller RunspacePool right-sized** — the poller-tier RunspacePool `maxRunspaces` was
+  reduced from 4 to 1. The poller executes collector types sequentially per cluster;
+  a single runspace is sufficient and removes 3 idle slots per pool per cluster.
+
+- **Module load race on concurrent connect** — `WebHyperVService._localPool.Open()` triggers
+  an `InitialSessionState` startup script that imports Hyper-V, FailoverClusters, and
+  NetworkATC. All three modules write to the process-wide PS module load table. When multiple
+  instances opened concurrently (poller + page request at startup) this produced:
+  `Collection was modified; enumeration operation may not execute`.
+  A static `SemaphoreSlim(1,1)` now serialises `_localPool.Open()` across all instances so
+  only one module import runs at a time.
+
+- **Admin Diagnostics — poller connection count** — the WinRM tile on Admin > Perf Debug now
+  shows two rows: page-tier connections (N / 50 LRU cap) and current poller-tier connections
+  (idle-evicted), making the effectiveness of the memory fix directly observable.
+  
 ---
 
 ## v0.10.0-rc1 — 2026-04-11
