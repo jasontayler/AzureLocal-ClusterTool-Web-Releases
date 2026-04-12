@@ -1164,7 +1164,7 @@ A: The **background collector** did not successfully sync data for this cluster 
 A: By default, VM state is refreshed approximately every 2 minutes, cluster nodes every 4 minutes, cluster info and roles every 10 minutes, storage pools/virtual disks every 20 minutes, and solution updates/physical disks every 40 minutes (all approximate; intervals are auto-scaled with cluster count). These intervals are configurable in **Admin → Settings** under *Background Collector*. In auto mode the interval scales up automatically when multiple clusters are registered so total WinRM load stays constant.
 
 **Q: The background collector shows a red "Circuit open" status in Admin → Diagnostics. What should I do?**  
-A: The circuit breaker trips after 5 consecutive poll failures to prevent the poller from hammering an unreachable cluster. Common causes: WinRM not reachable (firewall, cluster down), gMSA Kerberos ticket invalid, or credentials changed. Check network connectivity and WinRM access from the app server, then recycle `AZLManagementPool` in IIS Manager to reset the circuit immediately.
+A: The circuit breaker trips after 3 consecutive poll failures to prevent the poller from hammering an unreachable cluster. Common causes: WinRM not reachable (firewall, cluster down), gMSA Kerberos ticket invalid, or credentials changed. Check network connectivity and WinRM access from the app server, then click the **Reset** button that appears next to the circuit-open row in **Admin → Diagnostics** to reset the circuit immediately without an IIS recycle.
 
 ---
 
@@ -1287,7 +1287,7 @@ Shows the current state of the **background poller** — the in-process service 
 | 🔴 Circuit open until HH:mm:ss | Too many consecutive failures — poller is skipping this cluster until the retry time |
 | ⚫ Never polled | App just started; first poll hasn't run yet (~15 s after startup) |
 
-**Circuit breaker reset:** Recycle the `AZLManagementPool` app pool in IIS Manager. The circuit resets on startup and the poller retries immediately.
+**Circuit breaker reset:** Click the **Reset** button next to the circuit-open row in the health table. This resets the poller retry state immediately and allows it to reconnect without an IIS recycle. Recycling `AZLManagementPool` in IIS Manager also resets the circuit but causes all in-flight requests to restart.
 
 **Collector settings** are configurable in **Admin → Settings** under the *Background Collector* group:
 
@@ -1305,7 +1305,7 @@ Shows the current state of the **background poller** — the in-process service 
 | Physical Disk Multiplier | `20` | Physical disks polled every 20x min interval (~40 min; uses CIM) |
 | Arc Info Multiplier | `30` | Arc registration data polled every 30x min interval (~60 min) |
 | History Retention (days) | `3` | How long snapshot history rows are kept before pruning |
-| Circuit Breaker Threshold | `5` | Consecutive failures before the circuit opens |
+| Circuit Breaker Threshold | `3` | Consecutive failures before the circuit opens |
 | Circuit Breaker Timeout (s) | `300` | How long the circuit stays open before auto-retry |
 ---
 
@@ -1616,7 +1616,7 @@ By default, the `Cluster Admin` role includes `Op.Acknowledge` on `AlertRules`. 
 
 > **Note:** Maintenance windows suppress alert notifications without requiring individual alert rules to be disabled.
 
-Configured in Admin → Settings (under *Background Collector → Maintenance Windows*). During a maintenance window:
+Configured in **Admin → Maintenance** (accessible from the Admin menu). During a maintenance window:
 
 - The background poller continues collecting data normally.
 - `AlertEngine` evaluates rules normally.
@@ -1624,6 +1624,14 @@ Configured in Admin → Settings (under *Background Collector → Maintenance Wi
 - Alert history entries are still written with outcome `Suppressed (maintenance)`.
 
 This prevents alert floods during planned maintenance (node firmware updates, storage rebalancing, update runs) without needing to disable and re-enable rules.
+
+**Actions available on each row:**
+
+| Button | When shown | Effect |
+|---|---|---|
+| **Deactivate** | Active/running windows and scheduled-future windows only | Immediately marks the window inactive — no further notifications are suppressed |
+| **Edit** | All active windows (running or scheduled) | Opens a modal pre-populated with the current cluster, start/end times, and reason — save to apply changes |
+| **Delete** | Always | Permanently removes the row from the database |
 
 ---
 

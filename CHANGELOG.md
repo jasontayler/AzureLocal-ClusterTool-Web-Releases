@@ -4,6 +4,149 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ---
 
+## v0.10.1-rc1 — 2026-04-12
+
+### New Features
+
+- **Maintenance Windows — Edit and Delete** — maintenance windows can now be edited (change
+  cluster, times, or reason) or permanently deleted directly from the table. An Edit modal
+  pre-populates with the current values; Delete prompts for confirmation. Deactivate is now
+  only shown for currently active or scheduled windows — expired windows no longer show it.
+
+- **Maintenance Windows — local time display** — all times on the Maintenance Windows page
+  (table and Add / Edit forms) now show the app server's local time. Column headers say
+  "Local" rather than "UTC". The `datetime-local` input defaults to current server time.
+
+- **Background Collector Health — local time display** — circuit-breaker and last-success
+  times in the Admin Diagnostics panel now show server local time instead of UTC.
+
+### Bug Fixes / Improvements
+
+- **Maintenance window accumulation** — when a cluster remained offline across multiple
+  circuit-breaker cycles, a new maintenance window was created every 10 minutes. The poller
+  now extends the existing poller-created window's end time rather than creating a new row.
+  One window per cluster, rolling forward.
+
+- **Collector health circuit-open time was UTC** — `StatusLabel` and `LastSuccessDisplay`
+  computed properties on `CollectorHealth` now call `.ToLocalTime()` so times appear in
+  server local time everywhere they are displayed.
+
+- **`GetStorageNetworkHealthAsync` latency** — two sequential `Get-NetAdapterAdvancedProperty`
+  calls (one for Jumbo frames, one for Flow Control) were merged into a single call, reducing
+  the SMB health poll time by roughly half.
+
+---
+
+## v0.10.0-rc1 — 2026-04-11
+
+### Prerequisites
+
+- **NetworkATC management tools now required on the app server** — the app server must have
+  the NetworkATC RSAT tools installed so that `Get-NetIntent` and `Get-NetIntentStatus` can
+  be resolved via WinRM. Run once on the app server:
+  ```powershell
+  Install-WindowsFeature -Name NetworkATC -IncludeManagementTools
+  ```
+
+### New Features
+
+- **AKS on Azure Local** — full AKS management section added under each cluster:
+  - **Overview** — cluster list with Kubernetes version, upgrade availability, node pool
+    summary, OIDC issuer, Azure Monitor status, and an expandable all-pods list.
+  - **Workloads** — Deployments, StatefulSets, and DaemonSets with namespace filter, replica
+    counts, and container image details.
+  - **Resources** — Infrastructure (node pools, control plane), Storage (PVCs/PVs), and
+    Networking (services, ingresses) tabs in a single consolidated page.
+  - **Pod drilldown** — click any pod to view container details, resource requests/limits,
+    readiness/liveness probes, volumes, and environment variables.
+  - **Pod logs** — stream live container logs in a scrollable viewer directly in the browser.
+  - **Pod restart** — restart individual pods with a single click and audit log entry.
+  - **GitOps** — Flux kustomizations and config objects with compliance status, last-applied
+    timestamps, expandable detail panels, and a Force Resync action.
+  - All AKS live data is fetched via Arc cluster-connect using kubelogin; 5-minute
+    stale-while-revalidate cache for all AKS pages.
+
+- **Overview page — CSV and Network tiles** — the cluster Overview now shows:
+  - **Cluster Shared Volumes** tiles (short name, owner node, free space) with a Storage link.
+  - **Cluster Networks** tiles (role, subnet) with a Network link.
+  - **% free space** aggregate sub-line on the existing Cluster Shared Volumes health tile.
+
+- **Cluster Roles — Resource sub-panel** — clicking a role row expands an inline Resources
+  panel showing all cluster resources for that role, with per-resource Start / Stop actions
+  and audit logging.
+
+- **Agent Services — bulk operations** — multi-select with Select All, floating bulk action
+  bar (Start / Restart / Stop Selected), and a confirmation modal listing affected services
+  by node.
+
+- **Snapshot collection expanded** — background poller now collects Network Adapters,
+  Cluster Networks, and SMB Network Health in addition to existing types; data is available
+  immediately from the DB cache on page load.
+
+- **Navigation and workflow improvements** — the sidebar navigation has been significantly
+  reorganised to reduce clicks and improve day-to-day operational flow:
+  - Cluster navigation is now a flat list of direct links (Disks, Cluster Volumes,
+    Performance, Network, etc.) rather than collapsed trees — less clicking to get where
+    you need to go.
+  - Storage and Network sub-sections use in-page tab bars (SubNav) so you can switch
+    between Disks / Volumes / Performance or Adapters / Intents / Networks without leaving
+    the page.
+  - **Admin** section now groups Clusters, Settings, Audit Log, and Perf Debug together —
+    all admin tasks in one place.
+  - **Monitoring** section groups Alerts and Maintenance Windows separately from Admin,
+    making it clearer which menu items affect operational monitoring vs. configuration.
+  - The "All Clusters" link has been removed from the cluster-scoped nav to reduce clutter;
+    the cluster name at the top of the sidebar acts as the home/back navigation.
+  - The Reports section is hidden when a cluster is selected to keep the nav focused on the
+    cluster you are working with.
+
+### Bug Fixes
+
+- **Network ATC intents fail to load** — `Get-NetIntent` / `Get-NetIntentStatus` are now
+  executed via WinRM on the cluster node where the NetworkATC DLLs are installed, eliminating
+  the "module could not be loaded" error that occurred when running locally on the app server.
+
+- **Volume Performance empty on first load** — `Get-Volume` requires the `Storage` module
+  which was not auto-loading in the WinRM runspace. Added explicit
+  `Import-Module Storage` before the CSVFS pipeline, so volume performance data populates
+  on the first visit without needing a manual Refresh.
+
+- **Cluster Shared Volumes empty** — switched from `_localPool` + `-Cluster` (DCOM, 14-34s,
+  unreliable) to `_pool` WinRM for `Get-ClusterSharedVolume`; CSVs now load consistently.
+
+- **SMB Network health false-positive red status** — RDMA health was being evaluated against
+  all adapters; corrected to only check adapters that belong to a Storage ATC intent.
+
+- **SMB Network page HTML entity rendered as literal text** — diamond character was written
+  as a raw Unicode escape; replaced with the correct HTML entity.
+
+- **Security / Drift Detection** — fixed fault count (now failures-only), added collapsible
+  test rows, added BitLocker columns, and hardened the 24-hour minimum detection window.
+
+- **Overview — Arc and AKS cards** — both sections now render immediately from the DB
+  snapshot with a loading indicator while ARM data fetches in the background, eliminating
+  the blank-then-appear flash.
+
+- **Cluster Info — CSV tiles overlap** — tile names now show the short label extracted from
+  inside the parentheses (e.g. `Infrastructure_1`) instead of the full
+  `Cluster Virtual Disk (...)` string, fitting within the standard tile width.
+
+- **Cluster Storage — Free/Size column alignment** — the combined "X.X / Y.Y GB" cell has
+  been split into separate Free and Size columns aligned consistently with text columns.
+
+- **Nodes page** — VM count column alignment corrected.
+
+- **VirtualSwitches nav link missing** — nav link was omitted; restored.
+
+- **NetworkIntents scheduler** — intents were never polled by the background collector;
+  added to the scheduler correctly.
+
+- **Events page** — fixed loading/empty state display.
+
+- **Fault history panel** — was loading in a collapsed state by default; now expanded.
+
+---
+
 ## v0.9.13-rc3 — 2026-04-10
 
 ### Bug Fixes
@@ -466,8 +609,8 @@ Four new scripts in `scripts/perf/` for measuring and comparing transport approa
     `main` branches and on pull requests.
   - **Job 2 (self-hosted k6 + Playwright):** runs on `GITHUBRUN` (Windows Server
     self-hosted runner); executes k6 load test against the Entra ID site
-    (`https://azlocalmgmt.jase.org`), then Playwright E2E tests against the
-    WinAuth site (`https://azlocalmgmt-win.jase.org`). k6 uses
+    (`https://azlmgmt.yourdomain.com`), then Playwright E2E tests against the
+    WinAuth site (`https://azlmgmt-win.yourdomain.com`). k6 uses
     `insecureSkipTLSVerify: true` because the server uses a private CA certificate.
 
 - **Playwright E2E test suite** (`Tests/E2ETests/PageLoadTests.cs`) — 13 page-load
@@ -853,7 +996,7 @@ Four new scripts in `scripts/perf/` for measuring and comparing transport approa
   `appsettings.Production.json` when `ASPNETCORE_ENVIRONMENT=Production` is set on the IIS app
   pool. Without it, production settings (group IDs, DB connection string, ARM credentials) are
   silently ignored even when the file exists. A new idempotent step in `Deploy-ToIIS.ps1` (step 7a)
-  checks and sets this environment variable on `HCIPortalPool` via PS remoting on every deploy.
+  checks and sets this environment variable on `AZLManagementPool` via PS remoting on every deploy.
   Existing installs that ran Setup-IIS.ps1 after v0.9.1-beta already have this set; the step is a
   no-op for them.
 

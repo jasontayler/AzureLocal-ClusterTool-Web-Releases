@@ -25,7 +25,7 @@ Browser → HTTPS → IIS (w3wp.exe running as gMSA) → WinRM → Cluster nodes
 
 ## Required IIS Roles and Sub-Features
 
-These are installed automatically by `Setup-IIS.ps1`. Listed here for documentation and if installing manually via Server Manager.
+These are installed automatically by `Setup-Prerequisites.ps1`. Listed here for documentation and if installing manually via Server Manager.
 
 ### Web Server (IIS) — `Web-Server`
 
@@ -44,6 +44,8 @@ These are installed automatically by `Setup-IIS.ps1`. Listed here for documentat
 | Management Tools | `Web-Mgmt-Tools` | Group |
 | → IIS Management Console | `Web-Mgmt-Console` | IIS Manager snap-in (MMC) |
 | → IIS Management Scripts | `Web-Scripting-Tools` | Enables WebAdministration PowerShell module |
+| Application Development | | Group |
+| → WebSocket Protocol | `Web-WebSockets` | **Required for Blazor Server** — without this, SignalR falls back to Long Polling and the app degrades significantly |
 
 ### .NET Framework Features
 
@@ -51,6 +53,16 @@ These are installed automatically by `Setup-IIS.ps1`. Listed here for documentat
 |---|---|
 | `NET-Framework-45-ASPNET` | Required by some IIS modules even for .NET 10 apps |
 | `NET-WCF-HTTP-Activation45` | HTTP activation for .NET services |
+
+### RSAT Management Tools
+
+Required so the app can call Hyper-V and FailoverClusters cmdlets **locally on the app server** via CimSession/`-Cluster` parameters, avoiding the double-hop WinRM penalty.
+
+| Feature | Why needed |
+|---|---|
+| `RSAT-Hyper-V-Tools` | Enables `Get-VM`, `Start-VM`, `Get-VMSwitch`, `Get-VMNetworkAdapter`, snapshot cmdlets, CPU/memory config — used with `-CimSession` per node |
+| `RSAT-Clustering-PowerShell` | Enables `Get-ClusterNode`, `Get-ClusterGroup`, `Move-ClusterGroup`, `Suspend-ClusterNode`, `Resume-ClusterNode` etc — used with `-Cluster <address>` |
+| `RSAT-AD-PowerShell` | Enables `Get-ADServiceAccount` — required for gMSA SID resolution during NTFS permission setup |
 
 ### ASP.NET Core Hosting Bundle (separate installer)
 
@@ -124,7 +136,7 @@ The gMSA must be configured in Active Directory **before** running `Setup-IIS.ps
 # installs on the app server, and grants local admin on each cluster node.
 .\New-AppServiceAccount.ps1 `
     -AppServerName "azlmgmt" `
-    -ClusterNodes  @("AZ-NUC-N1", "AZ-NUC-N2", "AZ-NUC-N3")
+    -ClusterNodes  @("NODE1", "NODE2", "NODE3")
 ```
 
 See `New-AppServiceAccount.ps1 -?` for all parameters including retrieval-group mode and standard account mode.
@@ -164,7 +176,7 @@ From an elevated PS session on the app server, test connectivity using the same 
 ```powershell
 # This simulates what the app does — if this works, the app will work
 $ws = New-Object System.Management.Automation.Runspaces.WSManConnectionInfo `
-        ([Uri]"http://AZ-NUC-CL01.jase.org:5985/wsman")
+        ([Uri]"http://MY-CLUSTER-01.domain.local:5985/wsman")
 $ws.AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]::Default
 $rs = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($ws)
 $rs.Open()
@@ -186,7 +198,7 @@ If your environment does not support gMSA (non-domain, workgroup, or AD gMSA cap
 .\New-AppServiceAccount.ps1 `
     -AccountType "Standard" `
     -AccountName "svc-azlmgmt" `
-    -ClusterNodes @("AZ-NUC-N1", "AZ-NUC-N2", "AZ-NUC-N3")
+    -ClusterNodes @("NODE1", "NODE2", "NODE3")
 ```
 
 ### How it works
@@ -214,7 +226,7 @@ If your environment does not support gMSA (non-domain, workgroup, or AD gMSA cap
 .\New-AppServiceAccount.ps1 `
     -AccountType "Standard" `
     -AccountName "svc-azlmgmt" `
-    -ClusterNodes @("AZ-NUC-N1", "AZ-NUC-N2", "AZ-NUC-N3")
+    -ClusterNodes @("NODE1", "NODE2", "NODE3")
 ```
 
 The script creates the AD user, grants Administrators membership on each cluster node, then prints next-step instructions for `Setup-IIS.ps1`.
@@ -263,6 +275,42 @@ Invoke-Command -ComputerName azlmgmt.yourdomain.com {
     Restart-WebItem "IIS:\AppPools\AZLManagementPool"
 }
 ```
+
+---
+
+## AKS on Azure Local — Additional Prerequisites (optional)
+
+These steps are only required if you manage **Arc-connected AKS clusters** deployed on Azure Local. Skip this section if you do not use the AKS pages.
+
+### kubelogin
+
+The portal calls `kubelogin get-token` to acquire Proof-of-Possession tokens for Arc-connected Kubernetes clusters. The binary must be present on the app server in the **machine-level PATH** — user-specific directories (e.g. `%LOCALAPPDATA%\Microsoft\WinGet\...`) are not visible to the gMSA app pool process.
+
+```powershell
+# Install via winget
+winget install Microsoft.Azure.Kubelogin
+
+# Copy to System32 so it is on the machine-level PATH
+Copy-Item (Get-Command kubelogin).Source "C:\Windows\System32\kubelogin.exe"
+
+# Verify it is accessible to all processes
+$env:PATH -split ';' | ForEach-Object { Join-Path $_ "kubelogin.exe" } |
+    Where-Object { Test-Path $_ }
+# Should return: C:\Windows\System32\kubelogin.exe
+```
+
+### Azure role assignments and Admin > Settings configuration
+
+The ARM SPN configured in **Admin > Settings** requires four Azure role assignments on the connected cluster resource:
+
+| Role | Purpose |
+|---|---|
+| Azure Arc Enabled Kubernetes Cluster User Role | Call `listClusterUserCredential` to get the kubeconfig from ARM |
+| Azure Kubernetes Service Arc Cluster User Role | Get AKS credentials for Arc-hosted clusters specifically |
+| **Azure Kubernetes Service Arc Cluster Admin Role** | List/read k8s resources (namespaces, pods) — most commonly missed |
+| Flux Configurations Contributor | Read and write GitOps configurations (required for Force Resync) |
+
+For the full setup procedure including PowerShell commands, Admin > Settings values, token flow explanation, and troubleshooting table, see **[docs/AKS-Arc-SPN-Setup.md](AKS-Arc-SPN-Setup.md)**.
 
 ---
 
@@ -480,7 +528,7 @@ far more than enough — only clusters being actively viewed hold a connection.
 ```powershell
 .\Install.ps1 -Upgrade
 # If your pool has a non-default name:
-.\Install.ps1 -Upgrade -AppPoolName "HCIPortalPool" -WinAuthPoolName "HCIPortalWinPool"
+.\Install.ps1 -Upgrade -AppPoolName "AZLManagementPool" -WinAuthPoolName "AZLManagementWinPool"
 ```
 
 **Developer workflow** (from dev machine with .NET SDK, building from source):

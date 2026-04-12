@@ -9,7 +9,7 @@ This is useful when clusters are provisioned or deprovisioned by automation tool
 ## Base URL
 
 ```
-https://azlocalmgmt.jase.org/api
+https://azlmgmt.yourdomain.com/api
 ```
 
 ---
@@ -70,8 +70,8 @@ Returns all registered clusters.
 ```json
 [
   {
-    "name":                  "AZ-NUC-CL01",
-    "address":               "AZ-NUC-CL01.jase.org",
+    "name":                  "MY-CLUSTER-01",
+    "address":               "MY-CLUSTER-01.domain.local",
     "connectionType":        "HciCluster",
     "credentialSource":      "gMSA",
     "useHttps":              false,
@@ -106,8 +106,8 @@ Registers a new cluster.
 **Request body**
 ```json
 {
-  "name":                  "AZ-NUC-CL02",
-  "address":               "AZ-NUC-CL02.jase.org",
+  "name":                  "MY-CLUSTER-02",
+  "address":               "MY-CLUSTER-02.domain.local",
   "connectionType":        "HciCluster",
   "credentialSource":      "gMSA",
   "useHttps":              false,
@@ -142,7 +142,7 @@ Registers a new cluster.
 
 **Response** `201 Created`
 ```json
-{ "name": "AZ-NUC-CL02", "id": 6 }
+{ "name": "MY-CLUSTER-02", "id": 6 }
 ```
 **Response** `409 Conflict` — cluster with that name already exists
 
@@ -171,19 +171,19 @@ Removes a cluster registration. The cluster's cached connection is evicted immed
 ## PowerShell examples
 
 ```powershell
-$baseUrl = "https://azlocalmgmt.jase.org/api"
+$baseUrl = "https://azlmgmt.yourdomain.com/api"
 $headers = @{ Authorization = "ApiKey YOUR_TOKEN_HERE" }
 
 # List all clusters
 Invoke-RestMethod -Uri "$baseUrl/clusters" -Headers $headers
 
 # Get one cluster
-Invoke-RestMethod -Uri "$baseUrl/clusters/AZ-NUC-CL01" -Headers $headers
+Invoke-RestMethod -Uri "$baseUrl/clusters/MY-CLUSTER-01" -Headers $headers
 
 # Add a cluster
 $body = @{
-    name                  = "AZ-NUC-CL02"
-    address               = "AZ-NUC-CL02.jase.org"
+    name                  = "MY-CLUSTER-02"
+    address               = "MY-CLUSTER-02.domain.local"
     connectionType        = "HciCluster"
     credentialSource      = "gMSA"
     useHttps              = $false
@@ -195,8 +195,8 @@ Invoke-RestMethod -Uri "$baseUrl/clusters" -Method Post -Headers $headers `
 
 # Add a cluster in brownfield mode (Solution Updates and ATC not available on this cluster)
 $body = @{
-    name                  = "AZ-NUC-CL03"
-    address               = "AZ-NUC-CL03.jase.org"
+    name                  = "MY-CLUSTER-03"
+    address               = "MY-CLUSTER-03.domain.local"
     solutionUpdatesEnabled = $false
     atcIntentsEnabled     = $false
     aksEnabled            = $true
@@ -208,16 +208,16 @@ Invoke-RestMethod -Uri "$baseUrl/clusters" -Method Post -Headers $headers `
 
 # Update a cluster address
 $body = @{
-    name               = "AZ-NUC-CL02"
-    address            = "AZ-NUC-CL02-new.jase.org"
+    name               = "MY-CLUSTER-02"
+    address            = "MY-CLUSTER-02-new.domain.local"
     useHttps           = $false
     skipCertValidation = $true
 } | ConvertTo-Json
-Invoke-RestMethod -Uri "$baseUrl/clusters/AZ-NUC-CL02" -Method Put -Headers $headers `
+Invoke-RestMethod -Uri "$baseUrl/clusters/MY-CLUSTER-02" -Method Put -Headers $headers `
     -Body $body -ContentType "application/json"
 
 # Delete a cluster
-Invoke-RestMethod -Uri "$baseUrl/clusters/AZ-NUC-CL02" -Method Delete -Headers $headers
+Invoke-RestMethod -Uri "$baseUrl/clusters/MY-CLUSTER-02" -Method Delete -Headers $headers
 ```
 
 ## curl examples

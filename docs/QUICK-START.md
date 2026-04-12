@@ -14,6 +14,8 @@ For full details on every step, see the [IIS Deployment Guide](IIS-Deployment.md
 | gMSA service account | Must have WinRM access to cluster nodes. See [IIS Deployment Guide](IIS-Deployment.md) for setup. A standard Windows service account also works. |
 | WinRM open from the app server | Port 5985 (HTTP) or 5986 (HTTPS) to each cluster node |
 | Entra ID app registration | Free — used for browser SSO. Takes 5 minutes. See below. |
+| RSAT tools (Hyper-V + FailoverClusters + AD) | Installed automatically by `Setup-Prerequisites.ps1`. Required for VM, node, cluster role, and snapshot cmdlets. See [IIS Deployment Guide](IIS-Deployment.md) for the full feature list. |
+| kubelogin *(optional — AKS only)* | Required only if you manage Arc-connected AKS clusters deployed on Azure Local. See [AKS-Arc-SPN-Setup.md](AKS-Arc-SPN-Setup.md) for the full setup procedure. |
 
 ---
 
@@ -176,8 +178,8 @@ Download the latest release ZIP, extract it, and from the `scripts` folder run:
 # Default app pool name (AZLManagementPool)
 .\Install.ps1 -Upgrade
 
-# If your pool has a different name
-.\Install.ps1 -Upgrade -AppPoolName "HCIPortalPool" -WinAuthPoolName "HCIPortalWinPool"
+# If your pool has a non-default name (use the name you set during setup)
+.\Install.ps1 -Upgrade -AppPoolName "YourPoolName" -WinAuthPoolName "YourWinAuthPoolName"
 ```
 
 This stops the app pool(s), replaces the binaries, and restarts. `appsettings.Production.json`
@@ -198,6 +200,7 @@ For major upgrades, check the [Changelog](../CHANGELOG.md) for any required migr
 | No clusters listed | No clusters registered, or your RBAC role doesn't include `Clusters → View` |
 | WinRM errors on cluster pages | Verify port 5985 is open from the app server to cluster nodes; check the gMSA has WinRM access |
 | Blank VM / Node pages | gMSA may not be in the cluster's local Administrators group on the nodes |
+| AKS page shows no live data | kubelogin not installed or not in machine-level PATH; ARM SPN missing Azure role assignments — see [AKS-Arc-SPN-Setup.md](AKS-Arc-SPN-Setup.md) |
 
 For more detail, see the [IIS Deployment Guide](IIS-Deployment.md) troubleshooting section.
 
