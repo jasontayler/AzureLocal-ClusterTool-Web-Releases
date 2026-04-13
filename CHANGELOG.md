@@ -65,6 +65,23 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 - **Admin Diagnostics — poller connection count** — the WinRM tile on Admin > Perf Debug now
   shows two rows: page-tier connections (N / 50 LRU cap) and current poller-tier connections
   (idle-evicted), making the effectiveness of the memory fix directly observable.
+
+- **NetworkATC intents moved from local PS7 pool to WinRM pool** — `GetNetworkIntentsAsync`
+  now runs via the WinRM `_pool` instead of `_localPool`. The `Hyper-V` and `FailoverClusters`
+  modules use PS7's implicit Windows-PowerShell compatibility shim when their manifests do
+  not declare `CompatiblePSEditions = Core`. Every time `_localPool` was evicted and
+  recreated, the shim spawned a new `powershell.exe` process that was never cleaned up,
+  causing process accumulation proportional to evict+reconnect cycles.
+
+- **Local pool is now a static process-wide singleton** — `WebHyperVService._localPool` now
+  points to a single `RunspacePool` that is created once on first `ConnectAsync` and never
+  disposed. Previously, every evict+reconnect cycle disposed the old pool and opened a new
+  one, re-triggering Windows-PowerShell compatibility-shim initialisation (orphaned
+  `powershell.exe` processes) and accumulating unloadable PS type-system state in the
+  AppDomain (.NET cannot unload module assemblies at runtime). With the static singleton:
+  module imports and any shim processes happen once per app start; the pool is never closed
+  so "Closing" state races from `RecreateLocalPool` cannot occur; and all cluster connections
+  share up to 20 runspaces so per-connection pool overhead is eliminated entirely.
   
 ---
 
