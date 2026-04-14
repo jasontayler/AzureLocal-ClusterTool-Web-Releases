@@ -3,6 +3,69 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
+## v0.10.1 — 2026-04-14
+
+### Performance
+
+- **VM Detail load time reduced by ~70%** — `GetVMDetailAsync` previously opened 6 separate
+  PowerShell calls per VM expand (properties, VHDs, NICs, firmware, integration services,
+  snapshots). These are now consolidated into a single call with an internal discriminator
+  tag, reducing pool slot consumption from 6 to 1 and cutting VM detail expand time
+  significantly.
+
+- **VM Detail migrated to local RSAT + cached CimSession** — `GetVMDetailAsync` now uses the
+  local RSAT pool with per-node cached CimSession instead of per-call WinRM runspaces,
+  eliminating repeated WinRM handshakes on every VM expand.
+
+- **Collector performance — page-load refresh removed** — cluster data pages previously
+  triggered a live background collector refresh on every page load, adding latency and
+  competing with the scheduled poller for WinRM connections. Pages now read from the
+  snapshot store directly; the background collector runs on its own schedule without
+  interference from user navigation.
+
+### Bug Fixes
+
+- **IIS memory leak — PS7 module compatibility with FailoverClusters** — the FailoverClusters
+  and Hyper-V modules do not declare `CompatiblePSEditions = Core`. When loaded in PS 7,
+  they run via the Windows PowerShell compatibility shim which spawns a `powershell.exe`
+  host process. Each evict-and-reconnect cycle spawned a new shim process that was never
+  cleaned up. Over a long uptime this accumulated orphaned `powershell.exe` processes,
+  exhausted thread pool threads, and eventually caused IIS to stop serving requests.
+  The FailoverClusters and Hyper-V cluster mutations have been moved to the WinRM pool
+  (running PS 5.1 on the cluster directly) so the shim is never invoked from the
+  local PS7 pool.
+
+- **Remote Log Viewer — per-node browsing** — file browsing, reading, and live tail now
+  target the selected cluster node directly via `Invoke-Command -ComputerName` rather than
+  routing through the cluster VIP. Fixes missing log content when logs are node-local.
+
+- **Remote Log Viewer — node picker defaults to first node** — the node selector now always
+  defaults to the first node alphabetically and no longer offers a Cluster VIP option that
+  returned inconsistent results depending on which node the VIP resolved to.
+
+- **Virtual Switches — removed from main navigation** — Virtual Switches was incorrectly
+  appearing as a top-level nav item. It is a sub-tab within the Virtual Machines page.
+
+- **RBAC — Fleet Status cluster filtering** — the Fleet Status page now applies name-pattern
+  filtering so users with cluster-scoped role assignments only see their permitted clusters.
+
+- **RBAC — Fleet VM Status access denial** — denied users previously saw a silent empty VM
+  table with no explanation. The page now shows the standard access-denied message.
+
+- **RBAC — Fleet VM Status nav guard** — the Fleet VM Status nav link is now hidden for
+  users without VM View access, consistent with all other nav entries.
+
+- **RBAC — Home page policy** — the cluster picker now enforces the HciRead group policy
+  instead of bare authentication, consistent with all other pages in the app.
+
+- **Install.ps1 -Upgrade overwrites appsettings.json and appsettings.WinAuth.json** — the
+  upgrade robocopy excluded only `appsettings.Production.json` and `clusters.json`. Both
+  `appsettings.json` and `appsettings.WinAuth.json` are now also excluded from the upgrade
+  copy, preserving any server-side customisations (AllowedHosts, group SIDs, etc.) across
+  upgrades.
+
+---
+
 ## v0.10.1-rc1 — 2026-04-13
 
 ### New Features
