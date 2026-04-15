@@ -40,6 +40,7 @@ For detailed script parameters, reference material, and troubleshooting, see the
 Entra Application Proxy lets external users reach the portal over HTTPS without opening firewall ports or requiring a VPN. Skip this step if all users are on the same LAN as the app server.
 
 1. Follow the Microsoft guide: [Add an on-premises application — Entra Application Proxy](https://learn.microsoft.com/en-us/entra/identity/app-proxy/application-proxy-add-on-premises-application)
+   - For domain-joined environments using Entra Domain Services, see: [Deploy Azure AD Application Proxy](https://learn.microsoft.com/en-us/entra/identity/domain-services/deploy-azure-app-proxy)
 2. Install the **Entra Application Proxy connector** on the app server (or a connector server on the same network)
 3. Set the **internal URL** to your IIS site address (e.g. `https://azlmgmt.yourdomain.com`)
 4. Add the **external URL** provided by Entra as an additional redirect URI in your app registration
@@ -107,11 +108,35 @@ To use different paths, pass `-AppPath` and `-DataPath`:
     -DataPath "D:\apps\azlmgmt-data"
 ```
 
-At the end the script prints a `Database` and `DataProtection` JSON snippet — **copy this for Step 6**.
+At the end the script prints a `Database` and `DataProtection` JSON snippet — **copy this for Step 7**.
 
 ---
 
-## Step 6 — Create appsettings.Production.json
+## Step 6 — Install the app and create the IIS site
+
+```powershell
+# Copies app binaries to C:\apps\azlmgmt (or the AppPath you chose in Step 5)
+.\Install.ps1
+
+# Creates the IIS site and app pool
+.\Setup-IIS.ps1 `
+    -siteName       "AZLManagement" `
+    -appPoolName    "AZLManagementPool" `
+    -physicalPath   "C:\apps\azlmgmt" `
+    -hostHeader     "azlmgmt.yourdomain.com" `
+    -serviceAccount "DOMAIN\azlmgmt-svc$"
+
+# Add HTTPS binding with a self-signed certificate
+.\Add-HttpsBinding.ps1 -SiteName "AZLManagement" -HostHeader "azlmgmt.yourdomain.com"
+```
+
+`Setup-IIS.ps1` creates the site, configures the app pool identity, sets NTFS permissions, and applies idle timeout and periodic restart settings required for Blazor Server.
+
+For a standard service account (not gMSA), also pass `-serviceAccountType Standard -serviceAccountPassword "yourpassword"`.
+
+---
+
+## Step 7 — Create appsettings.Production.json
 
 Copy `appsettings.template.json` to `C:\apps\azlmgmt\appsettings.Production.json` and fill in:
 
@@ -133,7 +158,10 @@ Copy `appsettings.template.json` to `C:\apps\azlmgmt\appsettings.Production.json
   },
   "DataProtection": {
     "KeyPath": "<paste from Setup-Prerequisites.ps1 output>"
-  }
+  },
+  // Replace with the hostname(s) your IIS site will respond to.
+  // Separate multiple with semicolons.  localhost is safe to keep for dev.
+  "AllowedHosts": "server.domain.name;localhost"
 }
 ```
 
@@ -152,29 +180,12 @@ Then open `clusters.json` and add your cluster(s):
 
 `credentialSource` options: `"gMSA"` (use app pool identity — recommended) or `"KeyVault"` (see [Deployment Guide](IIS-Deployment.md)).
 
----
-
-## Step 7 — Install the app and create the IIS site
+Once the JSON files are updated, stop and restart the app pool to apply the new configuration:
 
 ```powershell
-# Copies app binaries to C:\apps\azlmgmt (or the AppPath you chose in Step 5)
-.\Install.ps1
-
-# Creates the IIS site and app pool
-.\Setup-IIS.ps1 `
-    -siteName       "AZLManagement" `
-    -appPoolName    "AZLManagementPool" `
-    -physicalPath   "C:\apps\azlmgmt" `
-    -hostHeader     "azlmgmt.yourdomain.com" `
-    -serviceAccount "DOMAIN\azlmgmt-svc$"
-
-# Add HTTPS binding with a self-signed certificate
-.\Add-HttpsBinding.ps1 -SiteName "AZLManagement" -HostHeader "azlmgmt.yourdomain.com"
+Stop-WebAppPool  -Name "AZLManagementPool"
+Start-WebAppPool -Name "AZLManagementPool"
 ```
-
-`Setup-IIS.ps1` creates the site, configures the app pool identity, sets NTFS permissions, and applies idle timeout and periodic restart settings required for Blazor Server.
-
-For a standard service account (not gMSA), also pass `-serviceAccountType Standard -serviceAccountPassword "yourpassword"`.
 
 ---
 

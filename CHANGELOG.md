@@ -3,6 +3,42 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
+## v0.10.2 — 2026-04-15
+
+### Setup & Deployment
+
+**Setup-Prerequisites.ps1 — Server 2025 compatibility**
+- IIS features now installed via DISM — faster and more reliable on Server 2025 than `Install-WindowsFeature`
+- Already-installed IIS features are skipped on re-run (idempotent)
+- PowerShell 7 now downloaded as a direct MSI instead of via winget — `--scope machine` is unsupported on Windows Server
+- ASP.NET Core Hosting Bundle now downloaded directly instead of via winget for the same reason
+- Clarified offline install path when Hosting Bundle download fails
+- Fixed kubelogin version check — `$Matches` was undefined when `--version` writes to stderr
+- `--source winget` added to remaining winget calls to avoid source-selection prompts
+- Printed connection strings simplified — redundant Npgsql parameters removed from output
+- Now detects when running on the app server itself and skips the loopback `Invoke-Command` path that caused credential errors
+
+**Setup-IIS.ps1 / Setup-IIS-WinAuth.ps1 — ANCM detection fix**
+- ASP.NET Core Module V2 check now uses `Get-ItemProperty` on the correct registry key and checks the `Install` DWORD value — `Test-Path` returns `$false` on some Server 2025 builds even when the Hosting Bundle is installed, causing a false "not installed" error
+
+**Setup-IIS.ps1 — gMSA setup**
+- Added `Install-ADServiceAccount` + `Test-ADServiceAccount` before setting the app pool identity — without this step WAS cannot retrieve the managed password and disables the pool with HTTP 503
+- gMSA is now automatically added to the local Administrators group — required for WinRM connections to cluster nodes
+- `-serviceAccountType` parameter now defaults to empty and requires an explicit value of `gMSA` or `Standard` — previously defaulted to `"gMSA"`, silently accepting a garbage value if the account name was passed in the wrong parameter
+
+**Install-PostgreSQL.ps1**
+- SQL identifiers (database name, username) are now double-quoted in DDL/DCL statements — prevents parse errors when names contain hyphens or other special characters
+- Password prompts are now deferred until needed — re-runs where the DB/user already exist no longer prompt for a password unnecessarily
+
+**New-AppServiceAccount.ps1**
+- `DNSHostName` now passed to `New-ADServiceAccount` to avoid an interactive prompt on some DC configurations
+- Removed empty `PrincipalsAllowedToRetrieveManagedPassword` from the initial call that was causing errors when no nodes were specified
+
+### Documentation
+- `QUICK-START.md` restructured — IIS setup (Step 6) now comes before JSON configuration (Step 7); added app pool stop/restart at end of Step 7; `AllowedHosts` added to the `appsettings.Production.json` snippet; App Proxy domain services how-to link added
+- `appsettings.template.json` — fixed `DataProtection:KeyPath` to use the correct default data path
+
+
 ## v0.10.1 — 2026-04-14
 
 ### Performance
