@@ -10,7 +10,7 @@ For full details on every step, see the [IIS Deployment Guide](IIS-Deployment.md
 | Requirement | Notes |
 |---|---|
 | Windows Server 2022+ with IIS | IIS role must be installed (`Install-WindowsFeature Web-Server -IncludeManagementTools`) |
-| No .NET runtime required | The build is self-contained |
+| [.NET 10 ASP.NET Core Hosting Bundle](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-aspnetcore-10.0.6-windows-hosting-bundle-installer) | Required on the IIS server. Download and run the installer, then run `iisreset`. |
 | gMSA service account | Must have WinRM access to cluster nodes. See [IIS Deployment Guide](IIS-Deployment.md) for setup. A standard Windows service account also works. |
 | WinRM open from the app server | Port 5985 (HTTP) or 5986 (HTTPS) to each cluster node |
 | Entra ID app registration | Free — used for browser SSO. Takes 5 minutes. See below. |
@@ -182,8 +182,7 @@ Download the latest release ZIP, extract it, and from the `scripts` folder run:
 .\Install.ps1 -Upgrade -AppPoolName "YourPoolName" -WinAuthPoolName "YourWinAuthPoolName"
 ```
 
-This stops the app pool(s), replaces the binaries, and restarts. `appsettings.Production.json`
-and `clusters.json` are preserved. No database changes are needed for minor/patch upgrades.
+This stops the app pool(s), replaces the binaries, and restarts. `appsettings.Production.json`, `appsettings.json`, `appsettings.WinAuth.json`, and `clusters.json` are preserved. No database changes are needed for minor/patch upgrades.
 For major upgrades, check the [Changelog](../CHANGELOG.md) for any required migration steps.
 
 > **Developer workflow:** If you are building from source, use `Deploy-ToIIS.ps1` instead —

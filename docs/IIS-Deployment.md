@@ -545,7 +545,7 @@ cd F:\github\AzureLocal-ClusterTool-Web
 ```
 
 Both approaches stop the app pool, replace the files, and restart the pool. `Install.ps1 -Upgrade`
-preserves `appsettings.Production.json` and `clusters.json` automatically. Takes ~30-60 seconds.
+preserves `appsettings.Production.json`, `appsettings.json`, `appsettings.WinAuth.json` (relevant for Windows Authentication deployments), and `clusters.json` automatically. Takes ~30-60 seconds.
 
 ### Updating clusters.json on the server (add/remove clusters)
 
@@ -596,6 +596,7 @@ Invoke-Command -ComputerName azlmgmt.yourdomain.com {
 |---|---|
 | **HTTP 503 Service Unavailable** | App pool is stopped — see 503 diagnosis section below |
 | HTTP 500.19 on first browse | ASP.NET Core Hosting Bundle not installed — install it and run `iisreset` |
+| HTTP 500.19 (error code 0x80070021) | Authentication config sections locked — run `appcmd unlock config /section:system.webServer/security/authentication/anonymousAuthentication` and the same for `windowsAuthentication`, then `iisreset` |
 | HTTP 500.30 (app failed to start) | Check Windows Event Log → Application for `IIS AspNetCore Module` errors |
 | HTTP 403 Forbidden | Request Filtering or authentication misconfigured |
 | Cluster page loads but VM list is empty | gMSA not in Administrators on cluster node; WinRM not enabled on nodes |
