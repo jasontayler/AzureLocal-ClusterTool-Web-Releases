@@ -410,6 +410,65 @@ After starting the app pool, browse to the app and check:
 
 ---
 
+## Data Protection Key Backup
+
+The app encrypts sensitive settings (ARM SPN credentials, SMTP password, Teams webhook URL, etc.)
+using ASP.NET Core Data Protection, backed by DPAPI on Windows. The key ring is stored on disk at
+`DataProtection:KeyPath` (default: `C:\apps\azlmgmt-data\dp-keys`).
+
+**DPAPI keys are machine-bound.** They cannot be decrypted on a different machine. If the app
+server is rebuilt without restoring the key ring, all encrypted DB values (`AppSettings` rows with
+`IsSensitive = true`) become permanently unreadable. The operator must re-enter every secret after
+the rebuild.
+
+### What to back up
+
+Back up the entire `DataProtection:KeyPath` directory. Each `.xml` file in it is an individual key,
+plus the `key-{id}.xml` files contain the actual encryption material.
+
+```
+C:\apps\azlmgmt-data\dp-keys\
+    key-{guid}.xml
+    key-{guid}.xml
+    ...
+```
+
+### How to back up
+
+```powershell
+# Run from a machine with access to the app server
+# Back up to a network share (run as domain admin or gMSA identity):
+robocopy "C:\apps\azlmgmt-data\dp-keys" "\\backup-server\share\azlmgmt\dp-keys" /MIR /LOG:dp-keys-backup.log
+
+# Or copy locally and store offsite:
+Compress-Archive -Path "C:\apps\azlmgmt-data\dp-keys\*" `
+                 -DestinationPath "C:\backup\dp-keys-$(Get-Date -f yyyyMMdd).zip"
+```
+
+**When to back up:** after any secrets are added or changed via `/admin/settings`. A weekly
+scheduled robocopy is sufficient for most environments.
+
+### How to restore
+
+1. Stop the app pool before restoring: `Stop-WebAppPool -Name 'AZLManagementPool'`
+2. Copy the backed-up key files to `DataProtection:KeyPath` on the new server
+3. Ensure the gMSA identity (`DOMAIN\account$`) has **Read** and **List** access to the directory
+4. Start the app pool: `Start-WebAppPool -Name 'AZLManagementPool'`
+
+The app discovers keys automatically — no configuration change is needed.
+
+### gMSA identity permissions reminder
+
+The `Setup-Prerequisites.ps1` script grants the gMSA `Full Control` on the data directory. On a
+rebuilt server, re-run the script or grant permissions manually:
+
+```powershell
+$sid = (Get-ADServiceAccount -Identity 'hci-web-svc').SID.Value
+icacls "C:\apps\azlmgmt-data\dp-keys" /grant "*${sid}:(OI)(CI)F" /T
+```
+
+---
+
 ## Performance Tuning
 
 The application is designed to scale horizontally across many clusters with minimal resource
