@@ -2,6 +2,39 @@
 
 ---
 
+## v0.10.5
+
+### Fleet Schedules page
+
+A new **Fleet Schedules** page (`/schedules`, linked from the nav alongside Fleet Update
+Status) gives a single place to view and manage scheduled updates across every registered
+cluster. Pending schedules are grouped by batch with expand/collapse, and a Schedule
+History table shows the last 50 completed, cancelled, or failed rows.
+
+A **New Schedule** modal lets operators schedule the same update across multiple clusters
+in one step — cluster checkboxes show only those where the version is confirmed in the
+snapshot, with a date/time picker, optional notes, maintenance window toggle, prepare-only
+option, and a configurable stagger (minutes between each cluster's start time).
+
+Both tables include a **Live State** column that shows the current install state from
+each cluster's snapshot (Preparing, Downloading, Installing, Ready, Failed, etc.) so you
+can see at a glance whether a triggered schedule is actively running. Batch group headers
+aggregate live states across all member clusters. The whole page is a pure database read
+— no WinRM connection required.
+
+### Solution Updates — rendering fixes
+
+Three rendering bugs in the Solution Updates schedule UI were fixed:
+
+- The version number was missing from update entries in the schedule dropdown (`v` was
+  displayed with no number following it).
+- The multi-cluster schedule modal was showing clusters where the selected update version
+  is not available in the snapshot — those clusters are now hidden from the list.
+- The expand/collapse arrows on batch schedule rows were appearing as literal `&#x25BC;`
+  text instead of the actual ▼ / ▶ characters.
+
+---
+
 ## v0.10.4
 
 ### Platform Topology
