@@ -2,6 +2,25 @@
 
 ---
 
+## v0.10.6
+
+### Bug fix — wsmprovhost.exe accumulation on cluster nodes
+
+The Nodes page was leaving orphaned `wsmprovhost.exe` processes on cluster nodes. Each
+time the page loaded with a stale snapshot, a new WinRM CIM session was opened per node
+and not reliably closed — if the node was slow to respond, the server-side process
+lingered for up to 2 hours. Over time this accumulated hundreds of orphaned processes.
+
+The fix reuses the existing per-node CIM session cache (5-minute TTL) for these reads,
+so a single `wsmprovhost` stays warm across page visits rather than a new one being
+created on each load.
+
+After deploying, recycle the IIS app pool once to force-close any existing orphaned
+connections. Remaining orphans on the nodes will self-clean within 2 hours, or can be
+cleared immediately with `Get-Process wsmprovhost | Stop-Process -Force` on each node.
+
+---
+
 ## v0.10.5
 
 ### Fleet Schedules page
