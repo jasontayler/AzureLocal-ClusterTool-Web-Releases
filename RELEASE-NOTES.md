@@ -2,6 +2,27 @@
 
 ---
 
+## v0.10.7
+
+### Bug fix — continued wsmprovhost.exe accumulation (poller TTL race)
+
+v0.10.6 fixed the `FetchNodeStats` leak but wsmprovhost processes continued to accumulate.
+The root cause was a second related issue: the poller's per-node CimSession cache TTL was
+set to 300 seconds, matching the configured Fast-tier poll interval exactly. Because the
+cache check is `age < TTL`, the session is always stale at the moment of the next poll and
+a new `wsmprovhost.exe` is spawned on each node every 300 seconds. With 14 clusters and
+2 nodes each, that is 28 new processes every cycle. Slow-responding nodes cannot close
+them cleanly, so they accumulate over hours.
+
+The TTL is now 10 minutes, ensuring sessions are reused across multiple poll cycles
+regardless of the configured base interval.
+
+After deploying, kill any remaining orphans with
+`Get-Process wsmprovhost | Stop-Process -Force` on each node, or wait for the 2-hour
+WinRM idle timeout to clear them naturally.
+
+---
+
 ## v0.10.6
 
 ### Bug fix — wsmprovhost.exe accumulation on cluster nodes
