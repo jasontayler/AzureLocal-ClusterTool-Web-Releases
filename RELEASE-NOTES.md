@@ -2,6 +2,55 @@
 
 ---
 
+## v0.10.9
+
+### Bug fix — wsmprovhost.exe steady accumulation (per-node CimSession TTL)
+
+v0.10.8 fixed the duplicate-poll race but wsmprovhost counts continued to grow steadily.
+The remaining cause was the poller's per-node CimSession TTL of 10 minutes. A background
+eviction sweep runs every 30 seconds and calls `Dispose()` on sessions older than the TTL.
+When the remote node is slow or does not acknowledge the WSMan DELETE message, the
+server-side `wsmprovhost.exe` process is not terminated and lingers for the full 2-hour
+WinRM idle timeout. With a 10-minute evict cycle, approximately one new orphan is created
+per node every 10 minutes. In practice this produced counts of 8-9 processes on the busier
+nodes (SV8403, SV1418) after 100 minutes of uptime.
+
+The fix sets the poller TTL to 4 hours, which is longer than the WinRM server-side idle
+timeout. The eviction timer will never fire during normal operation. Each poller connection
+now maintains exactly 1 long-lived wsmprovhost per cluster node. Sessions are only
+closed when the cluster goes idle (poller idle-evict) or when an error forces a retry.
+
+After deploying, kill any remaining orphans with
+`Get-Process wsmprovhost | Stop-Process -Force` on each node, then observe counts
+stabilise at 1-2 per node and remain flat.
+
+---
+
+## v0.10.8
+
+### Bug fix — wsmprovhost.exe accumulation (poller duplicate-queue race)
+
+v0.10.7 reduced the process count but did not stop accumulation entirely. The root cause
+was a race condition in the polling engine: when a cluster was dequeued from the priority
+queue, it entered a brief window where it was neither in the queue nor marked in-flight.
+The background registry sync (`ResyncQueue`) runs every 30 seconds and treats any cluster
+not in the queue or in-flight as newly registered — re-adding it to the queue. At startup,
+when all clusters fire simultaneously and the concurrency semaphore is saturated, a cluster
+could sit in this unprotected window for many seconds, allowing `ResyncQueue` to insert
+2 or 3 duplicate entries. Each duplicate triggered an independent poll task which opened
+its own CimSession to the cluster, spawning an additional `wsmprovhost.exe` per node.
+This matched the observed pattern exactly: SV1405 (more activity) accumulated 23 processes;
+SV1407 (less activity) stayed at 7-13.
+
+The fix moves the in-flight registration to immediately after dequeue, before the semaphore
+wait, so the cluster is protected for the entire time it is being processed.
+
+After deploying, kill any remaining orphans with
+`Get-Process wsmprovhost | Stop-Process -Force` on each node, or wait for the 2-hour
+WinRM idle timeout.
+
+---
+
 ## v0.10.7
 
 ### Bug fix — continued wsmprovhost.exe accumulation (poller TTL race)
