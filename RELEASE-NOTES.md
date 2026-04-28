@@ -2,31 +2,6 @@
 
 ---
 
-## v0.10.8
-
-### Bug fix — wsmprovhost.exe accumulation (poller duplicate-queue race)
-
-v0.10.7 reduced the process count but did not stop accumulation entirely. The root cause
-was a race condition in the polling engine: when a cluster was dequeued from the priority
-queue, it entered a brief window where it was neither in the queue nor marked in-flight.
-The background registry sync (`ResyncQueue`) runs every 30 seconds and treats any cluster
-not in the queue or in-flight as newly registered — re-adding it to the queue. At startup,
-when all clusters fire simultaneously and the concurrency semaphore is saturated, a cluster
-could sit in this unprotected window for many seconds, allowing `ResyncQueue` to insert
-2 or 3 duplicate entries. Each duplicate triggered an independent poll task which opened
-its own CimSession to the cluster, spawning an additional `wsmprovhost.exe` per node.
-This matched the observed pattern exactly: SV1405 (more activity) accumulated 23 processes;
-SV1407 (less activity) stayed at 7-13.
-
-The fix moves the in-flight registration to immediately after dequeue, before the semaphore
-wait, so the cluster is protected for the entire time it is being processed.
-
-After deploying, kill any remaining orphans with
-`Get-Process wsmprovhost | Stop-Process -Force` on each node, or wait for the 2-hour
-WinRM idle timeout.
-
----
-
 ## v0.10.7
 
 ### Bug fix — continued wsmprovhost.exe accumulation (poller TTL race)
