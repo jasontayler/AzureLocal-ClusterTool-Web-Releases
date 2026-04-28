@@ -2,6 +2,46 @@
 
 ---
 
+## v0.10.10
+
+### Bug fix — wsmprovhost.exe accumulation (PriorityQueue thread-safety)
+
+This release fixes the root cause of all persistent `wsmprovhost.exe` accumulation.
+Previous fixes (v0.10.6 through v0.10.9) addressed symptoms; this addresses the
+underlying structural defect in the polling engine.
+
+**Root cause:** `PriorityQueue<T,P>` in .NET is not thread-safe. The poller's
+`Task.Run` poll tasks called `queue.Enqueue()` directly from thread pool threads
+while the main loop simultaneously called `queue.TryDequeue()`, `queue.TryPeek()`,
+and `ResyncQueue`'s full drain-and-rebuild on another thread. Concurrent heap
+modifications silently corrupted the internal array, producing duplicate entries for
+the same cluster. `ResyncQueue` (running every 30 s) faithfully re-enqueued all
+copies without deduplication, making duplicates permanent once created.
+
+Each duplicate entry produced an independent `PollClusterAsync` task per cycle, each
+creating its own `WebHyperVService` instance with a separate `_cimSession` connection
+to the cluster — one `wsmprovhost.exe` per task per cluster owner node. Clusters
+with more activity (SV1405) were hit more often and accumulated more duplicates,
+explaining why SV1405CH002 showed 12 processes while SV1407CH001 showed 1.
+
+**Fix:**
+- `_pendingRequeue` (`ConcurrentQueue`) added: Task.Run finallys post completed
+  clusters here instead of writing to the PriorityQueue directly.
+- The main loop drains `_pendingRequeue` at the top of every iteration, making it
+  the sole writer to the PriorityQueue. No more concurrent access.
+- `_inFlight.Remove` deferred to the drain so clusters stay protected until
+  safely back in the queue.
+- `ResyncQueue` now deduplicates by cluster name (earliest due time wins) on every
+  rebuild — any pre-existing duplicates are cleaned up within 30 s of deployment.
+- `lastRegistrySync` initialised to `UtcNow` to skip the redundant immediate
+  `ResyncQueue` call on the very first loop iteration.
+
+After deploying, kill any remaining orphans with
+`Get-Process wsmprovhost | Stop-Process -Force` on each node.
+Process counts should stabilise at 1-2 per node permanently.
+
+---
+
 ## v0.10.9
 
 ### Bug fix — wsmprovhost.exe steady accumulation (per-node CimSession TTL)
