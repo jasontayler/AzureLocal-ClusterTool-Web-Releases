@@ -3,6 +3,18 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
+## v0.10.13 — 2026-04-30
+
+### Bug Fixes
+
+- **Fleet VM Status — VM row click now navigates to the VM directly** — when searching for a
+  VM on the Fleet VM Status page (`/status/vms`) and clicking a result row, the app was
+  navigating to the full cluster VM list (`/clusters/{name}/vms`) instead of the individual
+  VM. The link on each VM row now targets `/clusters/{name}/vms/{vmName}` directly so the
+  correct VM detail page opens immediately.
+
+---
+
 ## v0.10.2 — 2026-04-15
 
 ### Setup & Deployment

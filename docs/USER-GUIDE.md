@@ -38,6 +38,7 @@
 26. [Windows Authentication Deployment](#26-windows-authentication-deployment)
 27. [Admin — Diagnostics & Background Collector](#27-admin--diagnostics--background-collector)
 28. [Fleet Status Board](#28-fleet-status-board)
+   - [28a. Fleet VM Status](#28a-fleet-vm-status)
 29. [Admin — Alerts](#29-admin--alerts)
 
 ---
@@ -78,6 +79,7 @@ The sidebar groups cluster links into labelled sections:
 |---|---|
 | 🏠 All Clusters | Return to the cluster picker home page |
 | 📋 Fleet Status | Fleet-wide VM/node/health/updates dashboard — all clusters, zero WinRM, DB-only |
+| &nbsp;&nbsp;↳ 🖥️ Fleet VM Status | Fleet-wide VM table across all clusters — search, filter by state, click row to open that VM directly |
 | 📊 Overview | Summary cards — VM, role health, and Azure Arc status at a glance |
 | **Compute** | |
 | 🖥️ Virtual Machines | Full VM list with actions |
@@ -1514,6 +1516,46 @@ Click **▼ Snapshot Freshness** / **▶ Snapshot Freshness** to expand or colla
 - **Alternative to individual cluster browsing:** For read-only stakeholders who need a high-level view, the Fleet Status Board may be sufficient without ever visiting a per-cluster page.
 
 > **Note:** The Fleet Status Board only reflects data already collected by the background collector. If a cluster was added recently and has not been polled yet, it will show no data in the table until the first successful poll completes.
+
+---
+
+## 28a. Fleet VM Status
+
+**Route:** `/status/vms`  
+**Access required:** HciRead (or higher)
+
+The Fleet VM Status page provides a **zero-WinRM, read-only table of every VM across all registered clusters** in a single view. All data comes from the background collector's database snapshots — no live WinRM connections are made when the page loads.
+
+---
+
+### Columns
+
+| Column | Description |
+|---|---|
+| Cluster | Cluster that owns the VM |
+| VM Name | Name of the virtual machine |
+| State | Running / Off / Paused / Saved (with status dot) |
+| Memory Assigned | Memory allocated to the VM at last snapshot |
+| Uptime | Time since last power-on |
+| Node | Cluster node the VM is currently running on |
+| OS | Guest operating system reported by integration services |
+
+---
+
+### Filtering and Search
+
+- **State filter pills** — click a pill (Running / Off / Paused) above the table to show only VMs in that state. Click the active pill again to clear the filter.
+- **Name search** — type in the search box to filter the table to VMs whose names contain the search string (case-insensitive).
+
+Both filters can be used simultaneously.
+
+---
+
+### Navigating to a VM
+
+Click any VM row to open that VM's detail page directly at `/clusters/{clusterName}/vms/{vmName}`. The page opens with the VM already in context — you do not need to first navigate to the cluster or search again within the cluster VM list.
+
+> **Note:** Fleet VM Status only reflects data already collected by the background collector. If a VM was recently created or the cluster has not been polled yet, it may not appear until the next successful collection cycle.
 
 ---
 
