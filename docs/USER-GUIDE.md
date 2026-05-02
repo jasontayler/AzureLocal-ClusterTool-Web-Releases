@@ -160,7 +160,7 @@ Hover over any dot to see the full status text as a tooltip.
 ## 5. Virtual Machines
 
 **Route:** `/clusters/{name}/vms`  
-**Access required:** HciRead (view) · HciOperate (Start/Stop/Migrate)
+**Access required:** HciAccess (view + Start/Stop/Migrate via custom Roles)
 
 > The **Virtual Machines · VM Performance · Virtual Switches** tab strip at the top lets you switch between all three pages without returning to the sidebar.
 
@@ -228,8 +228,7 @@ Click any VM row to expand it, then scroll to the **Connect** section at the bot
 ## 5a. VM Performance
 
 **Route:** `/clusters/{name}/vms/perf`  
-**Access required:** HciRead
-
+**Access required:** HciAccess
 > Part of the **Virtual Machines · VM Performance · Virtual Switches** tab group.
 
 Displays performance charts per virtual machine gathered directly from the Hyper-V host. Select a VM from the table on the left to view its charts on the right.
@@ -246,8 +245,7 @@ Displays performance charts per virtual machine gathered directly from the Hyper
 ## 5b. Virtual Switches
 
 **Route:** `/clusters/{name}/virtual-switches`  
-**Access required:** HciRead
-
+**Access required:** HciAccess
 > Part of the **Virtual Machines · VM Performance · Virtual Switches** tab group.
 
 Lists all Hyper-V virtual switches across every node in the cluster.
@@ -271,7 +269,7 @@ Lists all Hyper-V virtual switches across every node in the cluster.
 ## 6. Cluster Nodes
 
 **Route:** `/clusters/{name}/nodes`  
-**Access required:** HciRead (view) · HciOperate (Pause/Resume)
+**Access required:** HciAccess (view + Pause/Resume via custom Roles)
 
 > The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
@@ -299,7 +297,7 @@ The **Connect** column shows an **RDP** button for each node. Clicking it downlo
 ## 7. Cluster Roles
 
 **Route:** `/clusters/{name}/roles`  
-**Access required:** HciRead (view) · HciOperate (Start/Stop/Move)
+**Access required:** HciAccess (view + Start/Stop/Move via custom Roles)
 
 > The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
@@ -326,7 +324,7 @@ Click **Move** to relocate a running role to another node. A dropdown showing av
 ## 8. AKS on Azure Local
 
 **Route:** `/clusters/{name}/aks`  
-**Access required:** HciRead  
+**Access required:** HciAccess
 **ARM required:** Yes — data is sourced from Azure Resource Manager
 
 > **Custom role filtering:** If your role does not include View access to AKS, this page shows an access-denied message and the sidebar link is hidden.
@@ -380,8 +378,7 @@ The AKS page shows ARM-sourced data only: cluster state, node pools, network/sec
 ## 9. Cluster Info
 
 **Route:** `/clusters/{name}/info`  
-**Access required:** HciRead
-
+**Access required:** HciAccess
 > The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > If your custom role does not include View access to this resource type, this page shows an access-denied message and the sidebar link is hidden.
@@ -398,8 +395,7 @@ A summary page showing:
 ## 10. Storage
 
 **Route:** `/clusters/{name}/storage`  
-**Access required:** HciRead
-
+**Access required:** HciAccess
 Three sections displayed on the page. Use the **Storage / Storage QoS** tab strip at the top to switch to the QoS volumes view.
 
 ### Storage Pools
@@ -441,8 +437,7 @@ Three sections displayed on the page. Use the **Storage / Storage QoS** tab stri
 ## 11. Storage QoS
 
 **Route:** `/clusters/{name}/cluster-performance`  
-**Access required:** HciRead
-
+**Access required:** HciAccess
 Accessible via the **Performance** tab in the Cluster tab strip, or via the **Storage QoS** tab on any Storage page.
 
 Displays Storage QoS volumes with current performance metrics. Each row shows:
@@ -459,8 +454,7 @@ Use this page to identify volumes that are hitting their IOPS limit or experienc
 ## 12. Network
 
 **Route:** `/clusters/{name}/network`  
-**Access required:** HciRead
-
+**Access required:** HciAccess
 The Network section spans five pages, switchable via the **Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks** tab strip shown at the top of each page.
 
 ### Network Adapters (`/network`)
@@ -514,8 +508,7 @@ If ARM is not configured, the tab shows a message indicating ARM credentials are
 ## 13. Events
 
 **Route:** `/clusters/{name}/events`  
-**Access required:** HciRead
-
+**Access required:** HciAccess
 > The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 Shows the cluster event log — by default the 200 most recent entries. Each entry shows:
@@ -542,8 +535,7 @@ Click **Export CSV** to download the currently visible events as a CSV file for 
 ## 14. Remote Log Viewer
 
 **Route:** `/clusters/{name}/logs`  
-**Access required:** HciRead
-
+**Access required:** HciAccess
 Allows browsing and reading log files directly from cluster nodes without needing RDP or PowerShell access.
 
 ### How to use
@@ -561,7 +553,7 @@ The file list shows each file's size and last modified time to help identify the
 ## 15. Solution Updates
 
 **Route:** `/clusters/{name}/updates`  
-**Access required:** HciRead (view) · HciOperate (start update)
+**Access required:** HciAccess (view + start update via custom Roles)
 
 ### Available Updates
 
@@ -579,7 +571,7 @@ Click a row to expand the **detail panel** showing the full description, categor
 
 Click **▶ Start Update** to begin installation. You will be prompted to confirm before proceeding.
 
-> Starting an update is an HciOperate-level action and is recorded in the audit log.
+> Starting an update requires the `Op.Start` custom Role permission on the `Updates` resource type and is recorded in the audit log.
 
 ### Update Runs
 
@@ -603,7 +595,7 @@ The Azure Arc section spans four pages, switchable via the **Registration · Arc
 
 ### Arc Registration (`/arc`)
 
-**Access required:** HciRead + Azure sign-in for ARM data
+**Access required:** HciAccess + Azure sign-in for ARM data
 
 Shows the cluster's Azure Arc registration status:
 
@@ -630,7 +622,7 @@ Lists all machines registered as `Microsoft.HybridCompute/machines` in the Azure
 
 ### Arc Extensions (`/arc-extensions`)
 
-**Access required:** HciRead (view) · HciOperate (Upgrade Selected)
+**Access required:** HciAccess (view + Upgrade Selected via custom Roles)
 
 Shows extensions installed on each Arc-enabled machine (e.g. AzureMonitorWindowsAgent, MDE). Columns include:
 
@@ -670,7 +662,7 @@ If an upgrade fails with `AuthorizationFailed`, the error message shown in the r
 
 ### Cluster Extensions (`/cluster-extensions`)
 
-**Access required:** HciRead (view) · HciOperate (Upgrade Selected)
+**Access required:** HciAccess (view + Upgrade Selected via custom Roles)
 
 Shows extensions installed at the cluster level via `Microsoft.AzureStackHCI/clusters/arcSettings/extensions`. This covers cluster-wide Arc extensions like billing, monitoring, and diagnostics.
 
@@ -701,7 +693,7 @@ Reader alone is **not** sufficient.
 ## 17. Arc Resource Bridge
 
 **Route:** `/clusters/{name}/arc-bridge`  
-**Access required:** HciRead  
+**Access required:** HciAccess
 **ARM required:** Yes — data is sourced from Azure Resource Manager
 
 > **Custom role filtering:** If your role does not include View access to Arc Resource Bridge, this page shows an access-denied message and the sidebar link is hidden.
@@ -741,7 +733,7 @@ If Azure Local sites are configured, they appear below the appliance section. Ea
 ## 18. Custom Locations
 
 **Route:** `/clusters/{name}/custom-locations`  
-**Access required:** HciRead  
+**Access required:** HciAccess
 **ARM required:** Yes — data is sourced from Azure Resource Manager
 
 > **Custom role filtering:** If your role does not include View access to Custom Locations, this page shows an access-denied message and the sidebar link is hidden.
@@ -768,7 +760,7 @@ If no custom locations are found, the page notes that they are created when the 
 ## 19. Agent Services
 
 **Route:** `/clusters/{name}/services`  
-**Access required:** HciRead (view) · HciOperate (Start/Stop/Restart)
+**Access required:** HciAccess (view + Start/Stop/Restart via custom Roles)
 
 Shows the status of the HCI infrastructure agent services on each cluster node:
 
@@ -1069,19 +1061,25 @@ Team A members see only `PROD-*` clusters in the picker and nav; Team B sees onl
 
 ## 24. Access Levels
 
-The app enforces three base access tiers via Entra security group membership.
+The app enforces two base access tiers via Entra security group membership.
 
 | Level | Description | What you can do |
 |---|---|---|
-| **HciRead** | Read-only operations | View all pages. No actions. |
-| **HciOperate** | Operational access | All read access + VM Start/Stop/Restart/Suspend/Migrate, Node Pause/Resume, Role Start/Stop/Move, Start Solution Update, Service Start/Stop/Restart. |
-| **HciAdmin** | Full administrative access | All of the above + access to Admin pages (Clusters, Audit Log, Settings, Custom Roles). |
+| **HciAccess** | Portal access | Sign in and view all pages. Actions (Start VM, Drain Node, etc.) are controlled by custom Roles assigned in Admin. In pass-through mode (no Roles configured), all HciAccess members can perform all actions. |
+| **HciAdmin** | Full administrative access | Everything HciAccess can do, plus access to Admin pages (Clusters, Audit Log, Settings, Custom Roles). HciAdmin bypasses all custom RBAC restrictions. |
 
-These groups are configured in `appsettings.json` on the server. All three can point to the same Entra group if a single access tier is sufficient.
+These groups are configured in `appsettings.json` (or `appsettings.Production.json`) on the server.
 
 **Group membership takes effect at sign-in.** If you are added to a group mid-session, sign out and back in to receive the updated claims.
 
-**Custom Roles layer on top** of these tiers — they can restrict but not expand access beyond what your base tier permits. An HciRead member with a custom role granting `Op.Start` on VMs still cannot start VMs, because `Op.Start` is an HciOperate-level action.
+**Migrating from v0.10:** The old HciRead and HciOperate groups are replaced by HciAccess.
+Rename your `Groups:HciRead` config key to `Groups:HciAccess`. Remove `Groups:HciOperate`.
+Members of the old HciRead and HciOperate groups retain their access automatically once
+you consolidate them into HciAccess.
+
+**Custom Roles layer on top of HciAccess** — they define exactly which operations each
+user can perform on which resources. In pass-through mode (no Roles configured), all
+HciAccess members have full operational access.
 
 **What custom role View restrictions control:**
 
@@ -1100,10 +1098,10 @@ When a custom role limits which resource types you can see, the restriction is e
 ## 25. Frequently Asked Questions
 
 **Q: I signed in but see "Access Denied" on every page.**  
-A: Your account is not in any of the three configured Entra groups. Contact your administrator to be added to the HciRead group (or higher).
+A: Your account is not in the configured HciAccess (or HciAdmin) Entra group. Contact your administrator to be added to HciAccess.
 
-**Q: I can see VMs but the action buttons aren't visible.**  
-A: Your account is in HciRead but not HciOperate. You need to be added to the HciOperate group by your administrator. Alternatively, a custom role with the required Op flags may need to be assigned to your group.
+**Q: I can see data but action buttons are not visible.**  
+A: Action buttons are controlled by custom Roles in Admin. Ask your administrator to assign a custom role that grants the operations you need (e.g. `Op.Start` on `VMs`). In deployments with no Roles configured (pass-through mode), all HciAccess members see all action buttons.
 
 **Q: The VM list is empty but I know there are VMs on the cluster.**  
 A: A custom RBAC role with a name pattern may be filtering your view. Contact your administrator to check `/admin/roles` for any roles whose pattern doesn't match the VMs you expect to see.
@@ -1184,12 +1182,11 @@ When you browse to the Windows Auth URL from a **domain-joined machine**, your b
 
 ### Access control
 
-The Windows Auth site uses **AD Security Group SIDs** (not Entra Object IDs) to define the three access levels:
+The Windows Auth site uses **AD Security Group SIDs** (not Entra Object IDs) to define the two access levels:
 
 | Level | AD group SID set in `appsettings.WinAuth.json` | Access |
 |---|---|---|
-| HciRead | `Groups:HciRead` SID | Read-only cluster data |
-| HciOperate | `Groups:HciOperate` SID | Read + VM/node operations |
+| HciAccess | `Groups:HciAccess` SID | All portal access (view + actions governed by custom Roles) |
 | HciAdmin | `Groups:HciAdmin` SID | Full access including admin pages |
 
 To get an AD group's SID, run on any domain controller:
@@ -1437,7 +1434,7 @@ sqlite3.exe $db "SELECT ClusterName, ConsecutiveFails, IsCircuitOpen FROM Collec
 ## 28. Fleet Status Board
 
 **Route:** `/status`  
-**Access required:** HciRead (or higher)
+**Access required:** HciAccess (or HciAdmin)
 
 The Fleet Status Board provides a **zero-WinRM, read-only overview of all clusters visible to your account** in a single page. All data comes from the background collector's database snapshots — no live WinRM connections are made when the page loads.
 

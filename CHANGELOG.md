@@ -3,6 +3,71 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
+## v0.11.0 — 2026-05-02
+
+### BREAKING CHANGE — Simplified authentication model (two Entra groups)
+
+The three-group model (HciRead / HciOperate / HciAdmin) is replaced by two groups:
+**HciAccess** and **HciAdmin**. All operational permissions (Start VM, Drain Node, etc.)
+are now handled entirely by custom Roles in Admin, not by group tiers.
+
+**Migration steps:**
+
+1. In `appsettings.Production.json` on the server, rename `Groups:HciRead` to
+   `Groups:HciAccess` — use the same Object ID as before.
+2. Remove `Groups:HciOperate` (no longer used).
+3. In **Entra Portal > App registrations > Manifest**, change
+   `"groupMembershipClaims"` from `"SecurityGroup"` to `"ApplicationGroup"`.
+   Then ensure HciAccess and HciAdmin are assigned under **Enterprise Applications >
+   your app > Users and groups**.
+4. Recycle the IIS app pool.
+
+**No user access disruptions:** Former HciRead and HciOperate members retain the same
+access they had — consolidate both groups into HciAccess (or merge them if you had all
+users in both already).
+
+**Backward compatibility:** If `Groups:HciAccess` is not set, the app automatically reads
+`Groups:HciRead` as a fallback, so the app continues to work before the config is updated.
+
+**`ApplicationGroup` strongly recommended** — prevents the HTTP 400 "request headers too
+long" error that occurs when `SecurityGroup` includes every tenant group in the auth cookie.
+
+### Changes
+
+- **Admin > Shared Views** now requires HciAdmin (was previously HciOperate).
+- All cluster data pages continue to require HciAccess (no page changes needed).
+
+## v0.10.12 — 2026-04-29
+
+### Bug Fixes
+
+- **VM Checkpoints causing ObjectDisposedException errors** — the VM Checkpoints background
+  poller could corrupt the shared CimSession cache when running concurrently with a live
+  page load, producing `ObjectDisposedException: CimSession: hostname` errors visible in
+  the Perf Debug log and causing VM detail pages to show empty data. Fixed.
+
+## v0.10.11 — 2026-04-29
+
+### Features
+
+- **VM Checkpoints count pill on Overview** — the Virtual Machines workload card on the
+  cluster Overview page now displays an orange "Checkpoints" count pill when any checkpoints
+  are present on the cluster. The pill reads from the background snapshot and links
+  directly to the VM Checkpoints tab.
+
+- **VM Checkpoints moved to SubNav tab** — VM Checkpoints is now a tab within the Virtual
+  Machines SubNav (alongside VM Performance and Virtual Switches) rather than a separate
+  navigation sub-link.
+
+### Bug Fixes
+
+- **Network ATC alert false positives** — the Network ATC Degraded alert previously fired
+  on transient convergence states (`"Provisioning"`, `"Retrying"`, `"Pending"`) and on
+  alternate healthy spellings (e.g. `"Completed"`) used by some Azure Local builds. The
+  alert now only fires on explicit failure states (`"Failed"` or `"Error"`), eliminating
+  false positive emails during cluster reboots and ATC convergence.
+
+
 ## v0.10.1 — 2026-04-14
 
 ### Performance
