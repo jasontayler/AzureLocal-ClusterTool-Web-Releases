@@ -7,7 +7,7 @@ All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 ### Features
 
-- **Daily Health Digest (#8)** — a new built-in scheduled service sends a once-per-day
+- **Daily Health Digest (#22)** — a new built-in scheduled service sends a once-per-day
   management-tool health summary via email and/or Teams at a configurable UTC time.
 
   **Contents of each digest:**
