@@ -351,7 +351,7 @@ See [`docs/QUICK-START.md`](docs/QUICK-START.md) for a step-by-step guide or
 - Windows Server 2022+ with IIS
 - .NET runtime **not** required — self-contained build
 - gMSA (or service account) with WinRM access to cluster nodes (HTTP 5985 / HTTPS 5986)
-- Entra ID app registration with `groupMembershipClaims: ApplicationGroup` (recommended — prevents HTTP 400 cookie-overflow errors)
+- Entra ID app registration with `groupMembershipClaims: SecurityGroup`
 
 ## Reporting issues
 
