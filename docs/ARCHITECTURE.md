@@ -117,7 +117,7 @@ sequenceDiagram
     end
 
     Blazor->>Blazor: FallbackPolicy — RequireAuthenticatedUser ✓
-    Blazor->>Blazor: Named policy check\nHciRead / HciOperate / HciAdmin group OID or SID
+    Blazor->>Blazor: Named policy check\nHciAccess / HciAdmin group OID or SID
 
     Blazor->>RBAC: HasViewAccess(userGroupIds, ResourceType)
     Note over RBAC: 5-minute snapshot cache of\nCustomRoles + Claims + Assignments
@@ -135,11 +135,14 @@ sequenceDiagram
 
 | Policy | Satisfied by | Typical assignment |
 |---|---|---|
-| `HciRead` | HciRead, HciOperate, or HciAdmin group | All staff who need view access |
-| `HciOperate` | HciOperate or HciAdmin group | Operators who start/stop VMs, drain nodes |
+| `HciRead` | HciAccess or HciAdmin group | All staff who need portal access |
 | `HciAdmin` | HciAdmin group only | IT admins — cluster CRUD, audit log, RBAC roles |
 
 > **HciAdmin users bypass all custom RBAC** — they always have full access regardless of role definitions.
+>
+> **Fine-grained action control** (Start VM, Drain Node, etc.) is delegated to custom Roles in
+> Admin → Roles. In pass-through mode (no Roles configured), all HciAccess members can perform
+> all operations.
 
 ---
 

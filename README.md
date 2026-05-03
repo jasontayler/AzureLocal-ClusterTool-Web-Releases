@@ -3,7 +3,7 @@
 [![CI](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/integration-tests.yml)
 [![Release](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/release.yml/badge.svg)](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/release.yml)
 
-> **v0.11.0** — Latest stable release. Please report bugs and
+> **v0.10.1** — Latest stable release. Please report bugs and
 > feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues).
 
 A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)** clusters and
@@ -260,8 +260,6 @@ For detailed context, implementation notes, and next steps see [`.github/BACKLOG
 | **Scheduled reporting** | Weekly cluster health report emailed as CSV/PDF |
 | **ARM REST strategic review** | Evaluate replacing WinRM reads with ARM API calls for clusters on Azure Local 25H2+ |
 | **JEA endpoints** | Restrict WinRM to an approved cmdlet allowlist for least-privilege access from the app server |
-| **Standalone Hyper-V Host support** | First-class support for standalone and clustered Hyper-V hosts alongside Azure Local clusters. Fleet Status dashboard will group Hyper-V and Azure Local entries separately (collapsible group headers, distinct row accent/background tint), with sorting applied within each group. Only the views relevant to Hyper-V (VMs, nodes, virtual switches, events, remote logs) will be surfaced — Azure Local–specific pages (Arc, S2D, solution updates, ATC intents) will be hidden for Hyper-V hosts. A "group by type / flat list" toggle will allow operators who prefer an ungrouped view to opt out of grouping. |
-| **Azure Sites support** | Track and align with Microsoft Azure Sites — the emerging Azure-native grouping and unified management layer for Azure Local and edge infrastructure. Roadmap items that overlap with Azure Sites (inventory, grouping, unified Azure Local + Hyper-V management) will be evaluated for alignment or differentiation as the Azure Sites feature set matures. |
 
 ### Under Investigation / Blocked
 
