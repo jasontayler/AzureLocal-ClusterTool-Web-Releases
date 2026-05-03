@@ -3,39 +3,67 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
-## v0.11.0 — 2026-05-02
+## v0.11.0 — 2026-05-03
 
-### BREAKING CHANGE — Simplified authentication model (two Entra groups)
+### BREAKING CHANGE — Auth group configuration simplified (2-group model)
 
-The three-group model (HciRead / HciOperate / HciAdmin) is replaced by two groups:
-**HciAccess** and **HciAdmin**. All operational permissions (Start VM, Drain Node, etc.)
-are now handled entirely by custom Roles in Admin, not by group tiers.
+The `Groups:HciRead` and `Groups:HciOperate` configuration keys are replaced by a single
+`Groups:HciAccess` key. Fine-grained action permissions (Start VM, Drain Node, etc.) are
+now controlled entirely by custom Roles in Admin > Roles.
 
-**Migration steps:**
+**Migration steps for existing installations:**
 
-1. In `appsettings.Production.json` on the server, rename `Groups:HciRead` to
-   `Groups:HciAccess` — use the same Object ID as before.
-2. Remove `Groups:HciOperate` (no longer used).
-3. In **Entra Portal > App registrations > Manifest**, change
-   `"groupMembershipClaims"` from `"SecurityGroup"` to `"ApplicationGroup"`.
-   Then ensure HciAccess and HciAdmin are assigned under **Enterprise Applications >
-   your app > Users and groups**.
+1. In `appsettings.Production.json` (on the server), add:
+   ```json
+   "Groups": {
+     "HciAccess": "<same-OID-as-your-HciRead-group>",
+     "HciAdmin":  "<same-OID-as-before>"
+   }
+   ```
+2. `HciRead` and `HciOperate` entries can be removed (or left — they are ignored).
+3. In the **Entra Portal > App registrations > Manifest**, change:
+   `"groupMembershipClaims": "SecurityGroup"` to `"groupMembershipClaims": "ApplicationGroup"`
+   Then ensure HciAccess and HciAdmin are assigned under **Enterprise Applications > your app >
+   Users and groups**.
 4. Recycle the IIS app pool.
+5. All previously HciRead or HciOperate members retain access — no user changes required.
 
-**No user access disruptions:** Former HciRead and HciOperate members retain the same
-access they had — consolidate both groups into HciAccess (or merge them if you had all
-users in both already).
+**Migration compatibility:** If `Groups:HciAccess` is absent, the app automatically falls back
+to reading `Groups:HciRead`, so the app continues to work before the config is updated.
 
-**Backward compatibility:** If `Groups:HciAccess` is not set, the app automatically reads
-`Groups:HciRead` as a fallback, so the app continues to work before the config is updated.
-
-**`ApplicationGroup` strongly recommended** — prevents the HTTP 400 "request headers too
-long" error that occurs when `SecurityGroup` includes every tenant group in the auth cookie.
+**`groupMembershipClaims: ApplicationGroup` is strongly recommended** — it prevents the
+HTTP 400 "request headers too long" cookie-overflow error that occurs when `SecurityGroup`
+emits claims for every tenant group the user belongs to.
 
 ### Changes
 
 - **Admin > Shared Views** now requires HciAdmin (was previously HciOperate).
 - All cluster data pages continue to require HciAccess (no page changes needed).
+
+### Bug Fixes
+
+- **Fleet VM Status — clicking a VM loads unfiltered VM list (#16)** —
+  Links from the Fleet VM Status page now navigate to `/clusters/{name}/vms?filter=<vmName>`.
+  The VM list opens pre-filtered to the selected VM name instead of showing all VMs.
+
+- **VM Checkpoints tab disappears when navigating to VM Performance (#23)** —
+  The VM Checkpoints sub-nav tab now persists correctly across all four pages in the VM
+  sub-nav group (Virtual Machines, VM Performance, Virtual Switches, VM Checkpoints).
+
+- **VM Checkpoints and VM Performance slow on large clusters (#25)** —
+  Both pages now defer WinRM connections until the user explicitly requests data.
+  VM Checkpoints shows a description panel on load; VM Performance shows a VM selector
+  and only fetches counters for the VMs the user selects before clicking Load Performance.
+
+- **Missing confirmation dialogs on destructive actions (#19)** —
+  Modal confirmation dialogs added to: VM Stop, Restart, Start, Resume, Delete Checkpoint;
+  Stop Cluster Role; Delete Role, Remove Permission, Remove Group Assignment (Admin > Roles);
+  Clear Setting, Generate API Key (Admin > Settings); Enable/Disable Cluster (Admin > Clusters).
+  Existing Force Off and Live Migrate dialogs are unchanged.
+
+- **Fleet Status: non-sortable columns + Azure Local and Hyper-V mixed (#20)** —
+  Fleet Status column headers are now sortable (click to toggle ascending/descending).
+  Standalone Hyper-V hosts appear in a separate section below the Azure Local clusters table.
 
 ## v0.10.12 — 2026-04-29
 

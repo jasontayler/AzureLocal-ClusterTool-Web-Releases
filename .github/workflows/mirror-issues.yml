@@ -1,0 +1,68 @@
+name: Mirror issue to private repo
+
+# When a user opens an issue in this public releases repo, create a matching
+# issue in the private development repo so the team can track and action it.
+# The private issue body embeds a hidden marker so the close workflow can
+# find the corresponding public issue when the fix ships.
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write   # needed to comment on the public issue
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue in private repo and comment on public issue
+        uses: actions/github-script@v7
+        with:
+          # SYNC_PAT must have issues: write on the private repo
+          github-token: ${{ secrets.SYNC_PAT }}
+          script: |
+            const publicOwner  = context.repo.owner;
+            const publicRepo   = context.repo.repo;
+            const publicNumber = context.issue.number;
+            const privateOwner = 'jasontayler';
+            const privateRepo  = 'AzureLocal-ClusterTool-Web';
+
+            const { data: publicIssue } = await github.rest.issues.get({
+              owner:        publicOwner,
+              repo:         publicRepo,
+              issue_number: publicNumber,
+            });
+
+            // Embed the public issue number as a hidden HTML comment so the
+            // close workflow in the private repo can parse it back out.
+            const privateBody = [
+              publicIssue.body ?? '',
+              '',
+              '---',
+              `<!-- public-issue: ${publicNumber} -->`,
+              `*Mirrored from public issue [${publicOwner}/${publicRepo}#${publicNumber}](${publicIssue.html_url})*`,
+            ].join('\n');
+
+            const { data: privateIssue } = await github.rest.issues.create({
+              owner:  privateOwner,
+              repo:   privateRepo,
+              title:  publicIssue.title,
+              body:   privateBody,
+              labels: ['from-public'],
+            });
+
+            // Post a comment on the public issue so the reporter knows it was logged.
+            await github.rest.issues.createComment({
+              owner:        publicOwner,
+              repo:         publicRepo,
+              issue_number: publicNumber,
+              body: [
+                'Thank you for reporting this! :wave:',
+                '',
+                'This issue has been logged in our internal development tracker and will be reviewed by the team.',
+                'You will receive an update here when a fix is available or if we need more information.',
+              ].join('\n'),
+            });
+
+            core.info(`Created private issue #${privateIssue.number} for public issue #${publicNumber}`);
