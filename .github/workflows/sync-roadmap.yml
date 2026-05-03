@@ -1,0 +1,69 @@
+name: Sync ROADMAP.md to dev repo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ROADMAP.md
+
+jobs:
+  sync:
+    name: Push ROADMAP.md to AzureLocal-ClusterTool-Web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout releases repo
+        uses: actions/checkout@v4
+
+      - name: Push ROADMAP.md to dev repo
+        env:
+          SYNC_PAT: ${{ secrets.SYNC_PAT }}
+        run: |
+          set -euo pipefail
+
+          TARGET_REPO="jasontayler/AzureLocal-ClusterTool-Web"
+          FILE="ROADMAP.md"
+          BRANCH="main"
+          COMMIT_MSG="docs: sync ROADMAP.md from releases repo (automated)"
+
+          # Encode file content as base64
+          CONTENT=$(base64 -w 0 "$FILE")
+
+          # Get the current SHA of the file in the target repo (needed for updates)
+          RESPONSE=$(curl -sf \
+            -H "Authorization: Bearer $SYNC_PAT" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$TARGET_REPO/contents/$FILE?ref=$BRANCH" || true)
+
+          EXISTING_SHA=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('sha',''))" 2>/dev/null || true)
+
+          # Build the request body
+          if [ -n "$EXISTING_SHA" ]; then
+            BODY=$(python3 -c "
+          import json, sys
+          print(json.dumps({'message': sys.argv[1], 'content': sys.argv[2], 'sha': sys.argv[3], 'branch': sys.argv[4]}))
+          " "$COMMIT_MSG" "$CONTENT" "$EXISTING_SHA" "$BRANCH")
+          else
+            BODY=$(python3 -c "
+          import json, sys
+          print(json.dumps({'message': sys.argv[1], 'content': sys.argv[2], 'branch': sys.argv[3]}))
+          " "$COMMIT_MSG" "$CONTENT" "$BRANCH")
+          fi
+
+          # Create or update the file via the GitHub Contents API
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT \
+            -H "Authorization: Bearer $SYNC_PAT" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "https://api.github.com/repos/$TARGET_REPO/contents/$FILE")
+
+          if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then
+            echo "✅ ROADMAP.md synced to $TARGET_REPO (HTTP $HTTP_STATUS)"
+          else
+            echo "❌ Sync failed with HTTP $HTTP_STATUS"
+            exit 1
+          fi

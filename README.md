@@ -246,26 +246,12 @@ dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
 
 ## Roadmap
 
-No fixed timelines. Items move from *Planned* to *In Progress* to shipped in the [Changelog](CHANGELOG.md).  
-For detailed context, implementation notes, and next steps see [`.github/BACKLOG.md`](.github/BACKLOG.md).
+The full roadmap — including planned features, community-requested ideas, and items under investigation — lives in **[ROADMAP.md](ROADMAP.md)**.
 
-### Planned
+No fixed timelines. Items move from *Planned* → *In Progress* → shipped in the [Changelog](CHANGELOG.md).  
+For detailed implementation notes and investigation logs see [`.github/BACKLOG.md`](.github/BACKLOG.md).
 
-| Feature | Description |
-|---|---|
-| **RBAC group picker** | Search and select Entra groups by name in the Roles admin UI instead of pasting Object IDs manually |
-| **Alerting — Phase 2** | Additional rule types (storage threshold, update available, Arc connectivity); alert acknowledgement; per-alert escalation policy |
-| **Historical trending** | Background collection of CPU/memory/storage utilisation over time; capacity forecasting graphs |
-| **SIEM sink for audit logs** | Forward audit entries to Azure Monitor / Log Analytics, Splunk, or a generic HTTP webhook |
-| **Scheduled reporting** | Weekly cluster health report emailed as CSV/PDF |
-| **ARM REST strategic review** | Evaluate replacing WinRM reads with ARM API calls for clusters on Azure Local 25H2+ |
-| **JEA endpoints** | Restrict WinRM to an approved cmdlet allowlist for least-privilege access from the app server |
-
-### Under Investigation / Blocked
-
-| Feature | Blocker | Detail |
-|---|---|---|
-| **AKS Arc test & remediation** | `Support.AksArc` module does not support remote execution | `Test-SupportAksArcKnownIssues` and `Invoke-SupportAksArcRemediation` internally WinRM to each cluster node — unresolvable double-hop with current tooling. Revisit when module accepts `-Credential`/`-Session`, or a JEA endpoint is available. See [BACKLOG-4](.github/BACKLOG.md) for full investigation log. |
+> **Have an idea?** [Open a feature request →](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues/new?template=feature_request.yml)
 
 ---
 
