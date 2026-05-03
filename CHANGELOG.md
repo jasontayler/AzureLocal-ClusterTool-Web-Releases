@@ -3,6 +3,41 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
+## v0.11.1 — 2026-05-03
+
+### Features
+
+- **Daily Health Digest (#8)** — a new built-in scheduled service sends a once-per-day
+  management-tool health summary via email and/or Teams at a configurable UTC time.
+
+  **Contents of each digest:**
+  - Server hostname, tool version, and process uptime
+  - Per-cluster status table: healthy / unreachable / disabled, with last-poll timestamp
+  - Alert rule summary: enabled count, disabled count, global alerting on/off status
+  - Recent errors: any cluster poll failures from the last 24 hours
+
+  **Delivery** uses the same SMTP and Teams channels as existing alerts:
+  - Sends via email when SMTP is configured. Defaults to the global To address unless
+    `Digest:EmailTo` is set. Set `Digest:EmailTo = none` to suppress email for the
+    digest while keeping the global address for alerts.
+  - Posts to Teams when a webhook URL is configured. Defaults to the global
+    `Alerting:TeamsWebhookUrl` unless `Digest:WebhookUrl` is set. Set
+    `Digest:WebhookUrl = none` to suppress Teams delivery of the digest independently.
+  - Silently skipped when neither channel is configured.
+
+  **Configuration** (Admin > Settings > Daily Digest — all optional):
+
+  | Setting | Default | Description |
+  |---|---|---|
+  | `Digest:Enabled` | `false` | Set to `true` to activate |
+  | `Digest:SendTimeUtc` | `07:00` | HH:mm UTC send time |
+  | `Digest:EmailTo` | _(global SMTP To)_ | Override recipient list |
+  | `Digest:WebhookUrl` | _(global Teams URL)_ | Override Teams webhook |
+
+  Disabled by default — no emails are sent until `Digest:Enabled = true` is saved
+  in Admin > Settings.
+
+
 ## v0.11.0 — 2026-05-03
 
 ### BREAKING CHANGE — Auth group configuration simplified (2-group model)

@@ -2,6 +2,38 @@
 
 ---
 
+## v0.11.1
+
+### New feature — Daily Health Digest
+
+A new built-in scheduled service sends a once-per-day management-tool health summary
+via email and/or Teams at a configurable UTC time (default 07:00).
+
+**Each digest includes:**
+- Server hostname, tool version, and process uptime
+- Per-cluster status: healthy / unreachable / disabled with last-poll timestamp
+- Alert rule summary: enabled/disabled counts and global alerting on/off status
+- Recent errors: any cluster poll failures from the last 24 hours
+
+**Delivery** uses the same SMTP and Teams channels as existing alerts. Both channels
+fire independently based on what is configured. If neither is configured, the digest
+is silently skipped.
+
+**Configuration** via Admin > Settings > Daily Digest:
+
+| Setting | Default | Description |
+|---|---|---|
+| `Digest:Enabled` | `false` | Set to `true` to activate |
+| `Digest:SendTimeUtc` | `07:00` | UTC 24-hour send time (HH:mm) |
+| `Digest:EmailTo` | _(global SMTP To)_ | Per-digest email override |
+| `Digest:WebhookUrl` | _(global Teams URL)_ | Per-digest Teams webhook override |
+
+Disabled by default. No emails are sent until `Digest:Enabled = true`.
+Set `Digest:EmailTo = none` or `Digest:WebhookUrl = none` to suppress a specific
+channel for the digest without affecting alert delivery on that channel.
+
+---
+
 ## v0.11.0
 
 > **BREAKING CHANGE — authentication configuration update required before upgrading.**
