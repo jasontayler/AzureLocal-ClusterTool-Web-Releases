@@ -8,6 +8,12 @@ name: Mirror issue to private repo
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Public issue number to mirror (for ad-hoc / backfill use)'
+        required: true
+        type: number
 
 permissions:
   issues: write   # needed to comment on the public issue
@@ -24,7 +30,10 @@ jobs:
           script: |
             const publicOwner  = context.repo.owner;
             const publicRepo   = context.repo.repo;
-            const publicNumber = context.issue.number;
+            // Support both event-driven (issues.opened) and manual (workflow_dispatch) triggers
+            const publicNumber = context.eventName === 'workflow_dispatch'
+              ? parseInt(context.payload.inputs.issue_number, 10)
+              : context.issue.number;
             const privateOwner = 'jasontayler';
             const privateRepo  = 'AzureLocal-ClusterTool-Web';
 

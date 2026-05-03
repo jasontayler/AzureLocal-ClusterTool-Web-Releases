@@ -2,6 +2,101 @@
 
 ---
 
+## v0.11.0
+
+> **BREAKING CHANGE — authentication configuration update required before upgrading.**
+> See migration steps below.
+
+### BREAKING CHANGE — Auth group configuration simplified (2-group model)
+
+The three-group model (`HciRead` / `HciOperate` / `HciAdmin`) is replaced by two groups:
+**`HciAccess`** and **`HciAdmin`**. All operational permissions (Start VM, Drain Node, etc.)
+are now controlled entirely by custom Roles in Admin > Roles, not by group membership tiers.
+
+**Migration steps (required before or immediately after upgrading):**
+
+1. In `appsettings.Production.json` on the server, add the `HciAccess` key:
+   ```json
+   "Groups": {
+     "HciAccess": "<same-OID-as-your-HciRead-group>",
+     "HciAdmin":  "<same-OID-as-before>"
+   }
+   ```
+2. `HciRead` and `HciOperate` entries can be removed, or left in place — they are ignored.
+3. In **Entra Portal > App registrations > Manifest**, change:
+   `"groupMembershipClaims": "SecurityGroup"` to `"groupMembershipClaims": "ApplicationGroup"`
+   Then ensure HciAccess and HciAdmin are assigned under **Enterprise Applications > your app > Users and groups**.
+4. Recycle the IIS app pool.
+5. All previously HciRead and HciOperate members retain their current access — no user changes required.
+
+**Backward compatibility:** If `Groups:HciAccess` is absent, the app automatically falls back
+to reading `Groups:HciRead`, so the app continues to work before the config is updated.
+
+**`ApplicationGroup` is strongly recommended** — it prevents the HTTP 400 "request headers too long"
+error that occurs when `SecurityGroup` emits claims for every tenant group in the auth cookie.
+
+### Bug Fixes
+
+- **Fleet VM Status — VM link opens unfiltered list (#16)** — clicking a VM name on the Fleet VM
+  Status page now opens the Virtual Machines page pre-filtered to that VM instead of showing all VMs.
+
+- **VM Checkpoints tab disappears on navigation (#23)** — the Checkpoints sub-nav tab now persists
+  correctly when navigating to VM Performance and Virtual Switches.
+
+- **VM Checkpoints and VM Performance slow on large clusters (#25)** — both pages now wait for
+  an explicit user action before connecting to the cluster. VM Checkpoints shows a description
+  panel on load; VM Performance shows a VM selector before fetching counters.
+
+- **Missing confirmation dialogs on destructive actions (#19)** — modal confirmations added to:
+  VM Stop, Restart, Start, Resume, Delete Checkpoint; Stop Cluster Role; Delete Role,
+  Remove Permission, Remove Group Assignment (Admin > Roles); Clear Setting, Generate API Key
+  (Admin > Settings); Enable/Disable Cluster (Admin > Clusters).
+
+- **Fleet Status: non-sortable columns + Azure Local and Hyper-V mixed (#20)** — Fleet Status
+  column headers are now sortable. Standalone Hyper-V hosts appear in a separate section below
+  the Azure Local clusters table.
+
+---
+
+## v0.10.12
+
+### Bug fix — VM Checkpoints ObjectDisposedException in background poller
+
+The VM Checkpoints background poller could corrupt the shared CimSession cache when running
+concurrently with a live page load, producing `ObjectDisposedException: CimSession: hostname`
+errors in the Perf Debug log and causing VM detail pages to return empty data.
+
+The fix switches the poller from `-CimSession` (which caches the session object inside the
+runspace) to `-ComputerName`. CDXML creates and manages its own transient session per call,
+completely isolated from the shared node session cache.
+
+---
+
+## v0.10.11
+
+### VM Checkpoints moved to sub-nav tab
+
+VM Checkpoints is now a tab within the Virtual Machines sub-nav (alongside VM Performance
+and Virtual Switches) rather than a separate sidebar navigation link, consistent with the
+pattern used by Virtual Switches.
+
+### Checkpoints count pill on Overview
+
+The Virtual Machines workload card on the cluster Overview page now shows an orange
+**Checkpoints** count pill when any checkpoints are present. The pill reads from the
+existing background snapshot (no extra live query) and links directly to the Checkpoints tab.
+
+### Bug fix — Network ATC alert false positives
+
+The Network Intent Degraded alert rule was using an exclusion list of known-healthy status
+strings. Any status not on the list — including `Completed` (returned by some Azure Local
+builds) and transient states like `Provisioning`, `Retrying`, `Pending` — incorrectly
+triggered the alert. Fixed by switching to an allow-list: the alert now fires only when
+`Status == "Failed"` or `Status == "Error"`, eliminating false positives during ATC
+convergence after node reboots or cluster updates.
+
+---
+
 ## v0.10.10
 
 ### Bug fix — wsmprovhost.exe accumulation (PriorityQueue thread-safety)
@@ -256,7 +351,7 @@ See [`docs/QUICK-START.md`](docs/QUICK-START.md) for a step-by-step guide or
 - Windows Server 2022+ with IIS
 - .NET runtime **not** required — self-contained build
 - gMSA (or service account) with WinRM access to cluster nodes (HTTP 5985 / HTTPS 5986)
-- Entra ID app registration with `groupMembershipClaims: SecurityGroup`
+- Entra ID app registration with `groupMembershipClaims: ApplicationGroup` (recommended — prevents HTTP 400 cookie-overflow errors)
 
 ## Reporting issues
 
