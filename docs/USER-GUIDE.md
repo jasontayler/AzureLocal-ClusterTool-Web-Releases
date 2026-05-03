@@ -82,6 +82,7 @@ The sidebar groups cluster links into labelled sections:
 | **Compute** | |
 | 🖥️ Virtual Machines | Full VM list with actions |
 | &nbsp;&nbsp;↳ 📈 VM Performance | Per-VM CPU/memory/disk/network charts (sub-link) |
+| &nbsp;&nbsp;↳ 🌐 Virtual Switches | Hyper-V virtual switches per node (sub-link) |
 | 🖧 Cluster | Cluster-wide summary — health faults, quorum, CSV volumes |
 | &nbsp;&nbsp;↳ 💻 Cluster Nodes | Node health and drain operations (sub-link) |
 | &nbsp;&nbsp;↳ 🔧 Cluster Roles | Cluster resource groups (sub-link) |
@@ -540,7 +541,7 @@ Allows browsing and reading log files directly from cluster nodes without needin
 
 ### How to use
 
-1. **Select a node** from the dropdown above the Quick Access section in the left sidebar. The first node alphabetically is selected by default. There is no Cluster (VIP) option — all log reads target a specific node directly.
+1. **Select a node** from the dropdown on the left sidebar.
 2. The default log directory (`C:\ProgramData\...`) is listed. Type a different path in the text box and click **Browse** to navigate to it.
 3. Click any file in the list to read its contents on the right.
 4. Use the **Tail** selector to limit output to the last N lines (100 / 500 / 1000 / All).
@@ -1436,7 +1437,7 @@ sqlite3.exe $db "SELECT ClusterName, ConsecutiveFails, IsCircuitOpen FROM Collec
 **Route:** `/status`  
 **Access required:** HciAccess (or HciAdmin)
 
-The Fleet Status Board provides a **zero-WinRM, read-only overview of all clusters visible to your account** in a single page. All data comes from the background collector's database snapshots — no live WinRM connections are made when the page loads.
+The Fleet Status Board provides a **zero-WinRM, read-only overview of all registered clusters** in a single page. All data comes from the background collector's database snapshots — no live WinRM connections are made when the page loads.
 
 ---
 
@@ -1451,7 +1452,7 @@ A row of coloured pills at the top of the page shows fleet-wide totals:
 | Nodes Up | Total cluster nodes reported Up |
 | Health Faults | Total active health faults (red if > 0) |
 | Updates Available | Total clusters with at least one pending solution update |
-| Clusters | Total clusters your role permits to view |
+| Clusters | Total registered clusters included in the view |
 
 ---
 
@@ -1510,8 +1511,6 @@ Click **▼ Snapshot Freshness** / **▶ Snapshot Freshness** to expand or colla
 - **Alternative to individual cluster browsing:** For read-only stakeholders who need a high-level view, the Fleet Status Board may be sufficient without ever visiting a per-cluster page.
 
 > **Note:** The Fleet Status Board only reflects data already collected by the background collector. If a cluster was added recently and has not been polled yet, it will show no data in the table until the first successful poll completes.
-
-> **Note:** The **Fleet VM Status** button opens `/status/vms`, which shows a cross-cluster VM list. This page requires VM View access via your custom role. If your role does not include View access for Virtual Machines, an access-denied message is shown instead of the VM table.
 
 ---
 

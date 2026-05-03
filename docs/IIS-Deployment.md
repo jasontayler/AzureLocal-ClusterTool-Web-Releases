@@ -1,4 +1,4 @@
-﻿# IIS Deployment Guide — Azure Local HCI Web Portal
+﻿# Deployment Guide — Azure Local Cluster Tool
 
 ## Overview
 
@@ -23,9 +23,10 @@ Browser → HTTPS → IIS (w3wp.exe running as gMSA) → WinRM → Cluster nodes
 
 ---
 
-## Required IIS Roles and Sub-Features
+## Features and Components Installed by Setup-Prerequisites.ps1
 
-These are installed automatically by `Setup-Prerequisites.ps1`. Listed here for documentation and if installing manually via Server Manager.
+> All features and components listed in this section are installed automatically by `Setup-Prerequisites.ps1`.
+> This section is a reference for verifying an existing setup or performing manual installation when the script cannot be run.
 
 ### Web Server (IIS) — `Web-Server`
 
@@ -94,32 +95,19 @@ Run `iisreset` after installing the bundle before creating sites.
 
 > **Critical:** The "No Managed Code" setting on the app pool does NOT break the app. It just means IIS doesn't load the classic .NET framework pipeline. ASP.NET Core uses its own module regardless of this setting.
 
-### Critical SignalR settings (must be set — do not skip)
+> **SignalR settings:** `Setup-IIS.ps1` automatically disables idle timeout (`processModel.idleTimeout = 00:00:00`) and periodic worker process restart (`recycling.periodicRestart.time = 00:00:00`) on the app pool. Both are required for Blazor Server. If you create the app pool manually, apply these settings — see [Troubleshooting](#troubleshooting) for the PowerShell commands.
 
-Blazor Server uses a persistent SignalR WebSocket connection for every open browser tab. IIS recycles the worker process by default on two triggers that **silently drop all active sessions**:
+---
 
-| Setting | Default | Required value | Why |
-|---|---|---|---|
-| `processModel.idleTimeout` | 20 min | `00:00:00` (never) | IIS terminates the process after 20 min with no HTTP requests. Kills all circuits. |
-| `recycling.periodicRestart.time` | 29 h (1740 min) | `00:00:00` (disabled) | Worker process restarts on a timer. New process discards all SignalR connection IDs — clients get "connection could not be found on server" and fall back to slow long polling. |
+## Entra Application Proxy (recommended for external access)
 
-Both settings are applied automatically by `Setup-IIS.ps1` and `Setup-IIS-WinAuth.ps1`.
+Entra Application Proxy provides HTTPS access for external users without opening firewall ports or requiring a VPN. Install the connector on the app server or a dedicated connector server on the same network segment.
 
-To verify or fix manually on an existing site:
-```powershell
-Import-Module WebAdministration
-$pool = "AZLManagementPool"   # or AZLManagementWinPool, etc.
+1. Follow the Microsoft guide: [Add an on-premises application — Entra Application Proxy](https://learn.microsoft.com/en-us/entra/identity/app-proxy/application-proxy-add-on-premises-application)
+2. Set the **internal URL** to your IIS site (e.g. `https://azlmgmt.yourdomain.com`)
+3. Add the **external URL** provided by Entra as a redirect URI in the app registration
 
-Set-ItemProperty "IIS:\AppPools\$pool" -Name processModel.idleTimeout          -Value "00:00:00"
-Set-ItemProperty "IIS:\AppPools\$pool" -Name recycling.periodicRestart.time    -Value "00:00:00"
-
-# Verify
-(Get-ItemProperty "IIS:\AppPools\$pool").processModel.idleTimeout
-(Get-ItemProperty "IIS:\AppPools\$pool").recycling.periodicRestart.time
-# Both must show 00:00:00
-```
-
-> **Symptom if missed:** Users see Blazor disconnects every ~29 hours. The browser console shows `Server timeout elapsed without receiving a message` followed by `connection could not be found on the server` and a fallback to Long Polling. WAS event log will show `worker process serving application pool 'X' was shut down due to the following reason: 'Periodic Restart Time Limit Exceeded'`.
+The connector uses outbound HTTPS (port 443) only — no inbound firewall rules on the app server are needed.
 
 ---
 
@@ -375,7 +363,7 @@ Reload PostgreSQL after editing: `pg_ctl reload` or restart the `postgresql-x64-
 ```json
 "Database": {
   "Provider": "PostgreSQL",
-  "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app;Password=your_strong_password;Keepalive=60;Connection Idle Lifetime=300;Timeout=30;Command Timeout=60"
+  "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app;Password=your_strong_password"
 },
 "DataProtection": {
   "KeyPath": "C:\\apps\\azlmgmt-data\\dp-keys"
@@ -419,6 +407,65 @@ After starting the app pool, browse to the app and check:
 - `/admin/clusters` shows the correct cluster list
 - `/admin/audit` shows existing audit log entries
 - The app log shows `[startup] Database initialised (PostgreSQL)` or similar
+
+---
+
+## Data Protection Key Backup
+
+The app encrypts sensitive settings (ARM SPN credentials, SMTP password, Teams webhook URL, etc.)
+using ASP.NET Core Data Protection, backed by DPAPI on Windows. The key ring is stored on disk at
+`DataProtection:KeyPath` (default: `C:\apps\azlmgmt-data\dp-keys`).
+
+**DPAPI keys are machine-bound.** They cannot be decrypted on a different machine. If the app
+server is rebuilt without restoring the key ring, all encrypted DB values (`AppSettings` rows with
+`IsSensitive = true`) become permanently unreadable. The operator must re-enter every secret after
+the rebuild.
+
+### What to back up
+
+Back up the entire `DataProtection:KeyPath` directory. Each `.xml` file in it is an individual key,
+plus the `key-{id}.xml` files contain the actual encryption material.
+
+```
+C:\apps\azlmgmt-data\dp-keys\
+    key-{guid}.xml
+    key-{guid}.xml
+    ...
+```
+
+### How to back up
+
+```powershell
+# Run from a machine with access to the app server
+# Back up to a network share (run as domain admin or gMSA identity):
+robocopy "C:\apps\azlmgmt-data\dp-keys" "\\backup-server\share\azlmgmt\dp-keys" /MIR /LOG:dp-keys-backup.log
+
+# Or copy locally and store offsite:
+Compress-Archive -Path "C:\apps\azlmgmt-data\dp-keys\*" `
+                 -DestinationPath "C:\backup\dp-keys-$(Get-Date -f yyyyMMdd).zip"
+```
+
+**When to back up:** after any secrets are added or changed via `/admin/settings`. A weekly
+scheduled robocopy is sufficient for most environments.
+
+### How to restore
+
+1. Stop the app pool before restoring: `Stop-WebAppPool -Name 'AZLManagementPool'`
+2. Copy the backed-up key files to `DataProtection:KeyPath` on the new server
+3. Ensure the gMSA identity (`DOMAIN\account$`) has **Read** and **List** access to the directory
+4. Start the app pool: `Start-WebAppPool -Name 'AZLManagementPool'`
+
+The app discovers keys automatically — no configuration change is needed.
+
+### gMSA identity permissions reminder
+
+The `Setup-Prerequisites.ps1` script grants the gMSA `Full Control` on the data directory. On a
+rebuilt server, re-run the script or grant permissions manually:
+
+```powershell
+$sid = (Get-ADServiceAccount -Identity 'hci-web-svc').SID.Value
+icacls "C:\apps\azlmgmt-data\dp-keys" /grant "*${sid}:(OI)(CI)F" /T
+```
 
 ---
 
@@ -490,7 +537,16 @@ far more than enough — only clusters being actively viewed hold a connection.
 
 ### First time
 
-1. **On the app server** — copy and run `scripts\Setup-Prerequisites.ps1` (first time only), then `scripts\Setup-IIS.ps1`:
+**Default paths:** binaries at `C:\apps\azlmgmt`, runtime data at `C:\apps\azlmgmt-data`.
+To use different paths, pass `-AppPath` and `-DataPath` to `Setup-Prerequisites.ps1`:
+```powershell
+.\Setup-Prerequisites.ps1 -ServiceAccount "DOMAIN\azlmgmt-svc$" `
+    -AppPath  "D:\apps\azlmgmt" `
+    -DataPath "D:\apps\azlmgmt-data"
+```
+Pass the same paths to `Setup-IIS.ps1 -physicalPath` and `Install.ps1 -AppPath` if changed.
+
+1. **On the app server** — copy and run `scripts\Setup-Prerequisites.ps1`:
    ```powershell
    # Copy scripts to server then run
    \\azlmgmt.yourdomain.com\c$\scripts\Setup-Prerequisites.ps1
@@ -545,7 +601,7 @@ cd F:\github\AzureLocal-ClusterTool-Web
 ```
 
 Both approaches stop the app pool, replace the files, and restart the pool. `Install.ps1 -Upgrade`
-preserves `appsettings.Production.json`, `appsettings.json`, `appsettings.WinAuth.json` (relevant for Windows Authentication deployments), and `clusters.json` automatically. Takes ~30-60 seconds.
+preserves `appsettings.Production.json` and `clusters.json` automatically. Takes ~30-60 seconds.
 
 ### Updating clusters.json on the server (add/remove clusters)
 
@@ -596,16 +652,36 @@ Invoke-Command -ComputerName azlmgmt.yourdomain.com {
 |---|---|
 | **HTTP 503 Service Unavailable** | App pool is stopped — see 503 diagnosis section below |
 | HTTP 500.19 on first browse | ASP.NET Core Hosting Bundle not installed — install it and run `iisreset` |
-| HTTP 500.19 (error code 0x80070021) | Authentication config sections locked — run `appcmd unlock config /section:system.webServer/security/authentication/anonymousAuthentication` and the same for `windowsAuthentication`, then `iisreset` |
 | HTTP 500.30 (app failed to start) | Check Windows Event Log → Application for `IIS AspNetCore Module` errors |
 | HTTP 403 Forbidden | Request Filtering or authentication misconfigured |
 | Cluster page loads but VM list is empty | gMSA not in Administrators on cluster node; WinRM not enabled on nodes |
 | Sign-in redirects back to sign-in | Entra app registration missing redirect URI `https://azlmgmt.yourdomain.com/signin-oidc` |
 | App pool stops immediately after start | gMSA not retrievable on app server (`Test-ADServiceAccount` returns False) |
 | Robocopy fails during upgrade | Ensure the app pool is stopped and your account has write rights to the app folder |
-| Blazor disconnects every ~29 hours; browser console shows "connection could not be found on server" then falls back to Long Polling | IIS periodic restart (`recycling.periodicRestart.time`) not disabled — see Critical SignalR settings above |
-| Blazor disconnects every ~20 min when site is idle (no active users) | IIS idle timeout (`processModel.idleTimeout`) not disabled — see Critical SignalR settings above |
+| Blazor disconnects every ~29 hours; browser console shows "connection could not be found on server" then falls back to Long Polling | IIS periodic restart (`recycling.periodicRestart.time`) not disabled — apply the fix below |
+| Blazor disconnects every ~20 min when site is idle (no active users) | IIS idle timeout (`processModel.idleTimeout`) not disabled — apply the fix below |
 | Blazor disconnects frequently on one network but not another | Corporate proxy intercepting WebSocket traffic — see Proxy Bypass below |
+
+### SignalR app pool settings (if not set by Setup-IIS.ps1)
+
+Blazor Server requires two app pool settings that IIS does not apply by default. `Setup-IIS.ps1` sets these automatically. If you created the app pool manually or are troubleshooting disconnects, apply them:
+
+| Setting | Required value | Default | Effect if not set |
+|---|---|---|---|
+| `processModel.idleTimeout` | `00:00:00` (never) | 20 min | IIS kills the worker process after 20 min idle — drops all active SignalR circuits |
+| `recycling.periodicRestart.time` | `00:00:00` (disabled) | 29 h | Worker restarts on a timer — all clients get "connection could not be found on server" and fall back to Long Polling |
+
+```powershell
+Import-Module WebAdministration
+$pool = "AZLManagementPool"
+
+Set-ItemProperty "IIS:\AppPools\$pool" -Name processModel.idleTimeout       -Value "00:00:00"
+Set-ItemProperty "IIS:\AppPools\$pool" -Name recycling.periodicRestart.time -Value "00:00:00"
+
+# Verify (both must show 00:00:00)
+(Get-ItemProperty "IIS:\AppPools\$pool").processModel.idleTimeout
+(Get-ItemProperty "IIS:\AppPools\$pool").recycling.periodicRestart.time
+```
 
 ### HTTP 503 — App Pool Stopped: Diagnosis Steps
 
