@@ -81,7 +81,7 @@ The `Support.AksArc` PowerShell module (as of v1.2.x) does not accept `-Credenti
 
 **Re-evaluation triggers:**
 1. The `Support.AksArc` module adds `-Session` / `-Credential` parameter support.
-2. A JEA endpoint is available on cluster nodes (BACKLOG-1 dependency resolved first).
+2. A JEA endpoint is available on cluster nodes (BACKLOG-6 dependency resolved first).
 3. Microsoft exposes equivalent diagnostics via an ARM API.
 
 ---
