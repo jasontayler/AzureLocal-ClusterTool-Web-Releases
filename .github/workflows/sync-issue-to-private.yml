@@ -1,0 +1,77 @@
+name: Sync public issue to private repo
+
+# When someone opens an issue in this public releases repo, mirror it into
+# the private source repo so the team can triage and fix it there.
+# When the private issue is closed, a matching workflow in the private repo
+# will close this public issue (see .github/private-repo-setup/close-public-issue.yml).
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write   # needed to comment on the public issue
+
+jobs:
+  mirror-to-private:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue in private repo and acknowledge publicly
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.SYNC_PAT }}
+          script: |
+            const publicIssue = context.payload.issue;
+            const publicNumber = publicIssue.number;
+            const publicUrl    = publicIssue.html_url;
+
+            // Build the body for the private issue.
+            // The hidden HTML comment is the anchor used by the private-repo
+            // workflow to find and close the corresponding public issue.
+            const privateBody = [
+              `**Reported via public repo:** ${publicUrl}`,
+              ``,
+              publicIssue.body ?? "_No description provided._",
+              ``,
+              `<!-- public-issue: ${publicNumber} -->`
+            ].join("\n");
+
+            // Only forward labels that already exist in the private repo to
+            // avoid a 422 error from the API if the label is missing there.
+            const publicLabels  = publicIssue.labels.map(l => l.name);
+            const validatedLabels = [];
+            for (const label of publicLabels) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: "jasontayler",
+                  repo:  "AzureLocal-ClusterTool-Web",
+                  name:  label
+                });
+                validatedLabels.push(label);
+              } catch {
+                console.log(`Skipping label "${label}" — not found in private repo.`);
+              }
+            }
+
+            // Create the mirrored issue in the private repo.
+            const created = await github.rest.issues.create({
+              owner:  "jasontayler",
+              repo:   "AzureLocal-ClusterTool-Web",
+              title:  publicIssue.title,
+              body:   privateBody,
+              labels: validatedLabels
+            });
+
+            // Post an acknowledgement on the public issue so the reporter
+            // knows the team has seen it.
+            await github.rest.issues.createComment({
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              issue_number: publicNumber,
+              body: [
+                "Thanks for reporting this! 🙏",
+                "",
+                "This issue has been logged with the engineering team and is being tracked internally.",
+                "We'll update or close this issue once it has been resolved.",
+              ].join("\n")
+            });

@@ -1,0 +1,85 @@
+# =============================================================================
+# PRIVATE REPO SETUP — copy this file to:
+#   jasontayler/AzureLocal-ClusterTool-Web
+#   .github/workflows/close-public-issue.yml
+#
+# Prerequisites
+# -------------
+# Add a repository secret called SYNC_PAT to the PRIVATE repo.
+# The PAT must have:
+#   - issues: write  on jasontayler/AzureLocal-ClusterTool-Web-Releases (public)
+# =============================================================================
+
+name: Close mirrored public issue on resolution
+
+# When an issue in the private repo is closed, check whether it was mirrored
+# from the public releases repo and, if so, close the corresponding public issue.
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: read   # only needs to read the private issue body
+
+jobs:
+  close-public-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close the linked public issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.SYNC_PAT }}
+          script: |
+            const body = context.payload.issue.body ?? "";
+
+            // Look for the anchor comment written by the public-repo workflow.
+            const match = body.match(/<!--\s*public-issue:\s*(\d+)\s*-->/);
+            if (!match) {
+              console.log("No public-issue reference found — nothing to close.");
+              return;
+            }
+
+            const publicNumber = parseInt(match[1], 10);
+            const privateUrl   = context.payload.issue.html_url;
+
+            console.log(`Closing public issue #${publicNumber} linked to ${privateUrl}`);
+
+            // Verify the public issue exists and is still open before acting.
+            let publicIssueState;
+            try {
+              const { data: pub } = await github.rest.issues.get({
+                owner:        "jasontayler",
+                repo:         "AzureLocal-ClusterTool-Web-Releases",
+                issue_number: publicNumber
+              });
+              publicIssueState = pub.state;
+            } catch (err) {
+              console.log(`Could not fetch public issue #${publicNumber}: ${err.message}`);
+              return;
+            }
+
+            if (publicIssueState !== "open") {
+              console.log(`Public issue #${publicNumber} is already ${publicIssueState} — skipping.`);
+              return;
+            }
+
+            // Post a closing comment on the public issue.
+            await github.rest.issues.createComment({
+              owner:        "jasontayler",
+              repo:         "AzureLocal-ClusterTool-Web-Releases",
+              issue_number: publicNumber,
+              body: [
+                "✅ **This issue has been resolved.**",
+                "",
+                "The fix will be included in the next release. Thank you for taking the time to report it!",
+              ].join("\n")
+            });
+
+            // Close the public issue.
+            await github.rest.issues.update({
+              owner:        "jasontayler",
+              repo:         "AzureLocal-ClusterTool-Web-Releases",
+              issue_number: publicNumber,
+              state:        "closed"
+            });
