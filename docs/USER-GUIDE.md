@@ -15,12 +15,10 @@
 5. [Virtual Machines](#5-virtual-machines)
    - [5a. VM Performance](#5a-vm-performance)
    - [5b. Virtual Switches](#5b-virtual-switches)
-   - [5c. VM Checkpoints](#5c-vm-checkpoints)
 6. [Cluster Nodes](#6-cluster-nodes)
 7. [Cluster Roles](#7-cluster-roles)
 8. [AKS on Azure Local](#8-aks-on-azure-local)
 9. [Cluster Info](#9-cluster-info)
-   - [9a. Security & Compliance](#9a-security--compliance)
 10. [Storage](#10-storage)
 11. [Storage QoS](#11-storage-qos)
 12. [Network](#12-network)
@@ -40,7 +38,6 @@
 26. [Windows Authentication Deployment](#26-windows-authentication-deployment)
 27. [Admin — Diagnostics & Background Collector](#27-admin--diagnostics--background-collector)
 28. [Fleet Status Board](#28-fleet-status-board)
-   - [28a. Fleet Schedules](#28a-fleet-schedules)
 29. [Admin — Alerts](#29-admin--alerts)
 
 ---
@@ -81,13 +78,11 @@ The sidebar groups cluster links into labelled sections:
 |---|---|
 | 🏠 All Clusters | Return to the cluster picker home page |
 | 📋 Fleet Status | Fleet-wide VM/node/health/updates dashboard — all clusters, zero WinRM, DB-only |
-| � Fleet Schedules | Pending and historical update schedules across all clusters |
-| �📊 Overview | Summary cards — VM, role health, and Azure Arc status at a glance |
+| 📊 Overview | Summary cards — VM, role health, and Azure Arc status at a glance |
 | **Compute** | |
 | 🖥️ Virtual Machines | Full VM list with actions |
 | &nbsp;&nbsp;↳ 📈 VM Performance | Per-VM CPU/memory/disk/network charts (sub-link) |
 | &nbsp;&nbsp;↳ 🌐 Virtual Switches | Hyper-V virtual switches per node (sub-link) |
-| &nbsp;&nbsp;↳ 📋 VM Checkpoints | All VM checkpoints/snapshots across the cluster (sub-link) |
 | 🖧 Cluster | Cluster-wide summary — health faults, quorum, CSV volumes |
 | &nbsp;&nbsp;↳ 💻 Cluster Nodes | Node health and drain operations (sub-link) |
 | &nbsp;&nbsp;↳ 🔧 Cluster Roles | Cluster resource groups (sub-link) |
@@ -108,13 +103,12 @@ The sidebar groups cluster links into labelled sections:
 | ☁️ Azure Arc | Arc registration status — includes Arc Machines, Arc Extensions, Cluster Extensions tabs |
 | &nbsp;&nbsp;↳ 🧱 Arc Resource Bridge | Arc appliance health and Azure Local sites (dedicated page) |
 | &nbsp;&nbsp;↳ 📍 Custom Locations | Azure Arc custom locations (dedicated page) |
-| 🔒 Security & Compliance | Per-node security features, WDAC, BitLocker, and drift detection |
 
 **Sub-navigation strips**
 
 Several page groups share a tab strip directly below the page heading, so you can switch between related pages without going back to the sidebar:
 
-- **Virtual Machines group:** Virtual Machines · VM Performance · Virtual Switches · VM Checkpoints
+- **Virtual Machines group:** Virtual Machines · VM Performance · Virtual Switches
 - **Cluster group:** Cluster Info · Nodes · Roles · Storage · Performance · Events
 - **Storage group:** Storage · Storage QoS
 - **Network group:** Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks
@@ -146,15 +140,6 @@ If you navigate directly to a URL for a cluster or page you cannot access, you w
 The **Overview** page respects the same rules: summary cards for Virtual Machines, Cluster Roles, and Azure Arc status are only shown if your role includes View access to those resource types. Items within each card are additionally filtered by any name patterns in your role (e.g. `PROD-*`).
 
 > In pass-through mode (no custom role assignments configured), the full navigation is always shown and all clusters are visible.
-
-### Global Search
-
-A search box is always visible in the top bar (magnifying glass icon). Type two or more characters to search across all registered clusters simultaneously — results are grouped into **Clusters**, **Virtual Machines**, and **Nodes**.
-
-- Results are sourced from the background collector's database snapshots — the search is instant and does not make any live WinRM connections.
-- Click any result to navigate directly to that resource: cluster results open the cluster Overview, VM results open the Virtual Machines page pre-filtered to that VM, and node results open the Cluster Nodes page.
-- Results respect your [Custom Role (RBAC)](#23-admin--custom-roles-rbac) permissions: clusters and VMs outside your allowed name patterns are never returned.
-- Keyboard: press **Escape** to dismiss the dropdown; the input retains focus so you can type a new query immediately.
 
 ---
 
@@ -239,24 +224,6 @@ Click any VM row to expand it, then scroll to the **Connect** section at the bot
 
 > **Why double-click for VMConnect?** Browsers can auto-open `.rdp` files because Windows has a built-in file association for them. `vmconnect.exe` has no equivalent — Windows cannot launch it directly from a browser download. Double-clicking the saved `.bat` is the closest one-click experience available without a custom registry URI handler.
 
-### Unclustered VMs
-
-Some VMs may be running on a cluster node but not registered as part of a Cluster Group. These VMs are shown in the table with an orange **Unclustered** badge in the Host column.
-
-An unclustered VM:
-- Is not protected by the cluster — if the host node goes offline the VM will not automatically fail over to another node.
-- Cannot be live-migrated through the normal cluster migration path.
-
-**Add to Cluster:** Click the **Add to Cluster** button (shown in the Actions column for unclustered VMs) to register the VM as a Highly Available (HA) cluster resource. A confirmation modal appears — click **Add to Cluster** in the modal to proceed. The operation calls `Add-ClusterVirtualMachineRole` on the cluster.
-
-> **Pre-flight check:** If the host node is in a draining state or cannot be reached, the operation may fail. Check the [Audit Log](#21-admin--audit-log) for detail.
->
-> **Exclusion patterns:** Administrators can configure `NonClusteredVmPatterns` (a comma-separated list of name patterns) in Admin → Settings to suppress the badge and button for VMs that are intentionally unclustered (e.g. management VMs that should not be HA).
-
-### DDA (Device Assignment)
-
-VMs with a **DDA** badge have a PCI device directly assigned via Discrete Device Assignment. These VMs cannot be live-migrated — the **Live Migrate** button is disabled to prevent the operation from failing. Saving the VM state and moving it manually is the recommended approach.
-
 ---
 
 ## 5a. VM Performance
@@ -299,42 +266,6 @@ Lists all Hyper-V virtual switches across every node in the cluster.
 | Notes | Additional switch notes or description |
 
 > Use this page to verify switch names and teaming configuration before troubleshooting VM network issues.
-
----
-
-## 5c. VM Checkpoints
-
-**Route:** `/clusters/{name}/vm-checkpoints`  
-**Access required:** HciRead
-
-> Part of the **Virtual Machines · VM Performance · Virtual Switches · VM Checkpoints** tab group.
-
-Lists all Hyper-V VM checkpoints (snapshots) across every node in the cluster.
-
-> **On-demand load:** Checkpoint data is not fetched automatically when the page opens because enumerating checkpoints requires a WinRM call to every node and can take 10–30 seconds on large clusters. Click the **Load Checkpoints** button to initiate the fetch. Subsequent **Refresh** clicks re-fetch immediately.
-
-### Columns
-
-| Column | Description |
-|---|---|
-| VM | VM name — click to jump to the Virtual Machines page filtered to that VM |
-| Host | The cluster node the VM is running on |
-| Checkpoint Name | Snapshot label, with a `(root)` indicator for root checkpoints |
-| Type | Checkpoint type — Standard, Production, or ProductionOnly |
-| Created | Local timestamp when the checkpoint was taken |
-| Age | Time elapsed since the checkpoint was created (colour-coded — orange > 72 h, red > 7 days) |
-
-### Filtering by age
-
-Use the **Age filter** dropdown in the toolbar to narrow results to checkpoints older than 24 hours, 72 hours, or 7 days. The status bar shows how many checkpoints match out of the total.
-
-### Exporting
-
-Click **Export CSV** to download a `.csv` file of all currently visible (filtered) rows.
-
-### Why manage checkpoints?
-
-Long-lived checkpoints grow the VHDX differencing chain, consume additional disk space, and can slow VM performance. The [Fleet Status Board](#28-fleet-status-board) shows a fleet-wide **Stale Checkpoints** pill (VMs with checkpoints older than 72 hours) to surface clusters that need attention. An **Alert rule** type (`VM Checkpoint Stale`) can notify you automatically when checkpoints exceed a configurable age threshold.
 
 ---
 
@@ -462,66 +393,6 @@ A summary page showing:
 - **Nodes** — count of Up/Down nodes
 - **S2D (Storage Spaces Direct)** — storage health state
 - **Health Faults** — any active health faults reported by the cluster, with fault description and affected object
-
----
-
-## 9a. Security & Compliance
-
-**Route:** `/clusters/{name}/security`  
-**Access required:** HciRead
-
-Provides a per-cluster view of the security posture across four areas: Security Features, WDAC Application Control, BitLocker (data at rest), and Drift Detection.
-
-> ARM-sourced compliance data (policy assignments and compliance state) is shown if Azure ARM is configured in Admin → Settings. The WinRM-sourced sections (Security Features, WDAC per-node mode, BitLocker) load from the background collector snapshot and, if stale, are re-fetched live on page load.
-
-### Security Features
-
-A per-node grid showing the status of each security feature reported by `Get-AzsSecurity` (Azure Local 24H2+ only; older clusters without this cmdlet will show no data in this section).
-
-| Feature | Description |
-|---|---|
-| Drift Control | Whether the cluster enforces configuration drift protection |
-| Credential Guard | Virtualization-based protection for LSASS credentials |
-| VBS (Virtualization-based Security) | Hypervisor-protected code integrity |
-| HVCI (Hypervisor-protected Code Integrity) | Memory integrity — prevents unsigned kernel code from running |
-| DRTM (Dynamic Root of Trust for Measurement) | Hardware attestation of boot sequence |
-| Side Channel Mitigation | CPU speculative execution mitigations |
-| SMB Signing | Ensures SMB packets are signed to prevent man-in-the-middle attacks |
-| SMB Cluster Encryption | Intra-cluster SMB traffic encryption |
-
-Each cell shows a coloured dot (green = enabled, red = disabled/not configured, grey = not available).
-
-### Application Control (WDAC)
-
-Shows the WDAC policy mode per node from `Get-AsWdacPolicyMode`:
-
-| Mode | Meaning |
-|---|---|
-| Enforced | Windows Defender Application Control is actively blocking unsigned code |
-| Audit | WDAC is in audit-only mode — violations are logged but not blocked |
-| Not configured | WDAC is not active on this node |
-
-An expandable **ARM policy assignments** panel below the node table shows the cluster-level WDAC assignment (Audit/Enforce/NotConfigured), Secured-Core assignment, and SMB encryption assignment sourced from ARM, along with the last compliance evaluation timestamp. This section is only shown when ARM is configured.
-
-### Data Encryption (BitLocker)
-
-Lists all BitLocker volumes per node gathered via `Get-ASBitLocker` (or `Get-BitLockerVolume` as a fallback). Columns:
-
-| Column | Description |
-|---|---|
-| Node | Cluster node the volume belongs to |
-| Volume | Drive letter or volume label |
-| Type | OperatingSystem / Data / Removable |
-| Encryption | Encryption status (FullyEncrypted / EncryptionInProgress / Decrypted etc.) |
-| Protection | Protection status (On / Off) — a green dot means BitLocker protectors are active |
-
-An ARM compliance indicator above the table shows whether the cluster meets the Azure Local "data at rest encrypted" policy.
-
-### Drift Detection
-
-A collapsible section (click the **Drift Detection** heading to expand). When expanded, the app automatically runs `Invoke-AzStackHciVSRDriftDetectionValidation` against the cluster and shows a per-component pass/fail table comparing installed component versions against the Validated Solution Recipe (VSR) baseline.
-
-Click **Run Drift Check** to manually trigger a fresh check at any time. Results remain visible for the duration of the browser session.
 
 ---
 
@@ -748,7 +619,7 @@ Shows the cluster's Azure Arc registration status:
 
 The **Azure Portal** link opens the cluster resource directly in the Azure Portal.
 
-If ARM data isn't loading, check that the SPN credentials are configured in Admin → Settings and that the SPN has the required Azure RBAC assignments.
+If ARM data isn't loading, the page will indicate whether Azure sign-in is required. Click **Load Azure Data** to trigger the sign-in flow (OBO mode) or check Settings if SPN mode is configured.
 
 ### Arc Machines (`/arc-machines`)
 
@@ -783,7 +654,7 @@ Shows extensions installed on each Arc-enabled machine (e.g. AzureMonitorWindows
 
 #### Required ARM permissions (Arc machine extensions)
 
-The SPN must have **one** of the following assigned on the resource group or subscription:
+The SPN (or OBO user) must have **one** of the following assigned on the resource group or subscription:
 
 | Role | Notes |
 |---|---|
@@ -1017,13 +888,17 @@ Controls how the Azure Arc pages authenticate to Azure Resource Manager.
 
 | Mode | Description |
 |---|---|
+| **OBO** (On-Behalf-Of) | Calls ARM on behalf of the currently signed-in user. Requires the `AzureAd:ClientSecret` setting and the `Azure Service Management / user_impersonation` delegated permission in the Entra app registration. |
 | **SPN** (Service Principal) | Uses dedicated service principal credentials. Requires SPN Tenant ID, Client ID, and Client Secret below. The SPN must have at least Reader RBAC on the target subscriptions. |
+
+> **OBO note:** After saving the client secret, the IIS app pool must be recycled once for the secret to be picked up by the MSAL client. All other settings take effect immediately.
 
 ### Settings reference
 
 | Setting | Group | Description |
 |---|---|---|
-| ARM Auth Mode | Azure ARM Authentication | `SPN` |
+| ARM Auth Mode | Azure ARM Authentication | `OBO` or `SPN` |
+| OBO Client Secret | Azure ARM Authentication | `AzureAd:ClientSecret` — the Entra app registration client secret for OBO token acquisition |
 | SPN Tenant ID | Azure ARM Authentication (SPN mode) | The Entra tenant ID for SPN authentication |
 | SPN Client ID | Azure ARM Authentication (SPN mode) | The service principal application (client) ID |
 | SPN Client Secret | Azure ARM Authentication (SPN mode) | The service principal client secret (encrypted at rest) |
@@ -1034,7 +909,7 @@ Controls how the Azure Arc pages authenticate to Azure Resource Manager.
 
 ### Action SPN (optional dual-SPN mode)
 
-By default a single SPN is used for all ARM calls. When **Enable Action SPN** is set to `true` and the three Action SPN credentials are filled in, **all ARM write operations** (POST, PUT, PATCH, DELETE — any call that modifies Azure resources) are routed through the action SPN instead. The read SPN continues to handle all GET calls.
+By default a single SPN (or OBO user) is used for all ARM calls. When **Enable Action SPN** is set to `true` and the three Action SPN credentials are filled in, **all ARM write operations** (POST, PUT, PATCH, DELETE — any call that modifies Azure resources) are routed through the action SPN instead. The read SPN continues to handle all GET calls.
 
 This allows a least-privilege split:
 
@@ -1080,26 +955,6 @@ Subscription or resource group scope:
 ```
 
 If your organisation separates read and write access, configure the optional **Action SPN** in `Admin → Settings → Azure ARM Authentication (Action SPN)` — see the FAQ for full details.
-
-### Daily Digest
-
-The daily digest sends a health summary of all registered clusters once per day via email and/or Teams. Configure it in the **Daily Digest** settings group.
-
-| Setting key | Description |
-|---|---|
-| `Digest:Enabled` | Set to `true` to enable. Default: `false`. |
-| `Digest:SendTimeUtc` | Time of day to send the digest in UTC 24-hour format, e.g. `07:00`. The scheduler checks every minute and fires once per calendar day when the current UTC minute matches. Default: `07:00`. |
-| `Digest:EmailTo` | Email recipient(s) for the digest (comma-separated). Leave blank to use the global `Smtp:ToAddress`. Set to `none` to suppress email delivery of the digest while keeping the global address active. |
-| `Digest:WebhookUrl` | Teams Incoming Webhook URL for the digest. Leave blank to use the global `Alerting:TeamsWebhookUrl`. Set to `none` to suppress Teams delivery while keeping the global webhook active. |
-
-**What the digest contains:**
-- Fleet-wide summary: total VMs running/off, nodes up/down, active health faults
-- Per-cluster row with VM count, node state, health fault count, and last poll age
-- A stale data warning for any cluster whose most recent snapshot is older than the stale threshold
-
-> The digest uses the same delivery channels (SMTP and Teams webhook) as alert notifications. Ensure at least one channel is configured in Admin → Settings before enabling the digest.
-
----
 
 ## 23. Admin — Custom Roles (RBAC)
 
@@ -1182,14 +1037,12 @@ Expand the role row. In the **Permissions** panel:
 
 Expand the role row. In the **Group Assignments** panel:
 
-1. Type in the **search box** to find Entra groups by display name. Results appear as a typeahead dropdown — click a result to select it. The group Object ID is filled in automatically.
-2. If the Graph API search is unavailable (not configured or consent not granted), click the **Or paste Object ID manually** link and enter the group GUID directly.
+1. Paste the Entra group **Object ID** (GUID).
    - Find it in Entra Portal → **Groups** → select the group → **Overview** → **Object ID**.
-3. Click **+ Assign Group** to apply the assignment.
+2. Enter an optional display name to make the assignment readable in the UI.
+3. Click **+ Assign Group**.
 
 All users in that group now inherit the permissions defined on the role.
-
-> **Graph API requirement:** The group search uses the Microsoft Graph API (`Group.Read.All` delegated permission). If the search returns no results, ensure the Entra app registration has the `Group.Read.All` delegated permission with **admin consent** granted, and that the signed-in admin account can see groups in your tenant. Object ID paste always works regardless of Graph configuration.
 
 ### Removing permissions / groups
 
@@ -1263,7 +1116,7 @@ A: The page automatically polls for 15 seconds after an action. If the state sti
 A: This can happen if the VM is off and doesn't have any configured adapters, or if WinRM connectivity to the host node is unavailable. Check the debug log (if you have Admin access) for any PowerShell errors.
 
 **Q: The Azure Arc page says "ARM not configured".**  
-A: The ARM authentication mode needs to be set in [Admin → Settings](#22-admin--settings). Select **SPN** and provide the SPN Tenant ID, Client ID, and Client Secret.
+A: The ARM authentication mode needs to be set in [Admin → Settings](#22-admin--settings). Choose OBO or SPN and provide the required credentials.
 
 **Q: Solution Update progress isn't streaming.**  
 A: The live monitor requires an active cluster connection. Refresh the page. If the update run has already completed, a static summary of the completed plan is shown instead of a live stream.
@@ -1271,7 +1124,7 @@ A: The live monitor requires an active cluster connection. Refresh the page. If 
 **Q: How do I add a new cluster to the app?**
 
 **Q: Can I use separate SPNs for read and write/action operations?**  
-A: Yes — the *Action SPN* feature lets you configure a second, lower-privilege service principal used exclusively for **all ARM write operations** (POST, PUT, PATCH, DELETE). The read SPN continues to handle all GET calls. Any write operation added to the app in future releases will also automatically use the action SPN — no reconfiguration required.
+A: Yes — the *Action SPN* feature lets you configure a second, lower-privilege service principal used exclusively for **all ARM write operations** (POST, PUT, PATCH, DELETE). The read SPN (or OBO user) continues to handle all GET calls. Any write operation added to the app in future releases will also automatically use the action SPN — no reconfiguration required.
 
 To enable it, go to **Admin → Settings** → *Azure ARM Authentication (Action SPN)*:
 
@@ -1661,61 +1514,6 @@ Click **▼ Snapshot Freshness** / **▶ Snapshot Freshness** to expand or colla
 - **Alternative to individual cluster browsing:** For read-only stakeholders who need a high-level view, the Fleet Status Board may be sufficient without ever visiting a per-cluster page.
 
 > **Note:** The Fleet Status Board only reflects data already collected by the background collector. If a cluster was added recently and has not been polled yet, it will show no data in the table until the first successful poll completes.
-
----
-
-## 28a. Fleet Schedules
-
-**Route:** `/schedules`  
-**Access required:** HciRead (view) · `Updates → Start` permission (create/cancel schedules)
-
-The Fleet Schedules page provides a single place to view, create, and cancel solution update schedules across all registered clusters.
-
-> Fleet Schedules is accessible from the left sidebar (above Fleet Status, visible on all pages — not cluster-scoped).
-
-### Pending Schedules
-
-Lists all update schedules that have not yet been triggered or cancelled. Schedules can be:
-
-- **Single-cluster** — one update entry for one cluster.
-- **Batch** — a set of schedules created together in one operation (e.g. rolling a cumulative update across multiple clusters). Batch rows are grouped with a collapse/expand toggle showing the number of clusters. Click the row to expand individual cluster entries.
-
-#### Columns
-
-| Column | Description |
-|---|---|
-| Update | Display name of the update package |
-| Version | Update version string |
-| Cluster(s) | Cluster name (single) or comma-separated list (batch header) |
-| Scheduled Start | UTC start time with a status dot: green = future, orange = due within 1 hour, grey = past/overdue |
-| Live State | Real-time update run state sourced from the latest cluster snapshot (e.g. Running, Succeeded) |
-| Created By | UPN of the user who created the schedule |
-| Notes | Free-text notes supplied when the schedule was created |
-| Action | **Cancel** (single) or **Cancel All** (batch header) — requires `Updates → Start` permission |
-
-> The scheduler triggers the update at the scheduled start time (checked every minute). If the app server is offline during the trigger window, the schedule is triggered on the next check-in.
-
-### Schedule History
-
-Shows the 50 most recent completed schedule entries. Columns match the Pending table with the addition of:
-
-- **Triggered / Cancelled** — timestamp when the schedule was acted on
-- **Schedule Status** — Pending / Triggered / Cancelled (with dot)
-
-### Creating a Schedule
-
-Click **New Schedule** (requires `Updates → Start` permission). A modal opens:
-
-1. **Select cluster(s)** — check one or more clusters (multiple selections create a batch).
-2. **Select update** — pick from the available updates shown for the selected cluster(s).
-3. **Scheduled start (UTC)** — date-time picker; defaults to 30 minutes from now.
-4. **Notes** — optional free-text note.
-
-Click **Create** to save. For batches, the scheduler creates one entry per cluster under a shared batch ID.
-
-### Per-cluster update scheduling
-
-Individual update schedules can also be created from the [Solution Updates](#15-solution-updates) page for a specific cluster using the **Schedules** tab.
 
 ---
 

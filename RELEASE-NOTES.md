@@ -2,6 +2,49 @@
 
 ---
 
+## v0.12.0
+
+### New — Unclustered VM detection and Add-to-Cluster
+
+VMs that are running on a node but not registered as a cluster resource are now
+highlighted on the Virtual Machines page with an orange **Unclustered** badge.
+
+**What this means:**  
+An unclustered VM has no automatic failover protection — if the host node goes offline,
+the VM will not restart on another node. The badge makes this risk immediately visible
+without needing to cross-reference Failover Cluster Manager.
+
+**Add to Cluster:**  
+An **Add to Cluster** button in the Actions column opens a confirmation modal and
+registers the VM as a Highly Available cluster resource (`Add-ClusterVirtualMachineRole`).
+The operation completes in seconds and the badge disappears on the next refresh.
+
+**Exclusion patterns:**  
+Set `NonClusteredVmPatterns` in Admin > Settings to a comma-separated list of name
+patterns (e.g. `Mgmt-*,*-Utility`) to suppress the badge for VMs that are intentionally
+unclustered.
+
+### New — DDA VM detection
+
+VMs with a PCI device directly assigned (Discrete Device Assignment) now show a **DDA**
+badge. Live migration is automatically blocked for these VMs — the Live Migrate button is
+disabled because DDA VMs cannot be moved while powered on.
+
+### New — Global search (previously staged as v0.11.2)
+
+A search box in the top bar lets you find clusters, VMs, and nodes instantly from any
+page. Results come from database snapshots — no WinRM calls, instant response. Click a
+result to navigate directly to that resource.
+
+### Bug fixes
+
+- **RBAC group search now works** — the Microsoft Graph `Group.Read.All` scope was
+  missing, causing the group picker in Admin > Roles to return no results. Fixed.
+- **ARM Auth settings** — the OBO mode option has been removed from Admin > Settings.
+  SPN remains the only supported ARM authentication mode.
+
+---
+
 ## v0.11.1
 
 ### New feature — Daily Health Digest
