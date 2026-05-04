@@ -3,6 +3,55 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
+## v0.12.0 — 2026-05-04
+
+### Features
+
+- **Unclustered VM detection + Add-to-Cluster (#21)** — VMs running on a node but not
+  registered as a Cluster Group resource are now detected and surfaced on the Virtual Machines
+  page.
+
+  - An orange **Unclustered** badge appears in the Host column for any VM not covered by a
+    Cluster Group. These VMs have no automatic failover protection.
+  - An **Add to Cluster** button in the Actions column opens a confirmation modal and calls
+    `Add-ClusterVirtualMachineRole` to register the VM as a Highly Available resource.
+  - A drain pre-flight check warns before migrating a VM off a node that is in a draining state.
+  - Works correctly on single-node clusters (single-node previously mis-detected all VMs as
+    unclustered).
+  - Administrators can configure `NonClusteredVmPatterns` (comma-separated name patterns) in
+    Admin > Settings to exclude specific VMs from the badge.
+
+- **DDA (Discrete Device Assignment) VM detection** — VMs with a directly assigned PCI device
+  are detected via `Msvm_PciExpressSettingData` during the VM snapshot. A **DDA** badge is shown
+  and live migration is blocked for those VMs (DDA VMs cannot be migrated while powered on).
+
+- **Global search typeahead (#17)** — a search box in the top bar lets operators quickly find
+  clusters, VMs, and nodes from any page. Results are drawn from database snapshots (no WinRM
+  calls), are RBAC-filtered, and are debounced to avoid redundant queries. Selecting a VM or
+  node result navigates directly to the corresponding page with the item pre-filtered.
+
+### Bug Fixes
+
+- **RBAC group picker — no results returned** — the `Group.Read.All` delegated scope was missing
+  from the token acquisition call, causing the Microsoft Graph API to reject the request and return
+  no groups. The group search typeahead in Admin > Custom Roles now works correctly.
+- **OBO mode removed from ARM Auth settings** — On-Behalf-Of authentication is not supported in
+  the current IIS/gMSA hosting model. The OBO option has been removed from the ARM Auth Mode
+  dropdown in Admin > Settings. SPN remains the supported mode.
+
+---
+
+## v0.11.2 — 2026-05-04
+
+### Features
+
+- **Global search typeahead (#17, Part 1)** *(included in v0.12.0 — see above)*
+
+  This entry is retained for reference. The v0.11.2 intermediate revision was deployed to
+  staging but was not publicly tagged; all users should upgrade directly to v0.12.0.
+
+---
+
 ## v0.11.1 — 2026-05-03
 
 ### Features
