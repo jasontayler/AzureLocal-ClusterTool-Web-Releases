@@ -2,6 +2,73 @@
 
 ---
 
+## v0.12.1
+
+### Bug fixes and configuration improvements
+
+This release focuses on authentication and RBAC configuration fixes surfaced through
+customer testing.
+
+### Fixed — Sign Out button on the Access Denied page
+
+The Sign Out button on the `/access-denied` page did not work — clicking it appeared
+to do nothing because Blazor enhanced navigation intercepted the click instead of
+following the Entra sign-out redirect. Fixed with the same `data-enhance-nav="false"`
+correction applied to the nav bar sign-out link in v0.12.0.
+
+### Fixed — Access Denied page listed outdated group names
+
+The Access Denied page still referenced the old three-group model (HCI Read / HCI
+Operate / HCI Admin) from before v0.11. Updated to reflect the current two-group
+model (HCI Access / HCI Admin).
+
+### Fixed — Custom RBAC role assignments silently having no effect
+
+With `groupMembershipClaims: "ApplicationGroup"` set in the Entra app manifest
+(the recommended setting to avoid oversized tokens), a group's Object ID only
+appears in a user's JWT token if that group is explicitly assigned to the
+**Enterprise Application** under Entra Portal → Enterprise Applications →
+[app] → Users and groups.
+
+This requirement applies to **every group** used in the app — not only the login
+gate groups (HciAccess / HciAdmin) but also every Entra group assigned to a
+Custom Role. If a custom RBAC group is not listed in the Enterprise Application,
+users in that group see no clusters and receive no role badge, even after signing
+out and back in.
+
+Two changes make this requirement visible at the point it matters:
+
+- A persistent warning now appears in Admin → Custom Roles directly below the
+  group assignment field.
+- The Access Denied page (Step 2) now explicitly calls this out with the correct
+  remediation steps.
+
+### New — Entra App Client Secret configurable via Admin → Settings
+
+The `AzureAd:ClientSecret` field is now visible in Admin → Settings under the
+**Azure ARM Authentication** group, labelled **Entra App Client Secret**.
+
+This secret enables two features:
+- **Graph group name search** in Admin → Custom Roles — type a group name to find
+  it instead of pasting an Object ID manually.
+- **ARM OBO mode** for Azure Arc pages (if `ArmAuthMode` is set to `OBO`).
+
+Storing the secret via Admin → Settings is the recommended approach — it is
+DPAPI-encrypted in the database and never touches a config file on disk. An IIS
+app pool recycle is required once after saving.
+
+### Configuration clarifications
+
+- `appsettings.json` and `appsettings.Production.json` now clearly document that
+  `Groups:HciAccess` and `Groups:HciAdmin` hold **Entra group Object IDs**, not
+  the App Role IDs visible in App registrations → App roles.
+- `AzureAd:ClientSecret` has been removed from the settings file templates — the
+  comment directs operators to Admin → Settings instead.
+- Admins only need to be a member of the `HciAdmin` group — membership in
+  `HciAccess` is not also required, as the access policy accepts either group.
+
+---
+
 ## v0.12.0
 
 ### New — Unclustered VM detection and Add-to-Cluster
