@@ -3,7 +3,7 @@
 [![CI](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/integration-tests.yml)
 [![Release](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/release.yml/badge.svg)](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/release.yml)
 
-> **v0.10.1** — Latest stable release. Please report bugs and
+> **v0.12.2** — Latest stable release. Please report bugs and
 > feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues).
 
 A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)** clusters and

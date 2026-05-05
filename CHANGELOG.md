@@ -3,7 +3,50 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
-## v0.12.0 — 2026-05-04
+## v0.12.2 — 2026-05-06
+
+### Features
+
+- **Clone Custom Role (#33)** — a **Clone** button on each role row in Admin > Custom Roles
+  pre-populates the new-role form with the source role's name (`"[Name] (Copy)"`), description,
+  and all permission claims. The cloned role is saved as a distinct role — the original is
+  unchanged. Group assignments are not copied. The creation is recorded in the audit log.
+
+### Bug Fixes
+
+- **Entra group search now works** — group search in Admin > Custom Roles was silently returning
+  no results despite the Client Secret being correctly configured. The `GraphService` has been
+  rewritten to use MSAL app-only client credentials, which works correctly in Blazor Server
+  SignalR event handlers (the previous OBO flow required an active `HttpContext` which is not
+  available in that context).
+
+- **Group search dropdown was a black box** — the dropdown background was hardcoded to a dark
+  colour, making results unreadable against the app's light theme. Fixed.
+
+- **Search box pre-filled with a browser URL** — Chrome treated the monospace group search input
+  as a URL field and auto-filled it with a URL from history before the user typed anything. Fixed
+  by overriding the font family and using `autocomplete="new-password"`.
+
+### Breaking Change — New Entra Application Permission Required
+
+> **Action required if you use Admin > Custom Roles group search.**
+
+The group search feature now uses an **Application** permission instead of a Delegated one.
+
+**Steps to grant the permission:**
+1. Entra Portal > **App registrations** > select your app
+2. **API permissions** > Add a permission > Microsoft Graph
+3. Choose **Application permissions** (not Delegated)
+4. Select **`Group.Read.All`** > Add permissions
+5. Click **Grant admin consent for [tenant]**
+6. Ensure the Client Secret is set in **Admin > Settings > Entra App Client Secret**
+
+If the Application permission is not granted the group search will show an error and fall back
+to the manual Object ID input — existing role assignments are unaffected.
+
+---
+
+## v0.12.1 — 2026-05-05
 
 ### Features
 
