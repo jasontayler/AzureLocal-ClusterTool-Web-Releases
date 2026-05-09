@@ -18,9 +18,10 @@ Remote Desktop or multiple PowerShell windows.
 | **Virtual Machines** | List, Start, Stop, Force Stop, Restart, Suspend, Live Migrate; VM detail (NICs, disks, integration services, snapshots); Configure CPU and memory; VM performance metrics (CPU%, memory, VHD IOPS/latency, network) |
 | **Virtual Switches** | Hyper-V virtual switch inventory per node — type, SET, management OS adapters |
 | **Cluster Nodes** | Live CPU, memory and uptime stats; OS build + display version; Pause/Drain, Resume, Failback |
+| **Node Performance** | Dedicated performance page per cluster — CPU%, memory, and network per node; timeframe selector (Most Recent / Last Hour / Last Day / Last Week / Last Month); sparklines on key columns for historical timeframes |
 | **Cluster Roles** | List, Start, Stop, Move (failover to node) |
 | **Cluster Info** | Quorum mode and witness, S2D status, health faults, Cluster Shared Volumes |
-| **Storage** | Storage pools, virtual disks, physical disks; Storage QoS volumes with read/write IOPS and latency; **Disk Replacement Wizard** — guided 3-step modal with pre-flight checks, retire command, and live repair job polling (feature-flag gated) |
+| **Storage** | Storage pools, virtual disks, physical disks; Storage QoS volumes with read/write IOPS and latency; **Storage Performance** — volume IOPS, latency, and throughput with timeframe selector and sparklines; **Disk Replacement Wizard** — guided 3-step modal with pre-flight checks, retire command, and live repair job polling (feature-flag gated) |
 | **Network** | Physical adapters with driver info; ATC intents + live status; cluster networks; logical networks (ARM); SMB health |
 | **Events** | Cluster event log viewer with CSV export |
 | **Remote Log Viewer** | Browse and tail log files directly from cluster nodes; auto-refresh with line interval picker |
@@ -30,6 +31,8 @@ Remote Desktop or multiple PowerShell windows.
 | **Alerting** | Rules engine with configurable thresholds and cooldown; Teams webhook and SMTP email delivery; maintenance windows to suppress alerts during planned work; alert history with acknowledgement; VM name glob pattern filtering for VM stop alerts |
 | **Fleet Status** | Default home page — multi-cluster dashboard with interactive filter pills (VMs Running, Nodes Up, Health Faults, Updates); user Favourites (pin clusters); personal named views (explicit / wildcard / regex); admin-created global and group-scoped shared views; zero WinRM calls (DB reads only) |
 | **Fleet VM Status** | Fleet-wide VM table across all clusters — state, memory, uptime, node; interactive state-filter pills and name search; snapshot data, no live WinRM |
+| **Fleet Update Status** | Cross-cluster update state summary — per-cluster update state pills (All Current / Failed / In Progress / Updates Ready); links to cluster update pages; snapshot data, no live WinRM |
+| **Update Schedules** | Create and manage scheduled solution update windows; track status (Pending / In Progress / Completed / Failed); cancel pending schedules; audit-logged |
 | **Snapshot Freshness** | Dedicated report page — per-data-type freshness grid with stale-cluster warning banner and exact timestamps on hover |
 | **Admin — Clusters** | Multi-cluster CRUD management with audit trail |
 | **Admin — Shared Views** | Create and manage global/group-scoped named cluster views for Fleet Status (explicit, wildcard, regex pattern types) |
@@ -154,17 +157,17 @@ Both sites connect to the same database and cluster list.
 
 ## Access Levels
 
-Three Entra security groups control base access:
+Two Entra security groups control base access:
 
 | Group | Access |
 |---|---|
-| **HciRead** | View all data |
-| **HciOperate** | View + perform VM/node/role operations |
-| **HciAdmin** | Full access including cluster admin, audit log, settings, RBAC management, and alerting |
+| **HciAccess** | View all pages; perform operations permitted by the user's assigned custom RBAC role |
+| **HciAdmin** | Full access including cluster admin, audit log, settings, RBAC management, and alerting; bypasses all custom RBAC checks |
 
-Fine-grained RBAC — per resource type, per named resource (glob pattern), per operation — is
+Fine-grained RBAC — per resource type, per named resource (glob or regex pattern), per operation — is
 configured via **Admin → Roles** after signing in as HciAdmin. When no role assignments exist
-the app runs in pass-through mode and only the three group policies apply.
+the app runs in pass-through mode (all HciAccess members can view and act on everything) and
+only the two group policies apply.
 
 ---
 
@@ -226,7 +229,7 @@ Shared views support the same three pattern types as personal views. They are ma
 | `SharedViews → View` | Seeing the `/admin/views` page |
 | `SharedViews → Configure` | Creating, editing, and deleting shared views |
 
-HciAdmin users always have both. Grant `SharedViews / Configure` to HciOperate users who
+HciAdmin users always have both. Grant `SharedViews / Configure` to HciAccess users who
 should manage views without needing full admin access.
 
 ---
@@ -251,7 +254,6 @@ For detailed context, implementation notes, and next steps see [`.github/BACKLOG
 
 | Feature | Description |
 |---|---|
-| **RBAC group picker** | Search and select Entra groups by name in the Roles admin UI instead of pasting Object IDs manually |
 | **Alerting — Phase 2** | Additional rule types (storage threshold, update available, Arc connectivity); alert acknowledgement; per-alert escalation policy |
 | **Historical trending** | Background collection of CPU/memory/storage utilisation over time; capacity forecasting graphs |
 | **SIEM sink for audit logs** | Forward audit entries to Azure Monitor / Log Analytics, Splunk, or a generic HTTP webhook |
