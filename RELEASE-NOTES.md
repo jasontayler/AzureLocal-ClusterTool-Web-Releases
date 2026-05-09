@@ -2,6 +2,103 @@
 
 ---
 
+## v0.12.3 — 2026-05-09
+
+### New — Storage Performance timeframe selector and sparklines
+
+The Cluster Performance page now matches the Node Performance pattern. A timeframe dropdown
+(Most Recent / Last Hour / Last Day / Last Week / Last Month) and an explicit **Load Performance**
+button replace the previous auto-load behaviour. Sparklines appear on IOPS, Latency, and
+Throughput columns when a historical timeframe is selected. An amber notice is shown for
+historical timeframes to indicate that data comes from the collector's snapshot history.
+
+### New — Node Performance added to sidebar navigation
+
+The Node Performance page is now directly accessible in the **Cluster** section of the sidebar
+(listed after Events). Previously it was only reachable via the tab bar on Cluster Info
+sub-pages.
+
+### Improved — Cluster Info page card styling
+
+The four summary cards (Cluster Summary, Nodes, Quorum, VM Load Balancer) and the Health
+section now use the same `overview-card` design as the Overview page. The Cluster Shared
+Volumes and Cluster Networks sections at the bottom have also been updated to `overview-card`
+panels with direct `Storage →` and `Network →` header links.
+
+### Fixed — Storage Performance stale "No volume data" message
+
+When `GetVolumePerfAsync` returned zero rows on first call (possible while performance history
+initialises), the page would show a permanent dead-end message. Replaced with an inline
+**Retry** button.
+
+### Fixed — Cluster Info comment text visible in browser
+
+Closing-brace comments left in Razor markup context were rendered as visible text in the
+browser. Removed.
+
+### Documentation
+
+- USER-GUIDE.md updated with new sections: Health Settings, Security & Compliance, Node
+  Performance, Diagnostic Logs, Platform Topology, Fleet VM Status, Fleet Update Status,
+  Update Schedules, and Reports.
+- API.md updated: 429 rate-limit response code added to the error table; new Rate Limiting
+  section documents the 60 req/min fixed-window limit and `Retry-After` header.
+- Access Levels section updated to reflect the current two-group model (HciAccess / HciAdmin).
+
+---
+
+## v0.12.2 — 2026-05-06
+
+### New — Clone Custom Role
+
+A **Clone** button on each role row in Admin &rarr; Custom Roles pre-populates the new-role
+form with the source role's name (`"[Name] (Copy)"`), description, and all permission claims.
+The cloned role is saved with a new ID — the original is unchanged. Group assignments are
+intentionally not copied. The operation is recorded in the audit log.
+
+### Breaking Change — New Entra Application Permission Required
+
+> **Action required before upgrading if you use the group search in Admin &rarr; Custom Roles.**
+
+The `GraphService` has been rewritten to use the **app-only** (client credentials) token flow
+instead of a delegated (OBO) token. The permission type changes:
+
+| | Before | After |
+|---|---|---|
+| Permission type | Delegated | **Application** |
+| Permission name | `Group.Read.All` | **`Group.Read.All`** |
+
+**Steps to grant the permission:**
+
+1. Entra Portal &rarr; **App registrations** &rarr; select your app
+2. **API permissions** &rarr; Add a permission &rarr; Microsoft Graph
+3. Choose **Application permissions** (not Delegated)
+4. Select **`Group.Read.All`** &rarr; Add permissions
+5. Click **Grant admin consent for [tenant]**
+6. The Client Secret must be set in **Admin &rarr; Settings &rarr; Entra App Client Secret**
+
+If the Application permission is not granted, group search will show an error and fall back to
+the manual Object ID input — existing role assignments are unaffected.
+
+### Fixed — Entra group search returning no results
+
+Group search was silently returning empty results even when the Client Secret was correctly
+configured. Root cause: Blazor Server SignalR handlers run without an active `HttpContext`,
+causing the OBO token acquisition to fail silently. `GraphService` now uses
+`AcquireTokenForClient` (app-only), which works correctly from any Blazor event handler.
+
+### Fixed — Group search dropdown rendered as a black box
+
+The dropdown had a hardcoded dark background making results unreadable. Background, border,
+shadow, and hover colours updated to use the app's light-theme CSS.
+
+### Fixed — Search box pre-filled with browser URL history
+
+The input inherited a monospace font which Chrome auto-filled with URL history. Fixed by
+overriding `font-family: inherit` and switching to `autocomplete="new-password"`.
+
+---
+
 ## v0.12.1
 
 ### Bug fixes and configuration improvements
