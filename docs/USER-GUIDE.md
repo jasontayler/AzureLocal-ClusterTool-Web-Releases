@@ -19,15 +19,20 @@
 7. [Cluster Roles](#7-cluster-roles)
 8. [AKS on Azure Local](#8-aks-on-azure-local)
 9. [Cluster Info](#9-cluster-info)
+   - [9a. Health Settings](#9a-health-settings)
+   - [9b. Security & Compliance](#9b-security--compliance)
 10. [Storage](#10-storage)
 11. [Storage QoS](#11-storage-qos)
+    - [11a. Node Performance](#11a-node-performance)
 12. [Network](#12-network)
 13. [Events](#13-events)
 14. [Remote Log Viewer](#14-remote-log-viewer)
+    - [14a. Diagnostic Logs](#14a-diagnostic-logs)
 15. [Solution Updates](#15-solution-updates)
 16. [Azure Arc](#16-azure-arc)
 17. [Arc Resource Bridge](#17-arc-resource-bridge)
 18. [Custom Locations](#18-custom-locations)
+    - [18a. Platform Topology](#18a-platform-topology)
 19. [Agent Services](#19-agent-services)
 20. [Admin — Clusters](#20-admin--clusters)
 21. [Admin — Audit Log](#21-admin--audit-log)
@@ -37,8 +42,13 @@
 25. [Frequently Asked Questions](#25-frequently-asked-questions)
 26. [Windows Authentication Deployment](#26-windows-authentication-deployment)
 27. [Admin — Diagnostics & Background Collector](#27-admin--diagnostics--background-collector)
-28. [Fleet Status Board](#28-fleet-status-board)
+28. [All Clusters — Dashboard](#28-all-clusters--dashboard)
+    - [28a. VM Status](#28a-vm-status)
+    - [28b. Update Status](#28b-update-status)
+    - [28c. Update Schedules](#28c-update-schedules)
 29. [Admin — Alerts](#29-admin--alerts)
+30. [Reports](#30-reports)
+30. [Reports](#30-reports)
 
 ---
 
@@ -68,63 +78,82 @@ If no clusters are listed, either no clusters are registered (an Administrator m
 
 ## 3. Navigation
 
-The left sidebar has two sections:
+The left sidebar organises pages into collapsible groups. All groups are expanded by default. Click any group header to collapse or expand it.
 
-**Cluster section** (appears after selecting a cluster)
-
-The sidebar groups cluster links into labelled sections:
+**Global links** (always visible at the top)
 
 | Link | Page |
 |---|---|
-| 🏠 All Clusters | Return to the cluster picker home page |
-| 📋 Fleet Status | Fleet-wide VM/node/health/updates dashboard — all clusters, zero WinRM, DB-only |
-| 📊 Overview | Summary cards — VM, role health, and Azure Arc status at a glance |
-| **Compute** | |
-| 🖥️ Virtual Machines | Full VM list with actions |
-| &nbsp;&nbsp;↳ 📈 VM Performance | Per-VM CPU/memory/disk/network charts (sub-link) |
-| &nbsp;&nbsp;↳ 🌐 Virtual Switches | Hyper-V virtual switches per node (sub-link) |
-| 🖧 Cluster | Cluster-wide summary — health faults, quorum, CSV volumes |
-| &nbsp;&nbsp;↳ 💻 Cluster Nodes | Node health and drain operations (sub-link) |
-| &nbsp;&nbsp;↳ 🔧 Cluster Roles | Cluster resource groups (sub-link) |
-| &nbsp;&nbsp;↳ 💾 Cluster Storage | CSV volumes and storage pools (sub-link) |
-| &nbsp;&nbsp;↳ 📊 Cluster Performance | Storage QoS and node performance metrics (sub-link) |
-| &nbsp;&nbsp;↳ 📡 Cluster Network | Cluster network health (sub-link) |
-| &nbsp;&nbsp;↳ 📋 Cluster Events | Windows cluster event log (sub-link) |
-| ⚓️ AKS | AKS on Azure Local clusters — ARM-sourced overview |
-| **Storage** | |
-| 💾 Storage | Storage pools, virtual disks, physical disks — includes Storage QoS tab |
-| **Network** | |
-| 📡 Network | Physical network adapters — includes ATC Intents, Cluster Networks, SMB Networks, Logical Networks tabs |
-| **Tools** | |
-| 📄 Remote Logs | Browse and read log files on cluster nodes |
-| ⚙️ Agent Services | HCI agent service status and control |
-| **Platform** | |
-| 🔄 Solution Updates | Available updates and update run history |
-| ☁️ Azure Arc | Arc registration status — includes Arc Machines, Arc Extensions, Cluster Extensions tabs |
-| &nbsp;&nbsp;↳ 🧱 Arc Resource Bridge | Arc appliance health and Azure Local sites (dedicated page) |
-| &nbsp;&nbsp;↳ 📍 Custom Locations | Azure Arc custom locations (dedicated page) |
+| All Clusters | Home page — cluster picker |
+| &nbsp;&nbsp;↳ VM Status | All VMs across all clusters — snapshot data, no live WinRM |
+| &nbsp;&nbsp;↳ Update Status | Solution update state for all clusters — snapshot data |
+| &nbsp;&nbsp;↳ Update Schedules | Create and manage scheduled update windows across clusters |
+
+**Cluster section** (appears after you select a cluster, labelled with the cluster name)
+
+Links are organised into named collapsible groups within the cluster section:
+
+| Link | Group | Page |
+|---|---|---|
+| Overview | — | Summary cards — VM count, cluster role health, and Azure Arc status |
+| Cluster Info | **Cluster** | Quorum, S2D health, cluster shared volumes, health faults |
+| &nbsp;&nbsp;↳ Nodes | Cluster | Node health, CPU/memory, drain and resume operations |
+| &nbsp;&nbsp;↳ Roles | Cluster | Cluster resource groups — start, stop, move |
+| &nbsp;&nbsp;↳ Events | Cluster | Windows cluster event log |
+| &nbsp;&nbsp;↳ Node Performance | Cluster | Per-node CPU/memory/network charts with timeframe selection |
+| &nbsp;&nbsp;↳ Security & Compliance | Cluster | Security feature and WDAC status per node (Azure Local 24H2+) |
+| &nbsp;&nbsp;↳ Health Settings | Cluster | Health Service fault-detection thresholds |
+| Storage | — | Physical disks · Cluster volumes · Storage QoS performance |
+| Network | — | Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks |
+| Virtual Machines | **Workloads** | Full VM list — start, stop, migrate, console access |
+| AKS | Workloads | AKS on Azure Local — ARM-sourced overview |
+| Alerts | **Monitoring** *(HciAdmin only)* | Alert rules and fired alert history |
+| Maintenance | Monitoring *(HciAdmin only)* | Schedule maintenance windows to suppress alerts |
+| Remote Logs | **Tools** | Browse and read log files on cluster nodes |
+| Agent Services | Tools | HCI agent service status and control |
+| Diagnostic Logs | Tools | Submit cluster logs to Microsoft Support (Send-DiagnosticData) |
+| Solution Updates | **Platform** | Available updates and update run history |
+| Azure Arc | Platform | Arc registration · Arc Machines · Arc Extensions · Cluster Extensions |
+| Arc Resource Bridge | Platform | Arc appliance health and Azure Local sites |
+| Custom Locations | Platform | Azure Arc custom locations |
+| Platform Topology | Platform | ARM-sourced topology view of Arc-registered resources |
 
 **Sub-navigation strips**
 
 Several page groups share a tab strip directly below the page heading, so you can switch between related pages without going back to the sidebar:
 
 - **Virtual Machines group:** Virtual Machines · VM Performance · Virtual Switches
-- **Cluster group:** Cluster Info · Nodes · Roles · Storage · Performance · Events
-- **Storage group:** Storage · Storage QoS
+- **Cluster group:** Cluster Info · Nodes · Roles · Events · Node Performance
+- **Storage group:** Disks · Cluster Volumes · Performance
 - **Network group:** Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks
 - **Azure Arc group:** Registration · Arc Machines · Arc Extensions · Cluster Extensions
 
-**Arc Resource Bridge** and **Custom Locations** are separate sidebar entries (indented below Azure Arc), not tabs.
+Arc Resource Bridge, Custom Locations, and Platform Topology are dedicated sidebar entries in the **Platform** group, not tabs.
 
 **Admin section** (HciAdmin group only)
 
 | Link | Page |
 |---|---|
-| ⚙️ Clusters | Add / edit / delete registered clusters |
-| 📓 Audit Log | Complete history of all operator actions |
-| 🔑 Settings | Encrypted application settings (ARM auth, SPN credentials) |
-| 🛡️ Custom Roles | Fine-grained RBAC role management |
-| 🔬 Diagnostics | PS/WinRM call log, cluster perf debug, background collector health |
+| Clusters | Add / edit / delete registered clusters |
+| Settings | Encrypted application settings (ARM auth, SPN credentials, Licence key) |
+| Audit Log | Complete history of all operator actions |
+| Custom Roles | Fine-grained RBAC role management |
+| Debug | PS/WinRM call log, background collector health, cluster perf diagnostics |
+
+**Monitoring section** (HciAdmin group only — appears before Reports)
+
+| Link | Page |
+|---|---|
+| 🔔 Alerts | Alert history — fired, sent, and suppressed alerts across all clusters |
+| 🛠️ Maintenance | Schedule maintenance windows to suppress alerts for planned work |
+
+**Reports section** (any authenticated user with Reports access)
+
+| Link | Page |
+|---|---|
+| 📊 Activity | Unified audit activity report — filter by cluster, resource type, action, outcome, and date range. Covers VM, Node, Role, and Cluster administration events. Export to CSV. |
+| ❤️ Health Faults | Historical record of health faults detected across all clusters |
+| 🕒 Snapshot Freshness | Background-collector freshness — shows how recently each data type was collected per cluster |
 
 **Custom role nav visibility**
 
@@ -133,7 +162,7 @@ If your account is subject to [Custom Roles (RBAC)](#23-admin--custom-roles-rbac
 1. **Cluster visibility** — which clusters appear in the home page picker and in the left navigation bar. Controlled by your role's `Clusters` permission. If a cluster does not appear in your picker, your role's `Clusters` pattern does not match it.
 2. **Within a cluster** — which resource type links (VMs, Nodes, Storage, etc.) are shown. Controlled by the corresponding resource type permission on your role.
 
-Section headers (*Compute*, *Storage*, *Network*, *Tools*, *Platform*) are hidden when all links within them are hidden.
+Collapsible group headers (*Cluster*, *Workloads*, *Tools*, *Platform*) are hidden when all links within them are hidden.
 
 If you navigate directly to a URL for a cluster or page you cannot access, you will see an access-denied message rather than data.
 
@@ -161,7 +190,7 @@ Hover over any dot to see the full status text as a tooltip.
 ## 5. Virtual Machines
 
 **Route:** `/clusters/{name}/vms`  
-**Access required:** HciRead (view) · HciOperate (Start/Stop/Migrate)
+**Access required:** HciAccess (actions available depend on your custom RBAC role permissions)
 
 > The **Virtual Machines · VM Performance · Virtual Switches** tab strip at the top lets you switch between all three pages without returning to the sidebar.
 
@@ -229,7 +258,7 @@ Click any VM row to expand it, then scroll to the **Connect** section at the bot
 ## 5a. VM Performance
 
 **Route:** `/clusters/{name}/vms/perf`  
-**Access required:** HciRead
+**Access required:** HciAccess
 
 > Part of the **Virtual Machines · VM Performance · Virtual Switches** tab group.
 
@@ -247,7 +276,7 @@ Displays performance charts per virtual machine gathered directly from the Hyper
 ## 5b. Virtual Switches
 
 **Route:** `/clusters/{name}/virtual-switches`  
-**Access required:** HciRead
+**Access required:** HciAccess
 
 > Part of the **Virtual Machines · VM Performance · Virtual Switches** tab group.
 
@@ -272,9 +301,9 @@ Lists all Hyper-V virtual switches across every node in the cluster.
 ## 6. Cluster Nodes
 
 **Route:** `/clusters/{name}/nodes`  
-**Access required:** HciRead (view) · HciOperate (Pause/Resume)
+**Access required:** HciAccess (actions available depend on your custom RBAC role permissions)
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > **Custom role filtering:** Name patterns apply to node names. If your role does not include View access to Nodes, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -300,9 +329,9 @@ The **Connect** column shows an **RDP** button for each node. Clicking it downlo
 ## 7. Cluster Roles
 
 **Route:** `/clusters/{name}/roles`  
-**Access required:** HciRead (view) · HciOperate (Start/Stop/Move)
+**Access required:** HciAccess (actions available depend on your custom RBAC role permissions)
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > **Custom role filtering:** Name patterns apply to role/group names. If your role does not include View access to Roles, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -327,7 +356,7 @@ Click **Move** to relocate a running role to another node. A dropdown showing av
 ## 8. AKS on Azure Local
 
 **Route:** `/clusters/{name}/aks`  
-**Access required:** HciRead  
+**Access required:** HciAccess  
 **ARM required:** Yes — data is sourced from Azure Resource Manager
 
 > **Custom role filtering:** If your role does not include View access to AKS, this page shows an access-denied message and the sidebar link is hidden.
@@ -381,9 +410,9 @@ The AKS page shows ARM-sourced data only: cluster state, node pools, network/sec
 ## 9. Cluster Info
 
 **Route:** `/clusters/{name}/info`  
-**Access required:** HciRead
+**Access required:** HciAccess
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 > If your custom role does not include View access to this resource type, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -396,12 +425,65 @@ A summary page showing:
 
 ---
 
+## 9a. Health Settings
+
+**Route:** `/clusters/{name}/health-settings`  
+**Access required:** HciAccess (view) · Storage Configure permission (edit settings)
+
+A sub-link inside the **Cluster** collapsible group in the sidebar. Lets you view and adjust the thresholds that control when the Health Service raises faults.
+
+> **Caution:** The default values are appropriate for most environments. Incorrect thresholds can suppress real problems or generate false alarms. Changes take effect only after restarting the **SDDC Management** cluster role — the page will prompt you to restart after saving.
+
+### Configurable thresholds
+
+| Setting | Default | Description |
+|---|---|---|
+| Volume Warning threshold | 80% | Percentage full at which a volume raises a Warning health fault |
+| Volume Critical threshold | 90% | Percentage full at which a volume raises a Critical health fault |
+| Storage fault counts | varies | Per-type thresholds for storage degradation fault generation |
+| Memory counters | varies | Per-node memory pressure fault thresholds |
+
+Users without the `Configure` operation on the `Storage` resource type see the current values in read-only mode with no save buttons.
+
+---
+
+## 9b. Security & Compliance
+
+**Route:** `/clusters/{name}/security`  
+**Access required:** HciAccess  
+**ARM required:** Optional — ARM supplemental data enhances the view but is not required
+
+A sub-link inside the **Cluster** collapsible group in the sidebar. Shows the status of security features across all cluster nodes.
+
+> **Azure Local 24H2+ only:** The `Get-AzsSecurity` cmdlet used to populate this page requires Azure Local builds from November 2024 onwards. On older clusters the page shows an informational notice and returns no data.
+
+### Security Features
+
+A matrix showing the enabled/disabled state of key security features per node:
+
+| Feature | Description |
+|---|---|
+| Secure Boot | UEFI Secure Boot state |
+| HVCI (Memory Integrity) | Hypervisor-protected code integrity |
+| BitLocker OS | OS drive encryption status |
+| BitLocker Data | Cluster data volume encryption status |
+| Credential Guard | Windows Credential Guard |
+| DRTM | Dynamic Root of Trust for Measurement |
+| Side Channel Mitigation | Spectre/Meltdown mitigation state |
+| SMB Signing | Server Message Block signing enforcement |
+| SMB Encryption | SMB network encryption |
+| WDAC | Windows Defender Application Control policy status |
+
+Colour coding: green = enabled/compliant · orange = partial or degraded · red = disabled/non-compliant.
+
+---
+
 ## 10. Storage
 
 **Route:** `/clusters/{name}/storage`  
-**Access required:** HciRead
+**Access required:** HciAccess
 
-Three sections displayed on the page. Use the **Storage / Storage QoS** tab strip at the top to switch to the QoS volumes view.
+Three sections displayed on the page. Use the **Disks · Cluster Volumes · Performance** tab strip at the top to switch between the physical disk view, the cluster volumes view, and the storage performance (QoS) view.
 
 ### Storage Pools
 
@@ -442,9 +524,9 @@ Three sections displayed on the page. Use the **Storage / Storage QoS** tab stri
 ## 11. Storage QoS
 
 **Route:** `/clusters/{name}/cluster-performance`  
-**Access required:** HciRead
+**Access required:** HciAccess
 
-Accessible via the **Performance** tab in the Cluster tab strip, or via the **Storage QoS** tab on any Storage page.
+Accessible via the **Performance** tab in the **Storage** tab strip (Disks · Cluster Volumes · Performance).
 
 Displays Storage QoS volumes with current performance metrics. Each row shows:
 
@@ -457,10 +539,47 @@ Use this page to identify volumes that are hitting their IOPS limit or experienc
 
 ---
 
+## 11a. Node Performance
+
+**Route:** `/clusters/{name}/node-performance`  
+**Access required:** HciAccess
+
+Accessible via:
+- The **Node Performance** sub-link inside the **Cluster** collapsible group in the sidebar
+- The **Node Performance** tab in the **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip
+
+Shows per-node performance metrics sourced from `Get-ClusterPerf`, with a timeframe selector to view either the most recent sample or averaged historical data.
+
+### Timeframe selector
+
+| Option | Approximate load time | Description |
+|---|---|---|
+| Most Recent | Instant | Latest available sample — only a few seconds of history |
+| Last Hour | ~1–2 min | Averaged samples over the last 60 minutes |
+| Last Day | ~1–2 min | Averaged samples over the last 24 hours |
+| Last Week | ~2–3 min | Averaged samples over the last 7 days |
+| Last Month | ~2–3 min | Averaged samples over the last 30 days |
+
+Click **Load Performance** to fetch data for the selected timeframe. Data is not loaded automatically on page open.
+
+> **Historical timeframes:** An amber warning is shown when a timeframe other than *Most Recent* is selected, indicating the query may take a few minutes to complete.
+
+### Metrics shown per node
+
+| Metric | Description |
+|---|---|
+| CPU % | Processor utilisation |
+| Memory Used (GB) | Physical memory in use |
+| Memory Total (GB) | Total installed physical memory |
+| Network In (Kbps) | Inbound network throughput |
+| Network Out (Kbps) | Outbound network throughput |
+
+---
+
 ## 12. Network
 
 **Route:** `/clusters/{name}/network`  
-**Access required:** HciRead
+**Access required:** HciAccess
 
 The Network section spans five pages, switchable via the **Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks** tab strip shown at the top of each page.
 
@@ -515,9 +634,9 @@ If ARM is not configured, the tab shows a message indicating ARM credentials are
 ## 13. Events
 
 **Route:** `/clusters/{name}/events`  
-**Access required:** HciRead
+**Access required:** HciAccess
 
-> The **Cluster Info · Nodes · Roles · Storage · Performance · Events** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
 Shows the cluster event log — by default the 200 most recent entries. Each entry shows:
 
@@ -543,7 +662,7 @@ Click **Export CSV** to download the currently visible events as a CSV file for 
 ## 14. Remote Log Viewer
 
 **Route:** `/clusters/{name}/logs`  
-**Access required:** HciRead
+**Access required:** HciAccess
 
 Allows browsing and reading log files directly from cluster nodes without needing RDP or PowerShell access.
 
@@ -559,10 +678,30 @@ The file list shows each file's size and last modified time to help identify the
 
 ---
 
+## 14a. Diagnostic Logs
+
+**Route:** `/clusters/{name}/diagnostics`  
+**Access required:** HciAccess
+
+Accessible via **Diagnostic Logs** under the **Tools** group in the sidebar.
+
+Submits cluster diagnostic logs to Microsoft Support using the `Send-DiagnosticData` cmdlet, which runs directly on the cluster over WinRM. No log data passes through this portal — the portal acts only as a remote trigger.
+
+### How to use
+
+1. Set the **log window** — specify a start and end date/time for the collection window. The maximum range is 24 hours. The default covers the last 24 hours.
+2. Click **Send Diagnostic Logs**.
+3. Wait for the command to complete — this may take several minutes while logs are collected and uploaded.
+4. A **Correlation ID** is returned. Provide this ID to Microsoft Support when opening or updating a case — it lets the engineering team locate your uploaded data.
+
+> If the cluster is unreachable over WinRM the command will fail with a connection error. Check the cluster connection from [Admin → Diagnostics](#27-admin--diagnostics--background-collector) if needed.
+
+---
+
 ## 15. Solution Updates
 
 **Route:** `/clusters/{name}/updates`  
-**Access required:** HciRead (view) · HciOperate (start update)
+**Access required:** HciAccess (start update requires the Updates · Start custom RBAC permission)
 
 ### Available Updates
 
@@ -580,7 +719,7 @@ Click a row to expand the **detail panel** showing the full description, categor
 
 Click **▶ Start Update** to begin installation. You will be prompted to confirm before proceeding.
 
-> Starting an update is an HciOperate-level action and is recorded in the audit log.
+> Starting an update requires the Updates · Start custom RBAC permission and is recorded in the audit log.
 
 ### Update Runs
 
@@ -604,7 +743,7 @@ The Azure Arc section spans four pages, switchable via the **Registration · Arc
 
 ### Arc Registration (`/arc`)
 
-**Access required:** HciRead + Azure sign-in for ARM data
+**Access required:** HciAccess + Azure sign-in for ARM data
 
 Shows the cluster's Azure Arc registration status:
 
@@ -631,7 +770,7 @@ Lists all machines registered as `Microsoft.HybridCompute/machines` in the Azure
 
 ### Arc Extensions (`/arc-extensions`)
 
-**Access required:** HciRead (view) · HciOperate (Upgrade Selected)
+**Access required:** HciAccess (Arc extension upgrade requires the appropriate custom RBAC permission)
 
 Shows extensions installed on each Arc-enabled machine (e.g. AzureMonitorWindowsAgent, MDE). Columns include:
 
@@ -671,7 +810,7 @@ If an upgrade fails with `AuthorizationFailed`, the error message shown in the r
 
 ### Cluster Extensions (`/cluster-extensions`)
 
-**Access required:** HciRead (view) · HciOperate (Upgrade Selected)
+**Access required:** HciAccess (cluster extension upgrade requires the appropriate custom RBAC permission)
 
 Shows extensions installed at the cluster level via `Microsoft.AzureStackHCI/clusters/arcSettings/extensions`. This covers cluster-wide Arc extensions like billing, monitoring, and diagnostics.
 
@@ -702,7 +841,7 @@ Reader alone is **not** sufficient.
 ## 17. Arc Resource Bridge
 
 **Route:** `/clusters/{name}/arc-bridge`  
-**Access required:** HciRead  
+**Access required:** HciAccess  
 **ARM required:** Yes — data is sourced from Azure Resource Manager
 
 > **Custom role filtering:** If your role does not include View access to Arc Resource Bridge, this page shows an access-denied message and the sidebar link is hidden.
@@ -742,7 +881,7 @@ If Azure Local sites are configured, they appear below the appliance section. Ea
 ## 18. Custom Locations
 
 **Route:** `/clusters/{name}/custom-locations`  
-**Access required:** HciRead  
+**Access required:** HciAccess  
 **ARM required:** Yes — data is sourced from Azure Resource Manager
 
 > **Custom role filtering:** If your role does not include View access to Custom Locations, this page shows an access-denied message and the sidebar link is hidden.
@@ -766,10 +905,34 @@ If no custom locations are found, the page notes that they are created when the 
 
 ---
 
+## 18a. Platform Topology
+
+**Route:** `/clusters/{name}/topology`  
+**Access required:** HciAccess  
+**ARM required:** Yes — data is sourced from Azure Resource Manager
+
+Accessible via **Platform Topology** in the **Platform** group in the sidebar.
+
+Provides a visual topology of the Azure Arc-registered resources associated with this cluster, sourced from ARM. Resource types displayed include:
+
+- Cluster nodes
+- Logical networks
+- Marketplace VM images
+- Arc virtual machines
+- Storage containers
+
+Each entry shows its ARM provisioning state, resource ID, Azure region, and a direct link to the Azure Portal resource.
+
+> **Prerequisite:** Visit the [Azure Arc](#16-azure-arc) page first so that ARM enrichment can run. Until ARM registration data is available, Platform Topology shows an informational notice and no resources.
+
+If ARM is not configured, the page shows a message directing you to [Admin > Settings](#22-admin--settings).
+
+---
+
 ## 19. Agent Services
 
 **Route:** `/clusters/{name}/services`  
-**Access required:** HciRead (view) · HciOperate (Start/Stop/Restart)
+**Access required:** HciAccess (Start/Stop/Restart require the Services custom RBAC permission)
 
 Shows the status of the HCI infrastructure agent services on each cluster node:
 
@@ -906,6 +1069,7 @@ Controls how the Azure Arc pages authenticate to Azure Resource Manager.
 | Action SPN Tenant ID | Azure ARM Authentication (Action SPN) | Entra tenant ID for the action SPN (usually the same as the read SPN tenant) |
 | Action SPN Client ID | Azure ARM Authentication (Action SPN) | Application (client) ID for the action SPN |
 | Action SPN Client Secret | Azure ARM Authentication (Action SPN) | Client secret for the action SPN (encrypted at rest) |
+| Licence Key | Licence | Current licence key. Leave blank or use the `PREVIEW-2026-FREE` default during the preview period. |
 
 ### Action SPN (optional dual-SPN mode)
 
@@ -1070,19 +1234,18 @@ Team A members see only `PROD-*` clusters in the picker and nav; Team B sees onl
 
 ## 24. Access Levels
 
-The app enforces three base access tiers via Entra security group membership.
+The app enforces two base access tiers via Entra security group membership.
 
 | Level | Description | What you can do |
 |---|---|---|
-| **HciRead** | Read-only operations | View all pages. No actions. |
-| **HciOperate** | Operational access | All read access + VM Start/Stop/Restart/Suspend/Migrate, Node Pause/Resume, Role Start/Stop/Move, Start Solution Update, Service Start/Stop/Restart. |
-| **HciAdmin** | Full administrative access | All of the above + access to Admin pages (Clusters, Audit Log, Settings, Custom Roles). |
+| **HciAccess** | Standard access | View all pages; perform operations permitted by your assigned custom RBAC role. |
+| **HciAdmin** | Administrative access | All of the above + access to Admin pages (Clusters, Audit Log, Settings, Custom Roles). Bypasses all custom RBAC checks — always sees the full navigation and all data. |
 
-These groups are configured in `appsettings.json` on the server. All three can point to the same Entra group if a single access tier is sufficient.
+These groups are configured in `appsettings.json` on the server. Both can point to the same Entra group if a single access tier is sufficient.
 
 **Group membership takes effect at sign-in.** If you are added to a group mid-session, sign out and back in to receive the updated claims.
 
-**Custom Roles layer on top** of these tiers — they can restrict but not expand access beyond what your base tier permits. An HciRead member with a custom role granting `Op.Start` on VMs still cannot start VMs, because `Op.Start` is an HciOperate-level action.
+**Custom Roles layer on top** of the base tiers — they define which specific resource types and named resources an HciAccess member can View or operate on. Without any custom roles configured (pass-through mode), all HciAccess members can view and act on everything.
 
 **What custom role View restrictions control:**
 
@@ -1101,10 +1264,10 @@ When a custom role limits which resource types you can see, the restriction is e
 ## 25. Frequently Asked Questions
 
 **Q: I signed in but see "Access Denied" on every page.**  
-A: Your account is not in any of the three configured Entra groups. Contact your administrator to be added to the HciRead group (or higher).
+A: Your account is not in any of the configured Entra groups. Contact your administrator to be added to the HciAccess group (or higher).
 
 **Q: I can see VMs but the action buttons aren't visible.**  
-A: Your account is in HciRead but not HciOperate. You need to be added to the HciOperate group by your administrator. Alternatively, a custom role with the required Op flags may need to be assigned to your group.
+A: Your account is in the HciAccess group but does not have the required custom RBAC operation permissions. The action requires a custom role that includes the corresponding `Op` flag (e.g. `Op.Start` for VM start). Contact your administrator to update your role in [Admin → Custom Roles](#23-admin--custom-roles-rbac).
 
 **Q: The VM list is empty but I know there are VMs on the cluster.**  
 A: A custom RBAC role with a name pattern may be filtering your view. Contact your administrator to check `/admin/roles` for any roles whose pattern doesn't match the VMs you expect to see.
@@ -1435,18 +1598,18 @@ sqlite3.exe $db "SELECT ClusterName, ConsecutiveFails, IsCircuitOpen FROM Collec
 
 ---
 
-## 28. Fleet Status Board
+## 28. All Clusters — Dashboard
 
 **Route:** `/status`  
-**Access required:** HciRead (or higher)
+**Access required:** HciAccess (or higher)
 
-The Fleet Status Board provides a **zero-WinRM, read-only overview of all registered clusters** in a single page. All data comes from the background collector's database snapshots — no live WinRM connections are made when the page loads.
+The **All Clusters** page provides a **zero-WinRM, read-only overview of all registered clusters** in a single page. All data comes from the background collector's database snapshots — no live WinRM connections are made when the page loads.
 
 ---
 
 ### Summary Pills
 
-A row of coloured pills at the top of the page shows fleet-wide totals:
+A row of coloured pills at the top of the page shows totals across all clusters:
 
 | Pill | What it counts |
 |---|---|
@@ -1459,7 +1622,7 @@ A row of coloured pills at the top of the page shows fleet-wide totals:
 
 ---
 
-### Fleet Table
+### Cluster Table
 
 One row per cluster. Columns:
 
@@ -1508,12 +1671,114 @@ Click **▼ Snapshot Freshness** / **▶ Snapshot Freshness** to expand or colla
 
 ### Use Cases
 
-- **Morning health check:** Open the Fleet Status Board before starting work to see at a glance if any cluster has faults, stale data, or collector problems.
+- **Morning health check:** Open the All Clusters page before starting work to see at a glance if any cluster has faults, stale data, or collector problems.
 - **Collector monitoring:** The Collector column and freshness grid immediately show which clusters have polling problems without navigating to each cluster individually.
 - **Pre-maintenance scan:** Confirm all nodes are Up and no updates are failing before scheduling a maintenance window.
-- **Alternative to individual cluster browsing:** For read-only stakeholders who need a high-level view, the Fleet Status Board may be sufficient without ever visiting a per-cluster page.
+- **Alternative to individual cluster browsing:** For read-only stakeholders who need a high-level view, the All Clusters page may be sufficient without ever visiting a per-cluster page.
 
-> **Note:** The Fleet Status Board only reflects data already collected by the background collector. If a cluster was added recently and has not been polled yet, it will show no data in the table until the first successful poll completes.
+> **Note:** The All Clusters page only reflects data already collected by the background collector. If a cluster was added recently and has not been polled yet, it will show no data in the table until the first successful poll completes.
+
+---
+
+## 28a. Fleet VM Status
+
+**Route:** `/status/vms`  
+**Access required:** HciAccess
+
+Accessible via **VM Status** in the **Monitoring** group in the sidebar (or from the All Clusters Dashboard).
+
+Provides a **cross-cluster VM table** drawn entirely from background-collector snapshots — no live WinRM is used. Shows every virtual machine across all registered clusters on a single page.
+
+### Summary pills
+
+| Pill | Meaning |
+|---|---|
+| Running | VMs currently in Running state |
+| Off | VMs currently powered off |
+| Other | VMs in any other state (Saved, Paused, etc.) |
+| Total | All VMs across all clusters |
+
+Click a pill to filter the table to that state.
+
+### VM table columns
+
+| Column | Description |
+|---|---|
+| Name | VM display name |
+| State | Current power state with a traffic-light dot |
+| Cluster | Cluster the VM belongs to (links to cluster Overview) |
+| Node | Current host node |
+| CPU% | Last-sampled CPU usage percentage |
+| Memory (GB) | Assigned memory in GB |
+
+The table supports client-side search (Name / Cluster / Node) and is sortable by any column.
+
+---
+
+## 28b. Fleet Update Status
+
+**Route:** `/status/updates`  
+**Access required:** HciAccess
+
+Accessible via **Update Status** in the **Monitoring** group in the sidebar.
+
+Summarises the solution-update state for every registered cluster from snapshot data (no live WinRM).
+
+### Summary pills
+
+| Pill | Meaning |
+|---|---|
+| All Current | Clusters with no available or in-progress updates |
+| Failed | Clusters where the last update attempt failed |
+| In Progress | Clusters currently running an update |
+| Updates Ready | Clusters with one or more updates available but not started |
+
+### Cluster table
+
+One row per cluster showing:
+
+| Column | Description |
+|---|---|
+| Cluster | Cluster name (links to cluster Solution Updates page) |
+| State | Current update state with a coloured dot |
+| Available | Number of updates available for this cluster |
+| Last Updated | Timestamp of the last completed update run |
+| Last Poll | Age of the snapshot data |
+
+---
+
+## 28c. Update Schedules
+
+**Route:** `/schedules`  
+**Access required:** HciAccess (view) · HciAdmin (create/cancel)
+
+Accessible via **Update Schedules** in the **Monitoring** group in the sidebar.
+
+Allows operators and administrators to plan and track scheduled solution-update windows.
+
+### Schedule table
+
+| Column | Description |
+|---|---|
+| Cluster | Target cluster name |
+| Update package | The update selected for this schedule |
+| Scheduled for | Date and time the update is planned to start (local time) |
+| Status | Pending / In Progress / Completed / Cancelled / Failed |
+| Created by | UPN of the user who created the schedule |
+
+### Creating a schedule
+
+1. Click **+ New Schedule**.
+2. In the modal: select the target **Cluster**, choose the **Update package**, and pick the **Date / Time**.
+3. Click **Create**. The schedule is saved to the database and appears in the table.
+
+The background collector will trigger the update run at the scheduled time. The status column updates automatically as the run progresses.
+
+### Cancelling a schedule
+
+Click **Cancel** on any schedule in Pending state. The action is audit-logged.
+
+> **Note:** Schedules in In Progress, Completed, Failed, or already-Cancelled states cannot be cancelled.
 
 ---
 
@@ -1644,3 +1909,62 @@ This prevents alert floods during planned maintenance (node firmware updates, st
 | `AlertRules → Acknowledge` | Can acknowledge fired alert history entries |
 
 HciAdmin users always have all three permissions. Non-admin users need a custom role with the appropriate operations assigned on the `AlertRules` resource type.
+
+---
+
+## 30. Reports
+
+The **Reports** section in the left navigation (visible when no cluster is selected) provides cross-cluster reporting from the audit log and background collector. It contains three pages:
+
+---
+
+### 30a. Activity Report (`/reports/activity`)
+
+The Activity report consolidates **all audited cluster and VM operations** into a single, filterable view. Instead of separate reports per resource type, you have one page and pick what you want to see via the filter bar.
+
+**Filters available:**
+
+| Filter | Options |
+|---|---|
+| Cluster | All clusters or a specific registered cluster |
+| Resource Type | All / Virtual Machines / Cluster Nodes / Cluster Roles / Cluster Administration |
+| Resource Name | Free-text filter — matches VM names, node names, role names, etc. |
+| Action | Context-sensitive — selecting a Resource Type narrows the action list to that type's actions only |
+| Outcome | All / Success only / Failures only |
+| From / To | Date range (UTC) |
+
+**Selecting a Resource Type automatically filters the Action dropdown** — e.g. choosing *Virtual Machines* shows only VM actions (Start, Stop, Restart, etc.); choosing *Cluster Nodes* shows Pause/Resume/Failback.
+
+**Actions covered per resource type:**
+
+| Resource Type | Actions |
+|---|---|
+| Virtual Machines | Start, Stop, Restart, Suspend, Live Migrate, Configure CPU, Configure Memory, Resize Disk |
+| Cluster Nodes | Pause/Drain, Resume, Failback |
+| Cluster Roles | Start Role, Stop Role, Move Role |
+| Cluster Administration | Add Cluster, Update Cluster, Delete Cluster, Enable (Online), Disable (Offline) |
+
+Click **Search** to run the query (up to 1,000 rows). Click **CSV** to export the current result set.
+
+> **Tip:** Leave all filters blank and click Search to see all recent activity across every cluster. Use the Resource Type and date range filters to build a targeted audit trail.
+
+---
+
+### 30b. Health Faults (`/reports/cluster-health`)
+
+Historical record of health faults detected across all clusters. Each row represents a point in time where the background collector recorded a non-empty fault state.
+
+Use the cluster dropdown and severity filter to narrow the view, and export to CSV for incident records.
+
+---
+
+### 30c. Snapshot Freshness (`/reports/snapshot-freshness`)
+
+Shows how recently each data type (VMs, Nodes, Arc, Storage, etc.) was collected by the background poller for every cluster. Colour coding indicates freshness relative to the expected collection interval:
+
+- Green — fresh (collected within the expected window)
+- Orange — slightly stale (1–2x the expected interval)
+- Red — very stale (2x or more)
+- Grey — never collected
+
+Use this page to diagnose collector problems before investigating WinRM connectivity.

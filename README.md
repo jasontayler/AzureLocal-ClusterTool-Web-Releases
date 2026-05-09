@@ -1,10 +1,8 @@
 # Azure Local Cluster Tool — Web
 
-[![CI](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/integration-tests.yml)
-[![Release](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/release.yml/badge.svg)](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/actions/workflows/release.yml)
-
-> **v0.12.2** — Latest stable release. Please report bugs and
-> feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues).
+> **Public Preview — Free to use during Public Preview.**
+> A licensing model may be introduced at general availability — this is still under consideration.
+> Please report bugs and feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues).
 
 A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)** clusters and
 Hyper-V hosts from any browser. Provides VM operations, node management, storage monitoring,
@@ -59,8 +57,8 @@ Remote Desktop or multiple PowerShell windows.
 
 ## Prerequisites
 
-- **Windows Server** (2022 or later) with IIS installed
-- **No separate .NET runtime required** — the release ZIP is a self-contained win-x64 build
+- **Windows Server** (2022 or later)
+- **No .NET runtime installation required** — the release ZIP is self-contained and bundles the .NET runtime. The `Setup-Prerequisites.ps1` script installs IIS, the ASP.NET Core Hosting Bundle (required IIS integration module), PowerShell 7, and optional components automatically.
 - A **group Managed Service Account (gMSA)** — or a standard Windows service account — with WinRM access to the cluster nodes
 - RSAT tools on the app server (installed by `scripts\Setup-Prerequisites.ps1`): `RSAT-Hyper-V-Tools` and `RSAT-Clustering-PowerShell`
 - An **Entra ID app registration** with `groupMembershipClaims: SecurityGroup` and HTTPS redirect URIs — OR Windows Authentication if using the WinAuth site

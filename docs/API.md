@@ -60,6 +60,18 @@ is still enforced by the app — anonymous access is not granted without a valid
 
 ---
 
+## Rate Limiting
+
+The API enforces a **fixed-window rate limit of 60 requests per minute** per client IP address. When the limit is exceeded the request is rejected immediately with:
+
+- **Status:** `429 Too Many Requests`
+- **Header:** `Retry-After: 60`
+- **Body:** `{ "error": "Rate limit exceeded. Please retry after 60 seconds." }`
+
+Clients should honour the `Retry-After` header and not retry before the indicated delay has elapsed. Automated tooling should use exponential back-off if multiple sequential requests are required.
+
+---
+
 ## Endpoints
 
 ### `GET /api/clusters`
@@ -282,6 +294,7 @@ All errors return JSON:
 | `401 Unauthorized` | Missing or invalid API key |
 | `404 Not Found` | Cluster name not found |
 | `409 Conflict` | POST: cluster with that name already exists |
+| `429 Too Many Requests` | Rate limit exceeded — retry after 60 seconds (check `Retry-After` header) |
 | `500 Internal Server Error` | Unexpected failure — check app logs |
 | `503 Service Unavailable` | No API key has been configured |
 
