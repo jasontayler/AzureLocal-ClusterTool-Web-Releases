@@ -2,6 +2,56 @@
 
 ---
 
+## v0.12.4 — 2026-05-15
+
+### New — Maintenance Windows
+
+A new **Admin &rarr; Maintenance Windows** page lets HciAdmin users configure windows that
+suppress alerting for a cluster (or all clusters) during planned maintenance.
+
+**Two window types:**
+
+- **One-time windows** — start time with an optional end time. Leave the end blank for an
+  indefinite mute. Useful for incidents or ad-hoc work outside the normal schedule.
+- **Recurring rules** — four recurrence types:
+  - `Daily` — fires every day
+  - `Weekly` — fires on selected days of the week (e.g. every Friday)
+  - `MonthlyByDay` — fires on a specific day number each month (e.g. the 1st)
+  - `MonthlyByOrdinal` — fires on a specific weekday occurrence (e.g. the 2nd Tuesday)
+
+  Rules generate occurrences 90 days ahead automatically. Each occurrence can be
+  enabled/disabled individually; the rule itself can also be paused without deleting it.
+
+**Grouped schedule view:**
+
+Recurring rules that share the same pattern and reason are displayed as a single
+**Reoccurring Schedule** row. Click the row to expand a fly-out table showing each cluster's
+individual rule with Enable/Disable, Edit, and Delete controls. Expired multi-cluster windows
+show a single group-level **Delete** button to remove the whole group in one action.
+
+**REST API:**
+
+Full CRUD is available via the REST API at `/api/maintenance/windows` and
+`/api/maintenance/rules`. The `windowStart` field uses a human-readable `HH:mm` format
+(e.g. `"22:00"`) and `daysOfWeek` uses comma-separated day names. See
+[API.md](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/blob/main/docs/API.md)
+for the full reference.
+
+**`Manage-Maintenance.ps1`** is included in `scripts/` as a ready-to-run PowerShell helper
+for the full maintenance window lifecycle via the API.
+
+### Security
+
+API layer, authentication, response headers, and audit subsystem hardening. No user-visible
+changes.
+
+### Documentation
+
+- API.md updated with full maintenance window and recurring rule endpoint reference,
+  field tables, PowerShell examples, and multi-cluster schedule patterns.
+
+---
+
 ## v0.12.3 — 2026-05-09
 
 ### New — Storage Performance timeframe selector and sparklines

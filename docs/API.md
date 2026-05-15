@@ -267,13 +267,285 @@ curl -s -X DELETE "$BASE/clusters/AZ-NUC-CL02" \
 
 ---
 
+## Maintenance window endpoints
+
+Maintenance windows suppress alerting for the specified cluster (or all clusters when `clusterName = "*"`). Windows can be created as one-time or as recurring rules that auto-generate occurrences 90 days ahead.
+
+---
+
+### `GET /api/maintenance/windows`
+
+Returns all active and upcoming one-time and recurring-occurrence windows (windows that have not yet ended and are not deactivated).
+
+**Response** `200 OK`
+```json
+[
+  {
+    "id":               12,
+    "clusterName":      "AZ-NUC-CL01",
+    "startsAt":         "2026-05-16T22:00:00Z",
+    "endsAt":           "2026-05-17T00:00:00Z",
+    "reason":           "Monthly patching",
+    "isCurrentlyActive": false,
+    "isRecurring":      true,
+    "recurringRuleId":  3
+  }
+]
+```
+
+---
+
+### `GET /api/maintenance/windows/{id}`
+
+Returns a single maintenance window by ID.
+
+**Response** `200 OK` — window object  
+**Response** `404 Not Found`
+
+---
+
+### `POST /api/maintenance/windows`
+
+Creates a one-time maintenance window.
+
+**Request body**
+```json
+{
+  "clusterName": "AZ-NUC-CL01",
+  "startsAt":    "2026-05-20T22:00:00Z",
+  "endsAt":      "2026-05-21T02:00:00Z",
+  "reason":      "Emergency patching"
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `clusterName` | Yes | Cluster name or `"*"` for all clusters |
+| `startsAt` | Yes | ISO 8601 UTC datetime |
+| `endsAt` | No | ISO 8601 UTC datetime. Omit or `null` for indefinite |
+| `reason` | No | Free text, max 512 chars |
+
+**Response** `201 Created` — `{ "id": 15 }`  
+**Response** `400 Bad Request` — validation error
+
+---
+
+### `DELETE /api/maintenance/windows/{id}`
+
+Deactivates a maintenance window (soft-delete). Does not remove past or recurring-generated windows from history.
+
+**Response** `204 No Content`  
+**Response** `404 Not Found`
+
+---
+
+### `GET /api/maintenance/rules`
+
+Returns all active recurring rules.
+
+**Response** `200 OK`
+```json
+[
+  {
+    "id":                    3,
+    "clusterName":           "*",
+    "recurrenceType":        "Weekly",
+    "daysOfWeek":            "Friday",
+    "weekOfMonth":           null,
+    "dayOfMonth":            null,
+    "windowStart":           "22:00",
+    "windowDurationMinutes": 120,
+    "reason":                "Weekly patching",
+    "recurrenceSummary":     "Every Friday at 22:00 UTC for 2h"
+  }
+]
+```
+
+---
+
+### `GET /api/maintenance/rules/{id}`
+
+Returns a single recurring rule by ID.
+
+**Response** `200 OK` — rule object  
+**Response** `404 Not Found`
+
+---
+
+### `POST /api/maintenance/rules`
+
+Creates a recurring rule and immediately materializes occurrences for the next 90 days.
+
+**Request body**
+```json
+{
+  "clusterName":           "*",
+  "recurrenceType":        "Weekly",
+  "daysOfWeek":            "Friday",
+  "windowStart":           "22:00",
+  "windowDurationMinutes": 120,
+  "reason":                "Weekly patching"
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `clusterName` | Yes | Cluster name or `"*"` for all clusters |
+| `recurrenceType` | Yes | `Daily`, `Weekly`, `MonthlyByDay`, or `MonthlyByOrdinal` |
+| `daysOfWeek` | For Weekly / MonthlyByOrdinal | Comma-separated day names: `"Friday"`, `"Monday,Wednesday,Friday"`. Valid names: `Sunday`, `Monday`, `Tuesday`, `Wednesday`, `Thursday`, `Friday`, `Saturday` |
+| `weekOfMonth` | For MonthlyByOrdinal | 1=1st, 2=2nd, 3=3rd, 4=4th, 5=last |
+| `dayOfMonth` | For MonthlyByDay | 1-31. Months shorter than this day produce no occurrence |
+| `windowStart` | Yes | UTC start time in `HH:mm` format, e.g. `"22:00"`, `"09:30"`, `"00:00"` |
+| `windowDurationMinutes` | No | Default 120. Max 10080 (1 week) |
+| `reason` | No | Free text, max 512 chars |
+
+**Response** `201 Created` — `{ "id": 4 }`  
+**Response** `400 Bad Request` — validation error
+
+---
+
+### `DELETE /api/maintenance/rules/{id}`
+
+Deactivates a recurring rule and cancels all future (not-yet-started) occurrences. Currently in-progress and past occurrences are retained for history.
+
+**Response** `204 No Content`  
+**Response** `404 Not Found`
+
+---
+
+### Maintenance PowerShell examples
+
+```powershell
+$baseUrl = "https://azlmgmt.yourdomain.com/api"
+$headers = @{ Authorization = "ApiKey YOUR_TOKEN_HERE" }
+
+# List all active windows
+Invoke-RestMethod -Uri "$baseUrl/maintenance/windows" -Headers $headers
+
+# Create a one-time window for a specific cluster
+$body = @{
+    clusterName = "AZ-NUC-CL01"
+    startsAt    = "2026-05-20T22:00:00Z"
+    endsAt      = "2026-05-21T02:00:00Z"
+    reason      = "Emergency patching"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "$baseUrl/maintenance/windows" -Method Post -Headers $headers `
+    -Body $body -ContentType "application/json"
+
+# Create an indefinite global mute (all clusters)
+$body = @{
+    clusterName = "*"
+    startsAt    = (Get-Date).ToUniversalTime().ToString("o")
+    reason      = "Incident investigation"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "$baseUrl/maintenance/windows" -Method Post -Headers $headers `
+    -Body $body -ContentType "application/json"
+
+# Deactivate a window by ID
+Invoke-RestMethod -Uri "$baseUrl/maintenance/windows/15" -Method Delete -Headers $headers
+
+# Create a weekly recurring rule (every Friday at 22:00 UTC, 2 hours, all clusters)
+$body = @{
+    clusterName           = "*"
+    recurrenceType        = "Weekly"
+    daysOfWeek            = "Friday"
+    windowStart           = "22:00"
+    windowDurationMinutes = 120
+    reason                = "Weekly patching"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "$baseUrl/maintenance/rules" -Method Post -Headers $headers `
+    -Body $body -ContentType "application/json"
+
+# Create a monthly rule (2nd Tuesday, 23:00 UTC, 3 hours, specific cluster)
+$body = @{
+    clusterName           = "AZ-NUC-CL01"
+    recurrenceType        = "MonthlyByOrdinal"
+    daysOfWeek            = "Tuesday"
+    weekOfMonth           = 2         # 2nd occurrence
+    windowStart           = "23:00"
+    windowDurationMinutes = 180
+    reason                = "Monthly patching"
+} | ConvertTo-Json
+Invoke-RestMethod -Uri "$baseUrl/maintenance/rules" -Method Post -Headers $headers `
+    -Body $body -ContentType "application/json"
+
+# List all active recurring rules
+Invoke-RestMethod -Uri "$baseUrl/maintenance/rules" -Headers $headers
+
+# Deactivate a recurring rule (cancels all future occurrences)
+Invoke-RestMethod -Uri "$baseUrl/maintenance/rules/3" -Method Delete -Headers $headers
+```
+
+#### Multi-cluster schedules
+
+The UI groups rules that share the same schedule and reason together as a single "Reoccurring Schedule" entry (even though they are stored as separate rules, one per cluster). To create the same recurring schedule across multiple clusters, POST one rule per cluster using identical `recurrenceType`, `daysOfWeek`, `windowStart`, `windowDurationMinutes`, and `reason` values.
+
+```powershell
+$baseUrl = "https://azlmgmt.yourdomain.com/api"
+$headers = @{ Authorization = "ApiKey YOUR_TOKEN_HERE" }
+
+# Apply the same weekly schedule to multiple clusters
+# The UI will display these as a single grouped schedule entry.
+$clusters = @("AZ-NUC-CL01", "AZ-NUC-CL02", "AZ-NUC-CL03")
+
+$scheduleBase = @{
+    recurrenceType        = "Weekly"
+    daysOfWeek            = "Friday"
+    windowStart           = "22:00"
+    windowDurationMinutes = 120       # 2 hours
+    reason                = "Weekly patching"
+}
+
+foreach ($cluster in $clusters) {
+    $body = ($scheduleBase + @{ clusterName = $cluster }) | ConvertTo-Json
+    $result = Invoke-RestMethod -Uri "$baseUrl/maintenance/rules" -Method Post `
+        -Headers $headers -Body $body -ContentType "application/json"
+    Write-Host "Created rule $($result.id) for $cluster"
+}
+
+# Apply a monthly schedule (1st day of month, 23:00 UTC, 4 hours) to two clusters
+$clusters = @("AZ-NUC-CL01", "AZ-NUC-CL02")
+
+foreach ($cluster in $clusters) {
+    $body = @{
+        clusterName           = $cluster
+        recurrenceType        = "MonthlyByDay"
+        dayOfMonth            = 1
+        windowStart           = "23:00"
+        windowDurationMinutes = 240       # 4 hours
+        reason                = "Monthly patching"
+    } | ConvertTo-Json
+    $result = Invoke-RestMethod -Uri "$baseUrl/maintenance/rules" -Method Post `
+        -Headers $headers -Body $body -ContentType "application/json"
+    Write-Host "Created rule $($result.id) for $cluster"
+}
+
+# Deactivate all rules in a multi-cluster schedule group
+# First, find the rule IDs by listing rules and matching on reason + schedule
+$rules = Invoke-RestMethod -Uri "$baseUrl/maintenance/rules" -Headers $headers
+$groupRules = $rules | Where-Object {
+    $_.reason -eq "Weekly patching" -and $_.daysOfWeek -eq "Friday"
+}
+
+foreach ($rule in $groupRules) {
+    Invoke-RestMethod -Uri "$baseUrl/maintenance/rules/$($rule.id)" `
+        -Method Delete -Headers $headers
+    Write-Host "Deactivated rule $($rule.id) for $($rule.clusterName)"
+}
+```
+
+> **Tip — use `"*"` to cover all clusters with one rule.** If every cluster in your fleet should share the same schedule, set `clusterName = "*"` and only a single rule is needed. The per-cluster approach above is for when different clusters need to be added or removed from the group independently.
+
+
+---
+
 ## Audit logging
 
 Every mutating API call (POST, PUT, DELETE) is written to the audit log
 (visible at **Admin → Audit Log**) with:
 
 - **User:** `api-key`
-- **Action:** `AddCluster`, `UpdateCluster`, or `DeleteCluster`
+- **Action:** `AddCluster`, `UpdateCluster`, `DeleteCluster`, `CreateMaintenanceWindow`, `DeactivateMaintenanceWindow`, `CreateRecurringRule`, or `DeactivateRecurringRule`
 - **Outcome:** `Success` or `Failure`
 
 Read calls (GET) are not audited.
