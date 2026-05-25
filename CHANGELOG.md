@@ -3,6 +3,87 @@
 All notable changes to the Azure Local Cluster Tool — Web are documented here.
 
 
+## v0.12.6 — 2026-05-18
+
+### Features
+
+- **Cluster Volumes — Dedup column** — the Cluster Storage page (Cluster Volumes tab) now
+  shows a **Dedup** column. Deduplication state is read from `Get-ReFSDedupStatus` on the
+  volume owner node (ReFS dedup, Azure Local 2025), with an automatic fallback to
+  `MSFT_DedupVolume` CIM for NTFS Data Deduplication on older servers. When enabled the
+  cell shows a green dot and the space saved with savings rate (e.g. `53.2 GB (25%)`);
+  hover for full detail. Both queries share the per-node connection loop already used for
+  BitLocker — no extra WinRM connections.
+
+- **Cluster Volumes — BitLocker encryption state** — the BitLocker column now shows the
+  full encryption state (`FullyEncrypted`, `EncryptionInProgress`, `DecryptionInProgress`,
+  etc.) sourced from `Win32_EncryptableVolume.ConversionStatus`. Previously only `On / Off`
+  was reported.
+
+- **Physical Disks — Location column** — a new **Location** column shows the physical slot
+  and adapter path (e.g. `PCI Slot 11 : Bus 1 : Device 0`) from
+  `MSFT_PhysicalDisk.PhysicalLocation`. Useful when a disk needs physical replacement.
+
+- **Node Drain pre-check — degraded storage warning** — the Pause / Drain confirmation
+  modal now shows a red warning if any virtual disks in the cluster are not Healthy,
+  listing the affected disk names and health states. Draining a node while storage is
+  resyncing can cause data unavailability; the warning allows the admin to abort and
+  investigate first. The check reads the existing virtual disk snapshot — no extra WinRM
+  call on every click.
+
+- **Affinity Rules page** — new page under Compute showing all cluster affinity and
+  anti-affinity rules (`Get-ClusterAffinityRule`): rule name, type with colour-coded badge
+  (`Same Node` / `Same Site` / `Different Nodes` / `Different Sites`), enabled dot, and
+  the list of cluster groups covered.
+
+- **Storage Jobs — disk retirement wizard** — active `MSFT_StorageJob` repair / rebuild
+  jobs are now shown inside the Physical Disks retirement wizard. The list auto-refreshes
+  every 10 seconds with job name, sub-operation, state dot, progress bar, and elapsed time.
+  A warning blocks removal if any job is failed or suspended until explicitly acknowledged.
+
+- **Admin Settings — grouped layout** — the Admin Settings page is reorganised into
+  collapsible named sections with tab navigation, making it easier to locate specific
+  settings. Configured-setting counts are shown as tab badges. No change to storage or
+  encryption behaviour.
+
+### Bug Fixes
+
+- **Dedup always showing N/A** — two root causes fixed: the cluster CIM session returns
+  `NotAvailable` for `DedupMode` on CSV volumes; and `Get-ReFSDedupStatus` was being called
+  on the app server where it does not exist. Fixed by running the cmdlet via a direct
+  per-node WinRM connection with a full-path fallback.
+
+---
+
+## v0.12.4 — 2026-05-15
+
+### Features
+
+- **Maintenance Windows** — a new **Admin > Maintenance Windows** page lets HciAdmin users
+  configure windows that suppress alerting for a cluster (or all clusters using `"*"`) during
+  planned maintenance. Supports one-time windows and recurring rules (Daily, Weekly,
+  MonthlyByDay, MonthlyByOrdinal). Recurring rules generate occurrences 90 days ahead
+  automatically. Multi-cluster rules are grouped as a single schedule row with a fly-out
+  table per cluster. Individual occurrences and entire rules can be enable/disabled and
+  edited without deletion.
+
+- **Maintenance Windows REST API** — new endpoints at `/api/maintenance/windows` and
+  `/api/maintenance/rules` expose the full lifecycle (create, list, delete) for automation.
+  `windowStart` uses `HH:mm` format; `daysOfWeek` uses comma-separated day names. All
+  endpoints require an API key and are audited. See
+  [API docs](https://github.com/jasontayler/AzureLocal-ClusterTool-Web/blob/main/docs/API.md)
+  for full reference.
+
+- **`Manage-Maintenance.ps1`** — PowerShell script in `scripts/` for managing maintenance
+  windows and recurring rules via the REST API.
+
+### Security
+
+- Internal security review and hardening across the API layer, authentication, response
+  headers, and audit subsystem. No user-visible changes.
+
+---
+
 ## v0.12.2 — 2026-05-06
 
 ### Features
