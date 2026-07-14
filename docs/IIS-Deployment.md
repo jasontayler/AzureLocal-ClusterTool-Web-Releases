@@ -531,6 +531,42 @@ This is a compile-time constant (`const int MaxActiveConnections = 50` in
 clusters simultaneously, increase this value and rebuild. For most organisations, 50 is
 far more than enough — only clusters being actively viewed hold a connection.
 
+### Multi-instance deployments (web farm / high availability)
+
+> **This application is designed as a single-instance deployment.** The defaults and
+> architecture assume one IIS worker process. Most organisations do not need to change this.
+
+If you need high-availability or load-balanced deployments, two requirements apply:
+
+**1. Sticky sessions (required)**
+
+Blazor Server uses persistent SignalR circuits — each user's circuit is bound to the server
+instance that created it. Without sticky sessions, a load balancer routing requests to a
+different instance will break the circuit and disconnect the user.
+
+Configure **Application Request Routing (ARR) affinity** on your load balancer so all
+requests from a given user always reach the same server instance:
+
+```powershell
+# IIS ARR — enable session affinity on the server farm
+Add-WebConfiguration -Filter "webFarms/webFarm[@name='MyFarm']/applicationRequestRouting/affinitySettings" `
+    -Value @{ affinityCookieName = "ARRAffinity"; }
+```
+
+**2. SignalR backplane (optional, recommended for 2+ instances)**
+
+Without a backplane, real-time updates (poller-driven page refreshes) only reach users on the
+same instance as the poller. Add the Azure SignalR Service backplane to share circuit state
+across instances:
+
+```csharp
+// Program.cs — replace AddSignalR() with:
+builder.Services.AddSignalR()
+    .AddAzureSignalR(builder.Configuration["Azure:SignalRConnectionString"]);
+```
+
+For single-instance deployments (the recommended topology), no changes are needed.
+
 ---
 
 ## Deployment Workflow
