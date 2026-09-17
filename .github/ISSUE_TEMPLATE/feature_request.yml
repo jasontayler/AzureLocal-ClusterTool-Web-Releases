@@ -15,7 +15,7 @@ body:
     options:
     - New feature request
     - Improvement to existing feature
-    - General Public Preview feedback
+    - General beta feedback
     - Performance concern
     - UX / usability issue
   validations:
