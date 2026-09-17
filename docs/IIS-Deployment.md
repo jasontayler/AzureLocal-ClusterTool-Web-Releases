@@ -337,72 +337,33 @@ psql -U postgres
 At the `postgres=#` prompt:
 
 ```sql
-CREATE USER azlmgmt_app;
+CREATE USER azlmgmt_app WITH PASSWORD 'your_strong_password';
 CREATE DATABASE azlmgmt OWNER azlmgmt_app;
 GRANT ALL PRIVILEGES ON DATABASE azlmgmt TO azlmgmt_app;
 \q
 ```
 
-> No password is set on the PostgreSQL role. Authentication is handled by Windows SSPI (Kerberos) — the IIS app pool identity is mapped to the `azlmgmt_app` role via `pg_ident.conf`.
+> **Tip:** The password you choose here must match the `Password=` value in `appsettings.json`.
 
-### Configure SSPI authentication (passwordless — recommended)
+### Grant the app pool identity access (gMSA)
 
-The app pool runs as a domain identity (gMSA or standard service account). PostgreSQL can authenticate that identity via Windows SSPI/Kerberos with no password stored anywhere.
-
-**Step 1 — `pg_ident.conf`** (`C:\Program Files\PostgreSQL\17\data\pg_ident.conf`)
-
-Add a mapping from the Windows identity to the PostgreSQL role. The identity is the bare account name after stripping the domain and realm (`include_realm=0` in step 2 handles this automatically):
+For the gMSA identity to authenticate to a local PostgreSQL instance, add it to `pg_hba.conf`:
 
 ```
-# Map name    Windows identity (bare, no domain or @REALM)    PG username
-sspi_map      azlmgmt-svc$                                    azlmgmt_app
+# In pg_hba.conf (usually C:\Program Files\PostgreSQL\17\data\pg_hba.conf)
+# Allow the azlmgmt_app user from localhost with scram-sha-256 (PG 17 default)
+host    azlmgmt    azlmgmt_app    127.0.0.1/32    scram-sha-256
+host    azlmgmt    azlmgmt_app    ::1/128          scram-sha-256
 ```
 
-For a **standard domain account** (e.g. `DOMAIN\svc-azlmgmt`), omit the `$`:
-```
-sspi_map      svc-azlmgmt        azlmgmt_app
-```
-
-**Step 2 — `pg_hba.conf`** (`C:\Program Files\PostgreSQL\17\data\pg_hba.conf`)
-
-Add the SSPI rules **above** any existing `host all all` catch-all lines. PostgreSQL reads top-to-bottom and uses the first match — if the catch-all appears first it will demand a password before reaching the SSPI rule.
-
-```
-# SSPI/Kerberos — MUST appear above the catch-all lines
-host    azlmgmt    azlmgmt_app    127.0.0.1/32    sspi    map=sspi_map include_realm=0
-host    azlmgmt    azlmgmt_app    ::1/128          sspi    map=sspi_map include_realm=0
-
-# Catch-all (must remain below the specific rules above)
-host    all        all            127.0.0.1/32    scram-sha-256
-host    all        all            ::1/128          scram-sha-256
-```
-
-`include_realm=0` strips the Kerberos realm suffix (e.g. `azlmgmt-svc$@CONTOSO` becomes `azlmgmt-svc$`) so the bare name in `pg_ident.conf` matches regardless of whether the connection uses NTLM or Kerberos.
-
-**Step 3 — Reload PostgreSQL**
-
-```powershell
-& "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" reload -D "C:\Program Files\PostgreSQL\17\data"
-```
-
-Or restart the service: `Restart-Service postgresql-x64-17`
-
-**Verify the rules loaded correctly** (no syntax errors = file loaded):
-```sql
--- In psql as postgres:
-SELECT line_number, type, database, user_name, address, auth_method
-FROM pg_hba_file_rules ORDER BY line_number;
-```
-The SSPI rows should appear at a lower `line_number` than the `{all}/{all}` catch-all rows.
+Reload PostgreSQL after editing: `pg_ctl reload` or restart the `postgresql-x64-17` service.
 
 ### Configure appsettings.json for PostgreSQL
-
-No password in the connection string — SSPI handles authentication transparently:
 
 ```json
 "Database": {
   "Provider": "PostgreSQL",
-  "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app"
+  "ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app;Password=your_strong_password"
 },
 "DataProtection": {
   "KeyPath": "C:\\apps\\azlmgmt-data\\dp-keys"
@@ -410,48 +371,6 @@ No password in the connection string — SSPI handles authentication transparent
 ```
 
 > **Important:** `DataProtection:KeyPath` is required when using PostgreSQL (there is no DB file path to derive it from automatically). The directory must exist and be writable by the app pool identity. The `Setup-Prerequisites.ps1` script creates `C:\apps\azlmgmt-data` with the correct permissions.
-
-### Migrating an existing installation from password auth to SSPI
-
-If you already have the app running with a password in `appsettings.Production.json`, follow these steps to migrate to SSPI with no downtime rollback path:
-
-**Step 1 — Add `pg_ident.conf` mapping** (no PostgreSQL reload needed yet):
-```
-sspi_map      azlmgmt-svc$        azlmgmt_app
-```
-
-**Step 2 — Add SSPI lines to `pg_hba.conf` above the catch-all** (keep the existing scram-sha-256 lines as a fallback):
-```
-# SSPI — above catch-all
-host    azlmgmt    azlmgmt_app    127.0.0.1/32    sspi    map=sspi_map include_realm=0
-host    azlmgmt    azlmgmt_app    ::1/128          sspi    map=sspi_map include_realm=0
-
-# Password fallback (remove after SSPI confirmed)
-host    azlmgmt    azlmgmt_app    127.0.0.1/32    scram-sha-256
-host    azlmgmt    azlmgmt_app    ::1/128          scram-sha-256
-
-# Catch-all
-host    all        all            127.0.0.1/32    scram-sha-256
-host    all        all            ::1/128          scram-sha-256
-```
-
-**Step 3 — Reload PostgreSQL:**
-```powershell
-& "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" reload -D "C:\Program Files\PostgreSQL\17\data"
-```
-
-**Step 4 — Remove `Password=` from `appsettings.Production.json`:**
-```json
-"ConnectionString": "Host=127.0.0.1;Database=azlmgmt;Username=azlmgmt_app"
-```
-
-**Step 5 — Recycle the app pool** and verify the app loads correctly.
-
-**Step 6 — Once confirmed, remove the password fallback lines** from `pg_hba.conf` and reload PostgreSQL again.
-
-> **Rollback:** If step 5 fails, restore the `Password=` value in `appsettings.Production.json` and recycle. The scram-sha-256 fallback lines still allow password auth while you diagnose.
-
----
 
 ### Migrate an existing SQLite database to PostgreSQL
 
@@ -488,6 +407,29 @@ After starting the app pool, browse to the app and check:
 - `/admin/clusters` shows the correct cluster list
 - `/admin/audit` shows existing audit log entries
 - The app log shows `[startup] Database initialised (PostgreSQL)` or similar
+
+### Legacy Clusters schema compatibility (PostgreSQL)
+
+Some upgraded environments may retain legacy `Clusters` columns (`AksApiEndpoint`, `AksApiToken`) from older builds.
+Current versions do not write these fields on insert, so they must either be nullable or have defaults.
+
+Read-only check:
+
+```sql
+SELECT ordinal_position, column_name, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'Clusters'
+ORDER BY ordinal_position;
+```
+
+If the legacy columns exist and are `NOT NULL` with no default, set defaults:
+
+```sql
+ALTER TABLE "Clusters" ALTER COLUMN "AksApiEndpoint" SET DEFAULT '';
+ALTER TABLE "Clusters" ALTER COLUMN "AksApiToken" SET DEFAULT '';
+```
+
+This change is safe and idempotent. Newer builds also apply this compatibility guard at startup when those columns are present.
 
 ---
 

@@ -3,6 +3,40 @@
 This file is the source for published GitHub Release bodies.
 Each release body is generated from exactly one matching section (latest-only, non-cumulative).
 
+## v0.12.12 - 2026-09-17
+
+### Highlights
+- Redesigned the fleet Update Status page to show Feature Update and Cumulative Update side by side per cluster, instead of hiding one behind a collapsed history row.
+- Added a live SBE Version column and an SBE Family column to both the fleet and per-cluster update views, replacing a misleading OEM Version column.
+- Updates that are actually ready to install now stand out with a distinct orange "READY TO INSTALL" badge, instead of sharing the same color as already-installed updates.
+- Updates that require a minimum SBE version first now show a clear warning badge explaining the requirement.
+
+### Reliability
+- Fixed SBE Version showing as blank in cases where the value was already available elsewhere in the update data.
+- Cleaned up the expandable update history into a proper table for easier scanning.
+
+## v0.12.11 - 2026-09-17
+
+### Highlights
+- Added a "Force Poll Now" admin action to immediately refresh a cluster's background data during an outage or right after fixing connectivity, instead of waiting for the next scheduled poll.
+
+### Reliability
+- Fixed the fleet Update Status page showing "No snapshot yet" for clusters that had actually been checked but had nothing new to report.
+- Fixed a case where a transient background polling failure could show stale or empty update data on the fleet Update Status page even though the per-cluster page was correct; the fleet page now prefers a live, direct read for this data.
+
+## v0.12.10 - 2026-09-17
+
+### Highlights
+- Improved Admin cluster onboarding UX by replacing raw save exceptions with a clear duplicate-name message.
+- Standardized duplicate cluster behavior so API and UI return consistent conflict outcomes.
+
+### Reliability and Upgrade Safety
+- Added startup schema compatibility guards for legacy `Clusters` columns (`AksApiEndpoint`, `AksApiToken`) in drifted customer databases.
+- Prevented insert failures in upgraded environments where legacy AKS columns remain `NOT NULL` without defaults.
+
+### Support and Operations
+- Added explicit support runbook guidance for schema drift verification and remediation in IIS deployment documentation.
+
 ## v0.12.9 - 2026-07-14
 
 ### Highlights

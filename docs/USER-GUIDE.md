@@ -982,6 +982,8 @@ Click **+ Add Cluster** and fill in:
 | Credential Source | `gMSA` (use app pool identity — works for both gMSA and standard service accounts) or `KeyVault` (fetch from Azure Key Vault) |
 | Key Vault Secret Name | Secret name in Key Vault (only required when Credential Source = KeyVault) |
 
+If the cluster name is already registered, the form shows a clear validation message instead of a raw database error.
+
 Changes take effect immediately — no restart required. The connection pool is evicted and reconnected with the new configuration on the next page access.
 
 ### Editing and deleting
@@ -1722,16 +1724,23 @@ The table supports client-side search (Name / Cluster / Node) and is sortable by
 
 Accessible via **Update Status** in the **Monitoring** group in the sidebar.
 
-Summarises the solution-update state for every registered cluster from snapshot data (no live WinRM).
+Summarises the solution-update state for every registered cluster. Prefers a live Azure Resource
+Manager (ARM) read per cluster (fast, not a WinRM call); falls back to the background collector's
+last snapshot when ARM isn't configured or the cluster has no Azure Arc info yet.
 
 ### Summary pills
 
 | Pill | Meaning |
 |---|---|
-| All Current | Clusters with no available or in-progress updates |
+| All Clusters | Every registered cluster you have access to |
 | Failed | Clusters where the last update attempt failed |
-| In Progress | Clusters currently running an update |
-| Updates Ready | Clusters with one or more updates available but not started |
+| In Progress | Clusters currently downloading, health-checking, or installing an update |
+| Available | Clusters with one or more updates ready to install |
+| Current | Clusters with no pending action — up to date |
+| No Data | Clusters with no snapshot collected yet |
+
+Click a pill to filter the table to that state. The search box filters by cluster name, SBE
+version, or update name/version.
 
 ### Cluster table
 
@@ -1739,11 +1748,15 @@ One row per cluster showing:
 
 | Column | Description |
 |---|---|
-| Cluster | Cluster name (links to cluster Solution Updates page) |
-| State | Current update state with a coloured dot |
-| Available | Number of updates available for this cluster |
-| Last Updated | Timestamp of the last completed update run |
-| Last Poll | Age of the snapshot data |
+| Cluster | Cluster name (links to that cluster's Solution Updates page) |
+| SBE Version | Currently installed Solution Builder Extension (OEM hardware update package) version, with vendor/model as subtext. Shows a dash when ARM isn't configured or the cluster has no Arc info. |
+| Feature Update | The most relevant Feature Update for this cluster — a pending one (Ready/In Progress/Failed) if it exists, otherwise the most recently installed Feature Update. A ⚠ icon appears when the update needs a prerequisite (e.g. an SBE update) installed first — hover for details. |
+| Cumulative Update | Same pattern as Feature Update, scoped to Cumulative Update releases. |
+| Scheduled Start | Next pending scheduled install time for this cluster, if one has been scheduled |
+
+Feature and Cumulative updates are shown side by side because a cluster can have both available at
+the same time — some environments choose to stay on the Cumulative path and skip Feature Updates,
+or vice versa. Expand the row (▶) to see quality/SBE updates and older installed versions.
 
 ---
 
