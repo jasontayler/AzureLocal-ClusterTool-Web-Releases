@@ -721,6 +721,18 @@ Click **▶ Start Update** to begin installation. You will be prompted to confir
 
 > Starting an update requires the Updates · Start custom RBAC permission and is recorded in the audit log.
 
+The result includes a correlation ID that can be matched with **Admin > Perf Debug** and
+the audit log:
+
+| Outcome | Meaning | Operator action |
+|---|---|---|
+| Accepted | A follow-up cluster read proved that a new run or target update state/progress change occurred | Monitor the update state or new run |
+| Rejected | The cluster explicitly rejected the request, or the selected update could not be resolved uniquely | Correct the reported issue before retrying |
+| Indeterminate | The command transport ended without a definitive response and follow-up reads could not prove acceptance | Do not click Start again; check update runs and the correlation ID first |
+
+The application never automatically retries an indeterminate update start. This prevents
+a transport interruption from causing a duplicate mutation.
+
 ### Update Runs
 
 The lower section lists previous update run history with start time, duration, state, and result summary.
@@ -1487,7 +1499,7 @@ A rolling buffer of the last 500 PowerShell/WinRM calls made by the app — incl
 | Rows | Result row count returned |
 | Error | First PS error stream message, if any |
 
-Rows with PS errors are highlighted with a dark red background. The log auto-refreshes every 5 seconds while the page is open. Click **Clear** to flush the buffer.
+Rows with PS errors are highlighted with a dark red background. The log auto-refreshes every 5 seconds while the page is open. Method and Error columns now wrap full text instead of truncating to a single line, and the grid scrolls horizontally if needed on smaller screens. Click **Clear** to flush the buffer.
 
 ---
 
@@ -1741,6 +1753,23 @@ last snapshot when ARM isn't configured or the cluster has no Azure Arc info yet
 
 Click a pill to filter the table to that state. The search box filters by cluster name, SBE
 version, or update name/version.
+
+### Fleet overview
+
+Below the main state pills, the page shows two compact fleet-level summary bands to help the
+table scale to larger estates:
+
+| Overview item | Meaning |
+|---|---|
+| Feature Ready | Clusters with a Feature Update ready to install |
+| Cumulative Ready | Clusters with a Cumulative Update ready to install |
+| Needs SBE First | Clusters whose visible Feature or Cumulative path requires a higher SBE version before it can proceed |
+
+These overview pills are clickable and act as additional filters.
+
+The page also shows the top current solution-bundle versions in the fleet (for example
+`12.2609.1003.7 (11 clusters)`). Clicking one filters the table to clusters currently on that
+version.
 
 ### Cluster table
 

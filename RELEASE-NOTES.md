@@ -3,6 +3,26 @@
 This file is the source for published GitHub Release bodies.
 Each release body is generated from exactly one matching section (latest-only, non-cumulative).
 
+## v0.12.14 - 2026-09-20
+
+### Highlights
+- Fleet Update Status search box now supports wildcards and multi-cluster search, e.g. `AZL-*` or `AZ-NUC-CL01, AZL-NUC-CL02`.
+- The Solution Version filter now covers every installed version across the fleet instead of just the top 5.
+- Both fleet tables are now paginated (25/50/100 rows) so the page stays responsive on fleets of 100-300+ clusters.
+- Actively-installing clusters now show the exact ARM run step and elapsed time in the fleet view, matching the per-cluster Solution Updates page.
+
+### Reliability
+- Failed update runs now show the real ARM error message instead of a generic "Failed" label.
+- Fixed `NotifyMessage` never being populated from ARM due to an incorrect nested-property assumption.
+- ARM/ARG call volume is now capped and targeted to reduce throttling risk on large fleets.
+
+## v0.12.13 - 2026-09-18
+
+### Reliability
+- Fixed misleading Solution Update diagnostics by separating the read-only ID lookup from the actual start command and removing an early pipeline-stop trigger.
+- All update-start returns are now verified against cluster state and reported as Accepted, Rejected, or Indeterminate instead of a clean PowerShell return being assumed successful.
+- Added correlation IDs and duplicate-submission guards for manual and scheduled update actions.
+
 ## v0.12.12 - 2026-09-17
 
 ### Highlights
