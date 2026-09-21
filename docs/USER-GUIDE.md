@@ -1740,6 +1740,15 @@ Summarises the solution-update state for every registered cluster. Prefers a liv
 Manager (ARM) read per cluster (fast, not a WinRM call); falls back to the background collector's
 last snapshot when ARM isn't configured or the cluster has no Azure Arc info yet.
 
+### Saved Views
+
+The same **All Clusters / My Favourites / personal / shared views** bar from the All Clusters
+Dashboard is available here too — views are shared between the two pages, so a view you (or an
+administrator) create on one page is immediately available on the other. Click a view pill to
+narrow the table to just those clusters; it combines with the state pills, version filter, and
+search box below rather than replacing them. Dynamic query views (built from the condition
+builder on the All Clusters page) are All-Clusters-only and appear disabled here.
+
 ### Summary pills
 
 | Pill | Meaning |

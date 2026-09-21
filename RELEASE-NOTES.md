@@ -3,6 +3,14 @@
 This file is the source for published GitHub Release bodies.
 Each release body is generated from exactly one matching section (latest-only, non-cumulative).
 
+## v0.12.15 - 2026-09-21
+
+### Highlights
+- Saved views (All Clusters / My Favourites / personal / shared) from the All Clusters dashboard are now also available on the Fleet Update Status page, and are shared between the two.
+
+### Reliability
+- Fixed SBE prerequisite detection to match the real ARM data — updates now correctly show every acceptable SBE baseline version instead of relying on a field ARM doesn't actually return.
+
 ## v0.12.14 - 2026-09-20
 
 ### Highlights
