@@ -3,6 +3,11 @@
 This file is the source for published GitHub Release bodies.
 Each release body is generated from exactly one matching section (latest-only, non-cumulative).
 
+## v0.12.16 - 2026-09-22
+
+### Reliability
+- Failed and actively-running update steps on both the Fleet Update Status page and the per-cluster Solution Updates page now show the real Azure Resource Manager task error (e.g. the actual failing update task) instead of falling back to older, unrelated pre-update health-check warnings.
+
 ## v0.12.15 - 2026-09-21
 
 ### Highlights
