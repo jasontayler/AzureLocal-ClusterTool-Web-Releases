@@ -7,6 +7,7 @@ Each release body is generated from exactly one matching section (latest-only, n
 
 ### Reliability
 - Failed and actively-running update steps on both the Fleet Update Status page and the per-cluster Solution Updates page now show the real Azure Resource Manager task error (e.g. the actual failing update task) instead of falling back to older, unrelated pre-update health-check warnings.
+- Fixed a case where an older, already-superseded update run could be shown instead of the actual current one, causing mismatched step/error combinations and wildly incorrect elapsed times.
 
 ## v0.12.15 - 2026-09-21
 
