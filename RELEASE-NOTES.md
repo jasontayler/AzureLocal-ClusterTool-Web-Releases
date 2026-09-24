@@ -3,6 +3,18 @@
 This file is the source for published GitHub Release bodies.
 Each release body is generated from exactly one matching section (latest-only, non-cumulative).
 
+## v0.13.0 - 2026-09-24
+
+### Highlights
+- Added SIEM integration for the audit log — forward audit (and optionally alert) activity to Splunk (HTTP Event Collector) and/or Microsoft Sentinel (Logs Ingestion API), with a pluggable design for future targets.
+- New Admin > Settings > SIEM tab with a Delivery Health panel (per-sink status, last success/error, backlog count) and a one-click Send Test Event action.
+- Added a Skip Backlog admin action to fast-forward a lagging sink past a large accrued backlog.
+
+### Reliability
+- A newly enabled SIEM sink now starts forwarding from "now" instead of replaying an entire pre-existing audit history, so new activity is never stuck behind a large backlog.
+- Fixed Admin Settings showing stale SIEM toggle values and delivery health after a refresh on deployments running both the main and Windows Authentication IIS sites.
+- Added clear, actionable error messages for the most common Splunk HEC (timeout/connectivity) and Sentinel (RBAC 403, stream-name 400) setup mistakes.
+
 ## v0.12.16 - 2026-09-22
 
 ### Reliability

@@ -37,6 +37,7 @@
 20. [Admin — Clusters](#20-admin--clusters)
 21. [Admin — Audit Log](#21-admin--audit-log)
 22. [Admin — Settings](#22-admin--settings)
+    - [22a. Admin — SIEM Integration](#22a-admin--siem-integration)
 23. [Admin — Custom Roles (RBAC)](#23-admin--custom-roles-rbac)
 24. [Access Levels](#24-access-levels)
 25. [Frequently Asked Questions](#25-frequently-asked-questions)
@@ -1133,6 +1134,59 @@ Subscription or resource group scope:
 ```
 
 If your organisation separates read and write access, configure the optional **Action SPN** in `Admin → Settings → Azure ARM Authentication (Action SPN)` — see the FAQ for full details.
+
+## 22a. Admin — SIEM Integration
+
+**Route:** `/admin/settings` (SIEM tab)  
+**Access required:** HciAdmin only
+
+Forwards the audit log — and, optionally, alert history — to an external SIEM for long-term retention, correlation, and compliance reporting. Delivery is a periodic background poll (default every 120 seconds, configurable) rather than real-time streaming; each destination is called a **sink**, and the app ships with two built in:
+
+| Sink | Protocol | Notes |
+|---|---|---|
+| **Splunk** | HTTP Event Collector (HEC) | Works with Splunk Enterprise, Splunk Cloud, and any HEC-compatible collector |
+| **Microsoft Sentinel** | Logs Ingestion API (Data Collection Rule) | The modern, Microsoft-recommended replacement for the deprecated HTTP Data Collector API |
+
+Both sinks can be enabled at the same time — the same audit/alert data is forwarded to each independently. Delivery is **per-sink and per-stream**: if one sink is down or misconfigured, the other keeps receiving events, and the down sink automatically catches up (no data loss, no duplicates) once it's fixed.
+
+### Global settings
+
+| Setting | Description |
+|---|---|
+| SIEM Forwarding Enabled | Master switch. When `false`, no outbound calls are made at all. |
+| Include Alert History | When `true`, alert fires/suppressions are forwarded in addition to the audit log. Default: `false` (audit log only). |
+| Poll Interval (seconds) | How often new rows are checked for. Default: 120. |
+| Batch Size | Maximum events sent per sink per poll cycle. Default: 500. |
+
+### Splunk setup
+
+1. In Splunk Web: **Settings → Data Inputs → HTTP Event Collector → New Token**. Note the token value and the HEC base URL (e.g. `https://splunk.example.com:8088`).
+2. In `Admin → Settings → SIEM` → **SIEM Integration (Splunk)**: set **Splunk Enabled** to `true`, paste the **HEC URL** and **HEC Token**, and optionally set a custom **Source**, **Source Type**, or target **Index**.
+3. Only enable **Skip TLS Certificate Validation** against a lab/test HEC endpoint with a self-signed certificate — never against production. It is clearly marked Insecure and defaults to `false`.
+4. If **Send Test Event** fails with `HttpClient.Timeout ... elapsing`, this is almost never a code problem — it means either the HEC URL/port is wrong, the scheme (`http://` vs `https://`) doesn't match Splunk's `inputs.conf` HEC `enableSSL` setting, or the app server simply cannot reach that host/port at all (firewall or proxy in the way). Verify reachability from the app server itself first (e.g. `Test-NetConnection splunk.example.com -Port 8088`) before raising **Request Timeout (seconds)** — a longer timeout only helps if the endpoint is reachable but genuinely slow.
+
+### Microsoft Sentinel setup
+
+Sentinel ingestion uses the modern **Logs Ingestion API**, which requires a one-time setup in the Azure portal before the app can send data (the app does not provision these resources itself):
+
+1. **Create a Log Analytics custom table** with columns matching the forwarded event shape: `TimeGenerated` (datetime), `SourceId` (long), `StreamType` (string), `ClusterName` (string), `UserUpn` (string), `UserDisplayName` (string), `ResourceType` (string), `ResourceName` (string), `Action` (string), `Outcome` (string), `Detail` (string), `Severity` (string). Easiest path: in the Log Analytics workspace go to **Tables → Create → New custom log (DCR-based)**, and on the *Sample logs* step upload [`siem-sentinel-sample-events.json`](siem-sentinel-sample-events.json) — the wizard infers all 12 columns and their types automatically, and also creates the matching Data Collection Rule and Data Collection Endpoint for you in the same flow.
+2. **Create a Data Collection Endpoint (DCE)** and note its logs ingestion URL.
+3. **Create a Data Collection Rule (DCR)** with a stream pointing at the custom table (add a second stream if you also plan to forward alert history). Note the DCR's immutable ID and the exact **stream name** — this is **not** the table name. A DCR stream name always has a literal `Custom-` prefix in front of the table name, e.g. table `AZLSEIM_CL` → stream name `Custom-AZLSEIM_CL`. Find the exact value under the DCR resource's **JSON view → `properties.dataFlows[].streams`** (or `streamDeclarations`) if unsure — entering just the table name here causes an `InvalidStream` 400 error.
+4. **Create a dedicated Entra app registration** (client credentials) and grant it the **Monitoring Metrics Publisher** role scoped to the DCR only — this is least-privilege: the identity can only ingest data, never read it back.
+5. In `Admin → Settings → SIEM` → **SIEM Integration (Sentinel)**: set **Sentinel Enabled** to `true` and fill in the DCE endpoint, DCR immutable ID, audit (and optionally alert) stream names (with the `Custom-` prefix, per step 3), and the Entra tenant/client ID/client secret from step 4.
+6. If **Send Test Event** fails with `... does not have access to ingest data for the data collection rule ... 403 (Forbidden)`, this is always an Azure RBAC problem, never an app bug. Check, in order:
+   - The **Monitoring Metrics Publisher** role must be assigned via **Access control (IAM) on the DCR resource itself** — not on the Data Collection Endpoint, and not on the Log Analytics workspace (a resource group or subscription scope that contains the DCR also works).
+   - Subscription-level **Reader** (or Contributor) does **not** grant ingestion — ingestion is a separate data-plane permission that only `Monitoring Metrics Publisher` (or a custom role with the equivalent data action) provides.
+   - Double-check `Siem:Sentinel:TenantId`/`ClientId` exactly match the app registration the role was actually granted to — easy to mix up with the ARM read/action SPNs configured elsewhere in this app.
+   - Confirm the role was assigned to the app registration's **Enterprise Application** (service principal) — searching by the app's display name in "Add role assignment" normally resolves this correctly.
+   - New role assignments can take several minutes to propagate; retry after ~10 minutes before assuming the assignment is wrong. If a role assigned directly on the DCR resource ("This resource" scope) still fails after 30+ minutes with everything else confirmed correct, add a second assignment scoped to the **Resource Group** containing the DCR instead — this is a known propagation quirk with Azure Monitor's data-plane ingestion RBAC and reliably unblocks it.
+7. If **Send Test Event** instead fails with `The stream <name> was not configured in the data collection rule ... 400 (Bad Request) ... InvalidStream`, the **Audit/Alert Stream Name** setting is missing the `Custom-` prefix described in step 3 — update it to `Custom-<your table name>` and retry.
+
+### Delivery health and testing
+
+The **Delivery Health** panel (under the SIEM Integration group) shows, per sink and stream: Enabled/Disabled status, last successful send, last error, consecutive failures, and current backlog (events waiting to be sent). Use **Send Test Event** to verify connectivity end-to-end without waiting for real audit activity — test sends are themselves recorded in the [Audit Log](#21-admin--audit-log) as a `SiemSendTest` action so you can confirm delivery worked.
+
+> **New activity is always forwarded first.** The very first time a sink polls, its watermark starts at the *current* newest row rather than 0 — it never tries to replay an existing, possibly very large, audit history. If a sink falls behind later (for example after being disabled for a long time, or a large batch of automated actions ran while it was down), a **Skip Backlog** button appears next to its row once its backlog is non-zero. Clicking it permanently discards the queued backlog for that sink/stream — only new activity from that point on is sent. This cannot be undone, so confirm the backlog really is old/expected before using it.
 
 ## 23. Admin — Custom Roles (RBAC)
 
