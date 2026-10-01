@@ -17,7 +17,7 @@ Each release body is generated from exactly one matching section (latest-only, n
 ### Reliability
 - Fixed column-header tooltips not appearing for browsers that had cached older site assets.
 - Fixed the Disk Replacement Wizard incorrectly reporting that a genuine Storage Spaces Direct disk wasn't in any pool.
-- Fixed the Disk Replacement Wizard potentially targeting the wrong disk when multiple disks share the same drive model, including a same-day follow-up fix for a stale-cached-data edge case.
+- Fixed the Disk Replacement Wizard potentially targeting the wrong disk when multiple disks share the same drive model, including same-day follow-up fixes for a stale-cached-data edge case and a PowerShell parameter error on the final Remove step.
 - Fixed Settings page dropdowns occasionally showing a stale value right after a save.
 - Fixed the Live Update Monitor reporting a silent "complete" when no real output was produced.
 - Clearer troubleshooting guidance for Splunk/Sentinel/Log Analytics setup errors.
