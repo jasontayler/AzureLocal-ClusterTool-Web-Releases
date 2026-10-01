@@ -3,6 +3,28 @@
 This file is the source for published GitHub Release bodies.
 Each release body is generated from exactly one matching section (latest-only, non-cumulative).
 
+## v0.14.0-preview - 2026-10-01
+
+### Highlights
+- Added a VM Storage Alignment tab that flags VMs whose compute placement doesn't match the Cluster Shared Volume hosting their disks, with a capacity check and preferred-owner context.
+- Added an opt-in Per-Host Process Insights view on the Nodes page (top CPU/memory processes) with a matching alert rule.
+- Added VM footprint tracking (config/checkpoints/disk/Save-VM estimate), a Save-VM CSV space warning, a CSV Save-VM Space Risk alert rule, and RAM-headroom warnings for Live Migration and node Drain.
+- Added real-time direct alerting to Splunk and Microsoft Log Analytics, alongside the existing Teams and Email channels.
+- Added an in-app update check with a nav bar badge and an Admin > Settings panel.
+- Teams and Email alert delivery can now each be disabled independently without losing configuration.
+- The Admin > Clusters Add/Edit form now opens as a modal dialog instead of an inline block.
+
+### Reliability
+- Fixed column-header tooltips not appearing for browsers that had cached older site assets.
+- Fixed the Disk Replacement Wizard incorrectly reporting that a genuine Storage Spaces Direct disk wasn't in any pool.
+- Fixed Settings page dropdowns occasionally showing a stale value right after a save.
+- Fixed the Live Update Monitor reporting a silent "complete" when no real output was produced.
+- Clearer troubleshooting guidance for Splunk/Sentinel/Log Analytics setup errors.
+
+### Security
+- Added endpoint validation for admin-configurable SIEM/Alerting URLs, with explicit warnings when TLS validation is disabled.
+- Error messages shown in the admin UI no longer include raw GUIDs or Azure resource paths.
+
 ## v0.13.0 - 2026-09-24
 
 ### Highlights

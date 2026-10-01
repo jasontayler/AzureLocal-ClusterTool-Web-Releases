@@ -15,6 +15,7 @@
 5. [Virtual Machines](#5-virtual-machines)
    - [5a. VM Performance](#5a-vm-performance)
    - [5b. Virtual Switches](#5b-virtual-switches)
+   - [5c. VM Storage Alignment](#5c-vm-storage-alignment)
 6. [Cluster Nodes](#6-cluster-nodes)
 7. [Cluster Roles](#7-cluster-roles)
 8. [AKS on Azure Local](#8-aks-on-azure-local)
@@ -38,6 +39,7 @@
 21. [Admin — Audit Log](#21-admin--audit-log)
 22. [Admin — Settings](#22-admin--settings)
     - [22a. Admin — SIEM Integration](#22a-admin--siem-integration)
+    - [22b. Admin — Direct Alerting (Splunk / Log Analytics)](#22b-admin--direct-alerting-splunk--log-analytics)
 23. [Admin — Custom Roles (RBAC)](#23-admin--custom-roles-rbac)
 24. [Access Levels](#24-access-levels)
 25. [Frequently Asked Questions](#25-frequently-asked-questions)
@@ -299,6 +301,45 @@ Lists all Hyper-V virtual switches across every node in the cluster.
 
 ---
 
+## 5c. VM Storage Alignment
+
+**Route:** `/clusters/{name}/vm-storage-alignment`  
+**Access required:** HciAccess
+
+> Part of the same tab group as Virtual Machines · VM Performance · Virtual Switches · VM Checkpoints.
+
+Analyzes VM compute placement against Cluster Shared Volume (CSV) ownership to help identify VMs that could benefit from being moved to run on the same node that owns their storage.
+
+Like VM Checkpoints, this data is **not loaded automatically**. Click **Fetch Data** to run the analysis — it combines VM inventory, CSV ownership, node capacity, and Windows Failover Cluster Manager (WFCM) preferred owner data, so it can take longer than other VM tabs on large clusters.
+
+### Understanding the Alignment column
+
+In a healthy Storage Spaces Direct cluster, misalignment between a VM and its storage is usually **low-impact** — Direct I/O lets any node read/write straight to the disks holding the data over the storage network, regardless of which node "owns" the CSV. Misalignment only becomes a likely real performance concern when the CSV has fallen into **Redirected** mode, which forces all I/O for that volume through the owner node.
+
+| Status | Meaning |
+|---|---|
+| Aligned | VM is running on the same node that owns its primary CSV |
+| Misaligned (Low Impact) | Different node, but the CSV is Online (Direct I/O) — overhead is typically minimal on modern RDMA/NVMe fabrics |
+| Misaligned (High Impact) | Different node, and the CSV is in Redirected mode — a real double-hop performance penalty is likely |
+| Unknown | The VM's disk could not be attributed to a tracked CSV (e.g. unclustered VM or non-CSV storage) |
+
+### Columns
+
+| Column | Description |
+|---|---|
+| VM | VM name — click to jump to it on the Virtual Machines tab |
+| VM Owner | Node currently running the VM |
+| Primary CSV | The Cluster Shared Volume hosting the VM's first virtual disk |
+| CSV Owner | Node that currently owns that CSV |
+| Alignment | See table above |
+| Capacity Check | For misaligned VMs, whether the CSV owner node has enough free CPU/memory headroom to safely host the VM (Sufficient / Insufficient / Unknown / N/A for aligned VMs) |
+| Preferred Owners | Any WFCM Preferred Owners configured for the VM's cluster group, or "None" |
+| Notes | Plain-language explanation of the status and any capacity or preferred-owner considerations |
+
+> Only the VM's first virtual disk is used for CSV attribution. VMs with disks spread across multiple CSVs are not specially flagged.
+
+---
+
 ## 6. Cluster Nodes
 
 **Route:** `/clusters/{name}/nodes`  
@@ -324,6 +365,21 @@ Shows live statistics for every node: CPU %, memory usage, uptime, OS version, a
 ### Connect (RDP)
 
 The **Connect** column shows an **RDP** button for each node. Clicking it downloads a pre-filled `.rdp` file that opens a Remote Desktop connection to the node. Windows auto-launches `mstsc.exe` on download — click **Connect** in the RDP prompt.
+
+### Process Insights (opt-in)
+
+Expanding a node row shows a **Top Processes** section with the top 10 CPU-consuming and top 10
+memory-consuming processes on that host (process name, PID, CPU %, Private Bytes, Working Set).
+
+This is **disabled by default** and must be enabled per cluster in **Admin → Clusters → Enabled
+Features (opt-in) → Process Insights**. It is opt-in because process data is collected via a
+low-overhead WMI performance counter (`Win32_PerfFormattedData_PerfProc_Process` — the same
+mechanism Task Manager/Perfmon use) on every node; no PowerShell process is spawned and no
+additional load is placed on hosts that have not opted in.
+
+**Collection frequency:** every ~20 minutes by default (Slow tier — shared with other
+low-churn background collector types). If a cluster shows "Process Insights not enabled for
+this cluster", enable the feature and wait for the next poll cycle for data to appear.
 
 ---
 
@@ -1085,6 +1141,8 @@ Controls how the Azure Arc pages authenticate to Azure Resource Manager.
 | Action SPN Client ID | Azure ARM Authentication (Action SPN) | Application (client) ID for the action SPN |
 | Action SPN Client Secret | Azure ARM Authentication (Action SPN) | Client secret for the action SPN (encrypted at rest) |
 | Licence Key | Licence | Current licence key. Leave blank or use the `PREVIEW-2026-FREE` default during the preview period. |
+| Check for Updates | Update Check | `true` (default) or `false` — enables the background check for a newer stable release |
+| Check Interval (Hours) | Update Check | How often to poll GitHub for the latest release. Default: 24. |
 
 ### Action SPN (optional dual-SPN mode)
 
@@ -1134,6 +1192,29 @@ Subscription or resource group scope:
 ```
 
 If your organisation separates read and write access, configure the optional **Action SPN** in `Admin → Settings → Azure ARM Authentication (Action SPN)` — see the FAQ for full details.
+
+### Update Check
+
+The app periodically checks the public releases repo on GitHub
+(`AzureLocal-ClusterTool-Web-Releases`) for the latest **stable** release —
+pre-release tags (`-preview`/`-beta`/`-rc`) are never reported as an available
+update. No data leaves the app beyond this single read-only lookup, and it
+never runs on every page load — only once per configured interval (default
+every 24 hours).
+
+When a newer stable version is found, HciAdmins see a small **⬆ Update
+available** badge under the app title in the nav bar, linking to the release
+on GitHub. Regular (non-admin) users never see this badge.
+
+Use `Admin → Settings → Update Check → Check Now` to check immediately
+without waiting for the next scheduled poll — useful right after deploying,
+or to confirm connectivity to GitHub. The panel also shows the current
+version, the latest known version, and the time of the last check attempt.
+
+> **Note:** if the app runs as two IIS app pools (main + WinAuth site, see
+> Deployment Guide), each process checks independently and keeps its own
+> status — the badge and panel reflect whichever process handled your
+> request.
 
 ## 22a. Admin — SIEM Integration
 
@@ -1187,6 +1268,81 @@ Sentinel ingestion uses the modern **Logs Ingestion API**, which requires a one-
 The **Delivery Health** panel (under the SIEM Integration group) shows, per sink and stream: Enabled/Disabled status, last successful send, last error, consecutive failures, and current backlog (events waiting to be sent). Use **Send Test Event** to verify connectivity end-to-end without waiting for real audit activity — test sends are themselves recorded in the [Audit Log](#21-admin--audit-log) as a `SiemSendTest` action so you can confirm delivery worked.
 
 > **New activity is always forwarded first.** The very first time a sink polls, its watermark starts at the *current* newest row rather than 0 — it never tries to replay an existing, possibly very large, audit history. If a sink falls behind later (for example after being disabled for a long time, or a large batch of automated actions ran while it was down), a **Skip Backlog** button appears next to its row once its backlog is non-zero. Clicking it permanently discards the queued backlog for that sink/stream — only new activity from that point on is sent. This cannot be undone, so confirm the backlog really is old/expected before using it.
+
+## 22b. Admin — Direct Alerting (Splunk / Log Analytics)
+
+**Route:** `/admin/settings` (Alerting tab)  
+**Access required:** HciAdmin only
+
+Pushes each fired alert (from [Alert Rules](#alert-rules)) to Splunk and/or a Log Analytics workspace **the instant it fires** — a real-time channel alongside Teams and Email, not a periodic batch job. This is deliberately separate from [SIEM Integration](#22a-admin--siem-integration) above:
+
+| | SIEM Integration (22a) | Direct Alerting (this section) |
+|---|---|---|
+| Delivery | Periodic poll (default every 120s), only if **Include Alert History** is on | Instant, the moment `AlertEngine` fires a notification |
+| Scope | Full audit log + optional alert history, for compliance/retention | Fired alerts only, for real-time ops monitoring/paging |
+| Config | `SIEM Integration (Splunk)` / `(Sentinel)` groups | `Alerting (Splunk)` / `Alerting (Log Analytics)` groups — separate HEC token/index and DCE/DCR/stream, so it can target a completely different destination |
+| Audience | SOC / compliance | Ops teams (dashboards, workbooks, paging rules) |
+
+Both destinations can be enabled at the same time as Teams/Email — every configured channel receives the same alert in parallel. Each destination has its own **Minimum Severity** filter (`Warning` or `Critical`) so, for example, Splunk can receive every alert while Log Analytics only receives `Critical` ones.
+
+### Splunk setup
+
+1. In Splunk Web: **Settings → Data Inputs → HTTP Event Collector → New Token**. Note the token value and the HEC base URL.
+2. In `Admin → Settings → Alerting` → **Alerting (Splunk)**: set **Splunk Alert Delivery Enabled** to `true`, paste the **HEC URL** and **HEC Token**, and optionally set a custom **Source**, **Source Type**, **Index**, or **Minimum Severity**.
+3. Click **Send Test Alert** to verify connectivity — it sends a synthetic `Critical` test alert immediately, bypassing the Minimum Severity filter, and reports genuine success/failure (not just "dispatched").
+4. Same timeout/TLS troubleshooting guidance applies as the SIEM Splunk sink (22a) — a timeout almost always means the URL/port/scheme is wrong or the app server cannot reach that host at all.
+
+### Log Analytics setup
+
+Uses the same Logs Ingestion API (Data Collection Rule based) mechanism as SIEM Integration (Sentinel), but configured entirely separately so it can point at a different workspace/table dedicated to ops alerting:
+
+1. **Create a Log Analytics custom table** with columns: `TimeGenerated` (datetime), `ClusterName` (string), `RuleType` (string), `Severity` (string), `Title` (string), `Message` (string). Easiest path: in the Log Analytics workspace go to **Tables → Create → New custom log (DCR-based)**, and on the *Sample logs* step upload [`alerting-log-analytics-sample-events.json`](alerting-log-analytics-sample-events.json) — the wizard infers all 6 columns and their types automatically, and also creates the matching Data Collection Rule and Data Collection Endpoint for you in the same flow.
+   > **Naming gotcha:** the wizard always appends its own `_CL` suffix to whatever table name you type. If you type `AZLALERT_CL` as the base name (already including `_CL` out of habit from the SIEM setup above), the real table ends up named **`AZLALERT_CL_CL`** — check the table's actual name under **Tables** in the workspace before configuring the Stream Name in step 2; don't assume it matches what you originally typed.
+2. **Create a Data Collection Endpoint (DCE)** and a **Data Collection Rule (DCR)** with a stream pointing at that table. Note the DCR's immutable ID and the exact stream name — it is **always** `Custom-` + the table's real name from step 1 (e.g. table `AZLALERT_CL_CL` → stream `Custom-AZLALERT_CL_CL`, not `Custom-AZLALERT_CL`). Don't guess this from memory — open the DCR resource's **Export template** (or JSON view) and read the value directly under `properties.dataFlows[].streams` (or `properties.streamDeclarations`); that's the only guaranteed-correct source.
+3. **Create a dedicated Entra app registration** (client credentials) and grant it **Monitoring Metrics Publisher** scoped to the DCR only.
+4. In `Admin → Settings → Alerting` → **Alerting (Log Analytics)**: set **Log Analytics Alert Delivery Enabled** to `true` and fill in the DCE endpoint, DCR immutable ID, stream name, tenant/client ID/client secret, and optionally **Minimum Severity**.
+5. Click **Send Test Alert** to verify. The same RBAC (403) and `InvalidStream` (400) troubleshooting guidance from the Sentinel SIEM sink (22a) applies here.
+6. **If "Send Test Alert" still fails after confirming steps 1-5 and waiting 15+ minutes for RBAC propagation**, isolate the problem from the app before assuming it's a code bug:
+   - **List every role actually assigned** to the app registration's service principal, across all scopes, with Azure CLI:
+     ```powershell
+     az role assignment list --assignee <ClientId> --all -o table
+     ```
+     Confirm `Monitoring Metrics Publisher` appears with a scope that covers the DCR (the DCR itself, or an ancestor resource group/subscription). If it's missing or scoped somewhere unrelated, that's the fix.
+   - **Test ingestion directly with PowerShell**, bypassing the app entirely, using the exact same DCE/DCR/stream/credentials configured in Admin > Settings. If this also fails with the same error, it's conclusively an Azure-side RBAC/config issue, not an app bug:
+     ```powershell
+     $tenantId     = '<TenantId>'
+     $clientId     = '<ClientId>'
+     $clientSecret = Read-Host -AsSecureString 'Client secret'
+     $cred = New-Object System.Management.Automation.PSCredential($clientId, $clientSecret)
+     Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred | Out-Null
+
+     # Get-AzAccessToken returns .Token as a SecureString on recent Az.Accounts versions —
+     # interpolating it directly produces the literal text "System.Security.SecureString"
+     # instead of a real JWT and causes a misleading 401. Convert it first.
+     $tokenObj = Get-AzAccessToken -ResourceUrl 'https://monitor.azure.com/'
+     if ($tokenObj.Token -is [System.Security.SecureString]) {
+         $bstr  = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token)
+         $token = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+         [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+     } else { $token = $tokenObj.Token }
+
+     $dceEndpoint = '<DceEndpoint>'
+     $dcrId       = '<DcrImmutableId>'
+     $streamName  = '<StreamName>'   # e.g. Custom-AZLALERT_CL_CL — confirm from the DCR JSON view
+     $uri = "$dceEndpoint/dataCollectionRules/$dcrId/streams/$streamName`?api-version=2023-01-01"
+
+     $events = @(@{
+         TimeGenerated = (Get-Date).ToUniversalTime().ToString('o')
+         ClusterName   = '(manual-test)'; RuleType = 'Test'; Severity = 'Critical'
+         Title         = 'Manual REST Test'; Message = 'Direct REST ingestion test, bypassing the app.'
+     })
+     # Force a JSON array even for one element — ConvertTo-Json -AsArray is PS7+ only
+     $body = '[' + (($events | ForEach-Object { $_ | ConvertTo-Json -Compress }) -join ',') + ']'
+
+     Invoke-RestMethod -Method Post -Uri $uri -Headers @{ Authorization = "Bearer $token" } -Body $body -ContentType 'application/json'
+     ```
+   - **Real-world note:** in one troubleshooting session, `Monitoring Metrics Publisher` alone (correctly scoped to the DCR) still returned a 403 well past the normal propagation window, and only granting `Log Analytics Contributor` (much broader than the documented minimal role) made it start working. This may have been coincidental timing rather than a genuine permission gap — if you hit the same thing, try removing the broader role again once ingestion is working, to confirm whether `Monitoring Metrics Publisher` alone is actually sufficient in your tenant before leaving the wider grant in place permanently.
+
 
 ## 23. Admin — Custom Roles (RBAC)
 
@@ -1923,6 +2079,8 @@ Lists every configured alert rule. Click **+ New Rule** to create one, or the **
 | **Node Offline** | Any cluster node moves to a state other than `Up`. Fires independently for each affected node. |
 | **Cluster Unreachable** | The background poller's circuit breaker trips — the cluster is unreachable for consecutive poll cycles. |
 | **VM Stop** | One or more VMs transition to the `Off` state unexpectedly (not triggered by a user action through the app). Use the `VmNamePattern` field to limit which VMs trigger the rule. |
+| **High Memory Process Per Host** | A single process on any cluster host is using more Private Bytes than the configured threshold (entered in GB in the rule editor). Requires the **Process Insights** feature to be enabled for the cluster (Admin → Clusters). The **Process Exclude Pattern** field (reuses the VM Name Pattern input) excludes matching process names from firing the alert — defaults to `vmwp.exe` so large-VM worker processes, already visible on the Virtual Machines page, don't create noise. |
+| **CSV Save-VM Space Risk** | A Cluster Shared Volume would fall below a safety-margin percentage of free space (Threshold, default 10%) if every VM hosted on it were saved (Save-VM) at the same time — e.g. a UPS-triggered shutdown or planned maintenance. Required space per VM is its current memory usage (or Maximum/Startup when not running) plus a 10% overhead estimate. |
 
 > **Health Fault threshold:** Setting threshold to `1` (default) fires on any fault. Setting it to `3` requires at least 3 simultaneous faults. Use a threshold of `1` for production clusters where any fault is actionable.
 
@@ -1934,6 +2092,12 @@ Each rule fires through **both** channels simultaneously if both are configured.
 |---|---|---|
 | Teams webhook | Admin → Settings → `Alerting:TeamsWebhookUrl` | Rule **Webhook URL** field |
 | Email (SMTP) | Admin → Settings → `Smtp:ToAddress` | Rule **Email To** field |
+| Splunk (real-time) | Admin → Settings → `Alerting (Splunk)` — see [22b](#22b-admin--direct-alerting-splunk--log-analytics) | None (global only) |
+| Log Analytics (real-time) | Admin → Settings → `Alerting (Log Analytics)` — see [22b](#22b-admin--direct-alerting-splunk--log-analytics) | None (global only) |
+
+The Splunk and Log Analytics channels additionally respect their own **Minimum Severity** setting — a rule's alert is only forwarded to that channel if its Severity meets or exceeds the channel's configured minimum.
+
+Each channel can also be turned off independently without losing its configuration: **Enable Teams Delivery** (Alerting group), **Enable Email Delivery** (Email Alerting (SMTP) group), and the **Splunk/Log Analytics Alert Delivery Enabled** toggles under their own groups. Flipping one of these to `false` stops that channel's live alert delivery while leaving its webhook URL, SMTP credentials, HEC token, etc. untouched — flip it back to `true` to resume with the exact same settings. (Email's **Send Test Email** button always attempts delivery regardless of this toggle, so you can still verify SMTP credentials while email alerting is temporarily disabled.)
 
 If neither a per-rule override nor the global setting is configured, that channel is silently skipped for the rule — no error is shown. Configure at least one channel in Admin → Settings before creating rules.
 

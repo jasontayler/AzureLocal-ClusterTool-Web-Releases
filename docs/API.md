@@ -9,8 +9,13 @@ This is useful when clusters are provisioned or deprovisioned by automation tool
 ## Base URL
 
 ```
-https://azlmgmt.yourdomain.com/api
+https://azlmgmt.yourdomain.com/api/v1
 ```
+
+> **Versioning:** `/api/v1/...` is the primary, supported base URL. The unversioned
+> `/api/...` routes (e.g. `/api/clusters`) still work identically and are kept as
+> deprecated aliases for backward compatibility — they will not be removed earlier
+> than one major version after 1.0.0. New integrations should use `/api/v1/...`.
 
 ---
 
@@ -93,12 +98,15 @@ Returns all registered clusters.
     "arcExtensionsEnabled":  true,
     "atcIntentsEnabled":     true,
     "aksEnabled":            true,
-    "healthMonitorEnabled":  true,
-    "aksApiEndpoint":        "",
-    "hasAksApiToken":        false
+    "healthMonitorEnabled":  true
   }
 ]
 ```
+
+> **Note:** AKS/Arc-connected Kubernetes access uses an Azure AD Proof-of-Possession (PoP)
+> token flow via Arc and does not require any per-cluster API endpoint or token
+> configuration. Older releases had `aksApiEndpoint`/`aksApiToken` fields for a
+> now-retired manual token flow — these are no longer part of the API.
 
 ---
 
@@ -106,7 +114,7 @@ Returns all registered clusters.
 
 Returns a single cluster by name.
 
-**Response** `200 OK` — cluster object (same shape as above; `aksApiToken` is never returned — use `hasAksApiToken: true/false` to check if a token is stored)  
+**Response** `200 OK` — cluster object (same shape as above)  
 **Response** `404 Not Found` — `{ "error": "Cluster 'name' not found." }`
 
 ---
@@ -129,9 +137,7 @@ Registers a new cluster.
   "arcExtensionsEnabled":  true,
   "atcIntentsEnabled":     true,
   "aksEnabled":            true,
-  "healthMonitorEnabled":  true,
-  "aksApiEndpoint":        "",
-  "aksApiToken":           "eyJ..."
+  "healthMonitorEnabled":  true
 }
 ```
 
@@ -149,8 +155,6 @@ Registers a new cluster.
 | `atcIntentsEnabled` | No | `true` | Set `false` to hide the Network ATC Intents tab |
 | `aksEnabled` | No | `true` | Set `false` to hide the AKS page |
 | `healthMonitorEnabled` | No | `true` | Set `false` to disable background health polling |
-| `aksApiEndpoint` | No | `""` | Kubernetes API server, e.g. `10.10.10.26:6443` |
-| `aksApiToken` | No | — | Bearer token for AKS API. **Write-only** — never returned in responses. Omit or set `null` to keep existing value on PUT. |
 
 **Response** `201 Created`
 ```json
@@ -164,7 +168,7 @@ Registers a new cluster.
 
 Updates an existing cluster's connection settings.
 
-**Request body** — same shape as POST. For optional fields: omit or set `null` to keep the existing value (`connectionType`, `credentialSource`, `aksApiEndpoint`, `aksApiToken`). All feature-enabled booleans replace the existing value when provided (omit a field to keep existing).
+**Request body** — same shape as POST. For optional fields: omit or set `null` to keep the existing value (`connectionType`, `credentialSource`). All feature-enabled booleans replace the existing value when provided (omit a field to keep existing).
 
 **Response** `204 No Content` — update applied  
 **Response** `404 Not Found` — cluster does not exist
@@ -183,7 +187,7 @@ Removes a cluster registration. The cluster's cached connection is evicted immed
 ## PowerShell examples
 
 ```powershell
-$baseUrl = "https://azlmgmt.yourdomain.com/api"
+$baseUrl = "https://azlmgmt.yourdomain.com/api/v1"
 $headers = @{ Authorization = "ApiKey YOUR_TOKEN_HERE" }
 
 # List all clusters
@@ -212,8 +216,6 @@ $body = @{
     solutionUpdatesEnabled = $false
     atcIntentsEnabled     = $false
     aksEnabled            = $true
-    aksApiEndpoint        = "10.10.10.26:6443"
-    aksApiToken           = "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
 } | ConvertTo-Json
 Invoke-RestMethod -Uri "$baseUrl/clusters" -Method Post -Headers $headers `
     -Body $body -ContentType "application/json"
@@ -235,7 +237,7 @@ Invoke-RestMethod -Uri "$baseUrl/clusters/MY-CLUSTER-02" -Method Delete -Headers
 ## curl examples
 
 ```bash
-BASE="https://azlocalmgmt.jase.org/api"
+BASE="https://azlocalmgmt.jase.org/api/v1"
 KEY="YOUR_TOKEN_HERE"
 
 # List all clusters
@@ -416,7 +418,7 @@ Deactivates a recurring rule and cancels all future (not-yet-started) occurrence
 ### Maintenance PowerShell examples
 
 ```powershell
-$baseUrl = "https://azlmgmt.yourdomain.com/api"
+$baseUrl = "https://azlmgmt.yourdomain.com/api/v1"
 $headers = @{ Authorization = "ApiKey YOUR_TOKEN_HERE" }
 
 # List all active windows
@@ -481,7 +483,7 @@ Invoke-RestMethod -Uri "$baseUrl/maintenance/rules/3" -Method Delete -Headers $h
 The UI groups rules that share the same schedule and reason together as a single "Reoccurring Schedule" entry (even though they are stored as separate rules, one per cluster). To create the same recurring schedule across multiple clusters, POST one rule per cluster using identical `recurrenceType`, `daysOfWeek`, `windowStart`, `windowDurationMinutes`, and `reason` values.
 
 ```powershell
-$baseUrl = "https://azlmgmt.yourdomain.com/api"
+$baseUrl = "https://azlmgmt.yourdomain.com/api/v1"
 $headers = @{ Authorization = "ApiKey YOUR_TOKEN_HERE" }
 
 # Apply the same weekly schedule to multiple clusters

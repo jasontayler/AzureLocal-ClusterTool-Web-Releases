@@ -53,7 +53,7 @@ Remote Desktop or multiple PowerShell windows.
 | Authentication | Microsoft Entra ID SSO (`Microsoft.Identity.Web`) or Windows Authentication (second site) |
 | Authorisation | Entra security groups + fine-grained custom RBAC |
 | PowerShell | `Microsoft.PowerShell.SDK` 7.5.4 — local RSAT + CIM API + WinRM where required |
-| Database | EF Core 9 — PostgreSQL (recommended), SQLite, or SQL Server |
+| Database | EF Core 9 — PostgreSQL (recommended), SQLite, or SQL Server (not actively validated; pending customer demand) |
 | Hosting | IIS (InProcess) with gMSA service account |
 
 ---
@@ -140,7 +140,7 @@ Additional settings (ARM integration, SMTP, Teams webhook, Key Vault) are manage
 |---|---|---|
 | **PostgreSQL** (recommended) | Production; multi-server | No row-count limits; free and open source. Run `scripts\Setup-PostgreSQL.ps1` or configure manually. Set `DataProtection:KeyPath` to a persistent folder. |
 | **SQLite** | Single-server / low-traffic | Simple; single file. Connection string: `Data Source=C:\apps\hci-portal-data\app.db`. Key path is derived from the DB file location automatically. |
-| **SQL Server** | Enterprise / Azure SQL | Standard SQL Server connection string. Set `DataProtection:KeyPath` explicitly. |
+| **SQL Server** | Enterprise / Azure SQL — not actively validated for production use; full support pending customer demand | Standard SQL Server connection string. Set `DataProtection:KeyPath` explicitly. Contact support if you need this validated for your environment. |
 
 ---
 
