@@ -3,6 +3,8 @@
 High-level steps to get from a fresh Windows Server to a running portal.
 For detailed script parameters, reference material, and troubleshooting, see the [Deployment Guide](IIS-Deployment.md).
 
+> Developer note: this guide is deployment-focused. For Copilot MCP workflow standards and validation checks, see the Developer MCP runbook section in [README.md](../README.md#developer-mcp-runbook).
+
 ---
 
 ## Prerequisites

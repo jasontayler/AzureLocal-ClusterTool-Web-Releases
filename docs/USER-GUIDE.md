@@ -1,8 +1,10 @@
 ﻿# Azure Local Management (ALM) — User Guide
 
 > **Audience:** Cluster operators and administrators.  
-> **App URL:** Set by your administrator during IIS setup — typically `https://azlmgmt.<your-domain>/`  
-> **Authentication:** Microsoft Entra ID (Azure AD) single sign-on — no username/password prompt inside the app.
+> **App URL:** Set by your administrator during IIS setup - typically
+> `https://azlmgmt.<your-domain>/`  
+> **Authentication:** Microsoft Entra ID (Azure AD) single sign-on - no
+> username/password prompt inside the app.
 
 ---
 
@@ -39,139 +41,180 @@
 21. [Admin — Audit Log](#21-admin--audit-log)
 22. [Admin — Settings](#22-admin--settings)
     - [22a. Admin — SIEM Integration](#22a-admin--siem-integration)
-    - [22b. Admin — Direct Alerting (Splunk / Log Analytics)](#22b-admin--direct-alerting-splunk--log-analytics)
+    - [22b. Admin - Direct Alerting (Splunk / Log Analytics)](#22b-admin--direct-alerting-splunk--log-analytics)
+    - [22c. Admin — API Access](#22c-admin--api-access)
 23. [Admin — Custom Roles (RBAC)](#23-admin--custom-roles-rbac)
 24. [Access Levels](#24-access-levels)
 25. [Frequently Asked Questions](#25-frequently-asked-questions)
 26. [Windows Authentication Deployment](#26-windows-authentication-deployment)
-27. [Admin — Diagnostics & Background Collector](#27-admin--diagnostics--background-collector)
+27. [Admin - Diagnostics & Background Collector](#27-admin--diagnostics--background-collector)
 28. [All Clusters — Dashboard](#28-all-clusters--dashboard)
-    - [28a. VM Status](#28a-vm-status)
-    - [28b. Update Status](#28b-update-status)
+    - [28a. VM Status](#28a-fleet-vm-status)
+    - [28b. Update Status](#28b-fleet-update-status)
     - [28c. Update Schedules](#28c-update-schedules)
 29. [Admin — Alerts](#29-admin--alerts)
 30. [Reports](#30-reports)
-30. [Reports](#30-reports)
+31. [Reports](#30-reports)
 
 ---
 
 ## 1. Signing In
 
-Navigate to the app URL in any modern browser. You will be redirected to the **Microsoft Entra ID** sign-in page automatically. Use your normal domain or Microsoft 365 credentials.
+Navigate to the app URL in any modern browser. You will be redirected to the
+**Microsoft Entra ID** sign-in page automatically. Use your normal domain or
+Microsoft 365 credentials.
 
-After sign-in you are returned to the app home page. No separate app password is required.
+After sign-in you are returned to the app home page. No separate app password
+is required.
 
-**If access is denied:** Your account is not a member of a permitted Entra security group. Contact your administrator to be added to the appropriate group (see [Access Levels](#24-access-levels)).
+**If access is denied:** Your account is not a member of a permitted Entra
+security group. Contact your administrator to be added to the appropriate
+group (see [Access Levels](#24-access-levels)).
 
-**Sign out:** Click your name in the top-right corner and select **Sign out**, or navigate directly to `/signout`.
+**Sign out:** Click your name in the top-right corner and select **Sign out**,
+or navigate directly to `/signout`.
 
-**Your role badge:** After signing in, your assigned custom RBAC role name (e.g. `VM Admin`) is displayed as a small badge next to your name in the top bar. HciAdmin members see an `Admin` badge. In pass-through mode (no custom roles configured) no badge is shown.
+**Your role badge:** After signing in, your assigned custom RBAC role name
+(e.g. `VM Admin`) is displayed as a small badge next to your name in the top
+bar. HciAdmin members see an `Admin` badge. In pass-through mode (no custom
+roles configured) no badge is shown.
 
 ---
 
 ## 2. Cluster Selection — Home Page
 
-The home page lists every cluster you have access to. Click any cluster card to connect and begin managing it. The selected cluster name appears in the left navigation bar for the rest of your session.
+The home page lists every cluster you have access to. Click any cluster card
+to connect and begin managing it. The selected cluster name appears in the left
+navigation bar for the rest of your session.
 
-Use the **Filter clusters...** search box to narrow the list by cluster name or address — useful when many clusters are registered.
+Use the **Filter clusters...** search box to narrow the list by cluster name
+or address - useful when many clusters are registered.
 
-If no clusters are listed, either no clusters are registered (an Administrator must add them via [Admin → Clusters](#20-admin--clusters)) or your custom RBAC role does not include **View** access to any clusters — contact your administrator to update your role's `Clusters` permissions.
+If no clusters are listed, either no clusters are registered (an
+Administrator must add them via [Admin -> Clusters](#20-admin--clusters)) or
+your custom RBAC role does not include **View** access to any clusters -
+contact your administrator to update your role's `Clusters` permissions.
 
 ---
 
 ## 3. Navigation
 
-The left sidebar organises pages into collapsible groups. All groups are expanded by default. Click any group header to collapse or expand it.
+The left sidebar organises pages into collapsible groups. All groups are
+expanded by default. Click any group header to collapse or expand it.
 
 **Global links** (always visible at the top)
 
 | Link | Page |
-|---|---|
+| --- | --- |
 | All Clusters | Home page — cluster picker |
-| &nbsp;&nbsp;↳ VM Status | All VMs across all clusters — snapshot data, no live WinRM |
-| &nbsp;&nbsp;↳ Update Status | Solution update state for all clusters — snapshot data |
-| &nbsp;&nbsp;↳ Update Schedules | Create and manage scheduled update windows across clusters |
+| &nbsp;&nbsp;↳ VM Status | All VMs across all clusters - snapshot data |
+| &nbsp;&nbsp;↳ Update Status | Solution update state for all clusters |
+| &nbsp;&nbsp;↳ Update Schedules | Manage scheduled update windows |
 
-**Cluster section** (appears after you select a cluster, labelled with the cluster name)
+**Cluster section** (appears after you select a cluster)
 
 Links are organised into named collapsible groups within the cluster section:
 
 | Link | Group | Page |
-|---|---|---|
-| Overview | — | Summary cards — VM count, cluster role health, and Azure Arc status |
-| Cluster Info | **Cluster** | Quorum, S2D health, cluster shared volumes, health faults |
-| &nbsp;&nbsp;↳ Nodes | Cluster | Node health, CPU/memory, drain and resume operations |
-| &nbsp;&nbsp;↳ Roles | Cluster | Cluster resource groups — start, stop, move |
+| --- | --- | --- |
+| Overview | — | VM count, role health, and Azure Arc status |
+| Cluster Info | **Cluster** | Quorum, S2D, volumes, health faults |
+| &nbsp;&nbsp;↳ Nodes | Cluster | Node health, CPU/memory, drain/resume |
+| &nbsp;&nbsp;↳ Roles | Cluster | Resource groups - start, stop, move |
 | &nbsp;&nbsp;↳ Events | Cluster | Windows cluster event log |
-| &nbsp;&nbsp;↳ Node Performance | Cluster | Per-node CPU/memory/network charts with timeframe selection |
-| &nbsp;&nbsp;↳ Security & Compliance | Cluster | Security feature and WDAC status per node (Azure Local 24H2+) |
-| &nbsp;&nbsp;↳ Health Settings | Cluster | Health Service fault-detection thresholds |
-| Storage | — | Physical disks · Cluster volumes · Storage QoS performance |
-| Network | — | Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks |
-| Virtual Machines | **Workloads** | Full VM list — start, stop, migrate, console access |
-| AKS | Workloads | AKS on Azure Local — ARM-sourced overview |
-| Alerts | **Monitoring** *(HciAdmin only)* | Alert rules and fired alert history |
-| Maintenance | Monitoring *(HciAdmin only)* | Schedule maintenance windows to suppress alerts |
-| Remote Logs | **Tools** | Browse and read log files on cluster nodes |
-| Agent Services | Tools | HCI agent service status and control |
-| Diagnostic Logs | Tools | Submit cluster logs to Microsoft Support (Send-DiagnosticData) |
-| Solution Updates | **Platform** | Available updates and update run history |
-| Azure Arc | Platform | Arc registration · Arc Machines · Arc Extensions · Cluster Extensions |
-| Arc Resource Bridge | Platform | Arc appliance health and Azure Local sites |
+| &nbsp;&nbsp;↳ Node Performance | Cluster | Per-node CPU/memory/network charts |
+| &nbsp;&nbsp;↳ Security & Compliance | Cluster | Security and WDAC status per node |
+| &nbsp;&nbsp;↳ Health Settings | Cluster | Fault-detection thresholds |
+| Storage | — | Disks, cluster volumes, storage QoS |
+| Network | — | Adapters, ATC, networks, SMB, logical |
+| Virtual Machines | **Workloads** | VM list - start, stop, migrate, console |
+| AKS | Workloads | AKS on Azure Local - ARM overview |
+| Alerts | **Monitoring** *(HciAdmin only)* | Alert rules and history |
+| Maintenance | Monitoring *(HciAdmin only)* | Schedule maintenance windows |
+| Remote Logs | **Tools** | Browse and read log files |
+| Agent Services | Tools | HCI agent service status |
+| Diagnostic Logs | Tools | Submit cluster logs to Support |
+| Solution Updates | **Platform** | Available updates and run history |
+| Azure Arc | Platform | Arc registration, machines, extensions |
+| Arc Resource Bridge | Platform | Arc appliance health and sites |
 | Custom Locations | Platform | Azure Arc custom locations |
-| Platform Topology | Platform | ARM-sourced topology view of Arc-registered resources |
+| Platform Topology | Platform | ARM topology view of Arc resources |
 
 **Sub-navigation strips**
 
-Several page groups share a tab strip directly below the page heading, so you can switch between related pages without going back to the sidebar:
+Several page groups share a tab strip below the page heading, so you can
+switch between related pages without going back to the sidebar:
 
-- **Virtual Machines group:** Virtual Machines · VM Performance · Virtual Switches
-- **Cluster group:** Cluster Info · Nodes · Roles · Events · Node Performance
-- **Storage group:** Disks · Cluster Volumes · Performance
-- **Network group:** Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks
-- **Azure Arc group:** Registration · Arc Machines · Arc Extensions · Cluster Extensions
+- **Virtual Machines group:** Virtual Machines, VM Performance, Virtual Switches
+- **Cluster group:** Cluster Info, Nodes, Roles, Events, Node Performance
+- **Storage group:** Disks, Cluster Volumes, Performance
+- **Network group:** Adapters, ATC Intents, Cluster Networks, SMB Networks,
+    Logical Networks
+- **Azure Arc group:** Registration, Arc Machines, Arc Extensions, Cluster
+    Extensions
 
-Arc Resource Bridge, Custom Locations, and Platform Topology are dedicated sidebar entries in the **Platform** group, not tabs.
+Arc Resource Bridge, Custom Locations, and Platform Topology are dedicated
+sidebar entries in the **Platform** group, not tabs.
 
 **Admin section** (HciAdmin group only)
 
 | Link | Page |
-|---|---|
+| --- | --- |
 | Clusters | Add / edit / delete registered clusters |
-| Settings | Encrypted application settings (ARM auth, SPN credentials, Licence key) |
-| Audit Log | Complete history of all operator actions |
+| Settings | Encrypted application settings |
+| Audit Log | Complete history of operator actions |
 | Custom Roles | Fine-grained RBAC role management |
-| Debug | PS/WinRM call log, background collector health, cluster perf diagnostics |
+| Debug | PS/WinRM log, collector health, perf diagnostics |
 
 **Monitoring section** (HciAdmin group only — appears before Reports)
 
 | Link | Page |
-|---|---|
-| 🔔 Alerts | Alert history — fired, sent, and suppressed alerts across all clusters |
-| 🛠️ Maintenance | Schedule maintenance windows to suppress alerts for planned work |
+| --- | --- |
+| 🔔 Alerts | Alert history - fired, sent, suppressed |
+| 🛠️ Maintenance | Schedule maintenance windows |
 
 **Reports section** (any authenticated user with Reports access)
 
-| Link | Page |
-|---|---|
-| 📊 Activity | Unified audit activity report — filter by cluster, resource type, action, outcome, and date range. Covers VM, Node, Role, and Cluster administration events. Export to CSV. |
-| ❤️ Health Faults | Historical record of health faults detected across all clusters |
-| 🕒 Snapshot Freshness | Background-collector freshness — shows how recently each data type was collected per cluster |
+- **📊 Activity:** Unified audit activity report. Filter by cluster, resource
+  type, action, outcome, and date range. Covers VM, Node, Role, and Cluster
+  events. Export to CSV.
+- **❤️ Health Faults:** Historical record of health faults across all
+  clusters
+- **🕒 Snapshot Freshness:** Background-collector freshness. Shows how
+  recently each data type was collected
 
 **Custom role nav visibility**
 
-If your account is subject to [Custom Roles (RBAC)](#23-admin--custom-roles-rbac), RBAC controls access at two levels:
+If your account is subject to [Custom Roles (RBAC)](#23-admin--custom-roles-rbac),
+RBAC controls access at two levels:
 
-1. **Cluster visibility** — which clusters appear in the home page picker and in the left navigation bar. Controlled by your role's `Clusters` permission. If a cluster does not appear in your picker, your role's `Clusters` pattern does not match it.
-2. **Within a cluster** — which resource type links (VMs, Nodes, Storage, etc.) are shown. Controlled by the corresponding resource type permission on your role.
+1. **Cluster visibility** - which clusters appear in the home page picker
+   and in the left navigation bar. Controlled by your role's `Clusters`
+   permission. If a cluster does not appear in your picker, your role's
+   `Clusters` pattern does not match it.
+2. **Within a cluster** - which resource type links (VMs, Nodes, Storage,
+   etc.) are shown. Controlled by the corresponding resource type permission
+   on your role.
 
-Collapsible group headers (*Cluster*, *Workloads*, *Tools*, *Platform*) are hidden when all links within them are hidden.
+Collapsible group headers (*Cluster*, *Workloads*, *Tools*, *Platform*) are
+hidden when all links within them are hidden.
 
-If you navigate directly to a URL for a cluster or page you cannot access, you will see an access-denied message rather than data.
+If you navigate directly to a URL for a cluster or page you cannot access,
+you will see an access-denied message rather than data.
 
-The **Overview** page respects the same rules: summary cards for Virtual Machines, Cluster Roles, and Azure Arc status are only shown if your role includes View access to those resource types. Items within each card are additionally filtered by any name patterns in your role (e.g. `PROD-*`).
+The **Overview** page respects the same rules: summary cards for Virtual
+Machines, Cluster Roles, and Azure Arc status are only shown if your role
+includes View access to those resource types. Items within each card are
+additionally filtered by any name patterns in your role (e.g. `PROD-*`).
 
-> In pass-through mode (no custom role assignments configured), the full navigation is always shown and all clusters are visible.
+The **Cluster Health** card also includes an **Insights** row that shows:
+
+- effective status (`Bound`, `Pending`, `Unavailable`, or `Disabled`)
+- workspace/error details
+- explicit read path summary (`Source: Insights` or `Source: WinRM fallback`)
+
+> In pass-through mode (no custom role assignments configured), the full
+> navigation is always shown and all clusters are visible.
 
 ---
 
@@ -180,7 +223,7 @@ The **Overview** page respects the same rules: summary cards for Virtual Machine
 All pages use coloured dots to indicate health or state at a glance.
 
 | Colour | Meaning |
-|---|---|
+| --- | --- |
 | 🟢 Green | Running / Healthy / Up / Succeeded / Connected |
 | 🟠 Orange | Paused / Warning / InProgress / Pending / Degraded |
 | 🔴 Red | Off / Failed / Critical / Disconnected |
@@ -193,18 +236,22 @@ Hover over any dot to see the full status text as a tooltip.
 ## 5. Virtual Machines
 
 **Route:** `/clusters/{name}/vms`  
-**Access required:** HciAccess (actions available depend on your custom RBAC role permissions)
+**Access required:** HciAccess (actions depend on your custom RBAC role)
 
-> The **Virtual Machines · VM Performance · Virtual Switches** tab strip at the top lets you switch between all three pages without returning to the sidebar.
+> The **Virtual Machines · VM Performance · Virtual Switches** tab strip at the
+> top lets you switch between all three pages without returning to the sidebar.
 
-> **Custom role filtering:** If your role includes a name pattern (e.g. `PROD-*`), only VMs whose names match that pattern are shown. VMs outside the pattern are completely hidden. If your role does not include View access to VMs at all, this page shows an access-denied message and the sidebar link is hidden.
+> **Custom role filtering:** If your role includes a name pattern (e.g.
+> `PROD-*`), only matching VMs are shown. VMs outside the pattern are hidden.
+> If your role does not include View access to VMs at all, this page shows an
+> access-denied message and the sidebar link is hidden.
 
 Displays all VMs across every node in the cluster.
 
 ### Columns
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Name | VM name — click the row to expand network adapter details |
 | State | Running / Off / Paused / Saved (with status dot) |
 | CPU % | Current processor utilisation |
@@ -215,46 +262,58 @@ Displays all VMs across every node in the cluster.
 
 ### Viewing Network Adapters (inline flyout)
 
-Click any VM row to expand an inline panel showing all virtual network adapters for that VM:
+Click any VM row to expand an inline panel showing all virtual network adapters
+for that VM:
 
 - **Adapter name**, connection status (dot + text)
 - **MAC address**, virtual switch, VLAN mode/ID
 - **IP addresses** (IPv4 summary)
 
-Click the row again to collapse. Adapter data is fetched on first expand and cached for the duration of the page session.
+Click the row again to collapse. Adapter data is fetched on first expand and
+cached for the duration of the page session.
 
 ### VM Actions
 
 Action buttons appear based on the VM's current state and your permissions:
 
 | Button | Available when | Effect |
-|---|---|---|
+| --- | --- | --- |
 | ▶ Start | VM is Off or Saved | Powers on the VM |
 | ↺ Restart | VM is Running or Paused | Sends a restart command |
 | ⏸ Suspend | VM is Running | Saves VM state (pauses without power-off) |
 | ⏹ Stop | VM is Running, Paused, or Saved | Graceful shutdown |
-| ⇒ Live Migrate | VM is Running, cluster has >1 node | Opens the node picker modal |
+| ⇒ Live Migrate | VM is Running, cluster has >1 node | Opens node picker |
 
-After an action the page automatically polls the cluster for 15 seconds (every 3 seconds) to pick up state transitions — you do not need to manually refresh.
+After an action the page automatically polls the cluster for 15 seconds
+(every 3 seconds) to pick up state transitions - you do not need to refresh.
 
 ### Live Migration
 
-Click **⇒ Live Migrate** on a running VM. A modal dialog appears listing all other nodes in the cluster. Select the target node and click **Migrate**. The VM moves online with no guest disruption.
+Click **⇒ Live Migrate** on a running VM. A modal dialog lists all other
+nodes. Select the target node and click **Migrate**. The VM moves online with
+no guest disruption.
 
-> Actions that fail will show a red error banner above the table. Check the [Audit Log](#21-admin--audit-log) for detail.
+> Actions that fail will show a red error banner above the table. Check the
+> [Audit Log](#21-admin--audit-log) for detail.
 
 ### Connect Shortcuts
 
-> **Note:** All actions are recorded in the [Audit Log](#21-admin--audit-log) with the acting user, outcome, and duration.
+> **Note:** All actions are recorded in the [Audit Log](#21-admin--audit-log)
+> with the acting user, outcome, and duration.
 
-Click any VM row to expand it, then scroll to the **Connect** section at the bottom of the flyout:
+Click any VM row to expand it, then scroll to the **Connect** section at the
+bottom of the flyout:
 
 | Button | What it does |
-|---|---|
-| **RDP** | Downloads a pre-filled `.rdp` file for `mstsc.exe`. Windows auto-opens it — click **Connect** in the RDP dialog. Connects to the VM by **name** (requires the VM's guest OS to accept RDP). |
-| **🖥 VMConnect** | Downloads a small `.bat` file. **Double-click** it to open the Hyper-V VM console (requires Hyper-V management tools — `vmconnect.exe` — installed on your local machine). Unlike RDP, VMConnect gives you a direct console session regardless of the guest OS network configuration. |
+| --- | --- |
+| **RDP** | Downloads a pre-filled `.rdp` file for `mstsc.exe`. Windows auto-opens it - click **Connect** in the RDP dialog. Connects to the VM by **name**. |
+| **🖥 VMConnect** | Downloads a small `.bat` file. **Double-click** it to open the Hyper-V VM console (requires Hyper-V management tools and `vmconnect.exe`). Unlike RDP, VMConnect gives you a direct console session. |
 
-> **Why double-click for VMConnect?** Browsers can auto-open `.rdp` files because Windows has a built-in file association for them. `vmconnect.exe` has no equivalent — Windows cannot launch it directly from a browser download. Double-clicking the saved `.bat` is the closest one-click experience available without a custom registry URI handler.
+> **Why double-click for VMConnect?** Browsers can auto-open `.rdp` files
+> because Windows has a built-in file association for them. `vmconnect.exe`
+> has no equivalent, so Windows cannot launch it directly from a browser
+> download. Double-clicking the saved `.bat` is the closest one-click
+> experience available without a custom registry URI handler.
 
 ---
 
@@ -263,12 +322,14 @@ Click any VM row to expand it, then scroll to the **Connect** section at the bot
 **Route:** `/clusters/{name}/vms/perf`  
 **Access required:** HciAccess
 
-> Part of the **Virtual Machines · VM Performance · Virtual Switches** tab group.
+> Part of the **Virtual Machines, VM Performance, Virtual Switches** tab group.
 
-Displays performance charts per virtual machine gathered directly from the Hyper-V host. Select a VM from the table on the left to view its charts on the right.
+Displays performance charts per virtual machine gathered directly from the
+Hyper-V host. Select a VM from the table on the left to view its charts on the
+right.
 
 | Chart | Description |
-|---|---|
+| --- | --- |
 | CPU % | Processor utilisation over time |
 | Memory MB | Assigned memory and demand |
 | Disk IOPS | Read and write operations per second |
@@ -281,14 +342,14 @@ Displays performance charts per virtual machine gathered directly from the Hyper
 **Route:** `/clusters/{name}/virtual-switches`  
 **Access required:** HciAccess
 
-> Part of the **Virtual Machines · VM Performance · Virtual Switches** tab group.
+> Part of the **Virtual Machines, VM Performance, Virtual Switches** tab group.
 
 Lists all Hyper-V virtual switches across every node in the cluster.
 
 ### Columns
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Name | Virtual switch name |
 | Type | External / Internal / Private |
 | Node | The cluster node that hosts this switch |
@@ -297,7 +358,8 @@ Lists all Hyper-V virtual switches across every node in the cluster.
 | Adapters | Physical network adapters the switch is bound to |
 | Notes | Additional switch notes or description |
 
-> Use this page to verify switch names and teaming configuration before troubleshooting VM network issues.
+> Use this page to verify switch names and teaming configuration before
+> troubleshooting VM network issues.
 
 ---
 
@@ -306,80 +368,104 @@ Lists all Hyper-V virtual switches across every node in the cluster.
 **Route:** `/clusters/{name}/vm-storage-alignment`  
 **Access required:** HciAccess
 
-> Part of the same tab group as Virtual Machines · VM Performance · Virtual Switches · VM Checkpoints.
+> Part of the same tab group as Virtual Machines, VM Performance, Virtual
+> Switches, and VM Checkpoints.
 
-Analyzes VM compute placement against Cluster Shared Volume (CSV) ownership to help identify VMs that could benefit from being moved to run on the same node that owns their storage.
+Analyzes VM compute placement against Cluster Shared Volume (CSV) ownership to
+identify VMs that could benefit from running on the same node that owns their
+storage.
 
-Like VM Checkpoints, this data is **not loaded automatically**. Click **Fetch Data** to run the analysis — it combines VM inventory, CSV ownership, node capacity, and Windows Failover Cluster Manager (WFCM) preferred owner data, so it can take longer than other VM tabs on large clusters.
+Like VM Checkpoints, this data is **not loaded automatically**. Click
+**Fetch Data** to run the analysis - it combines VM inventory, CSV ownership,
+node capacity, and Windows Failover Cluster Manager (WFCM) preferred owner
+data, so it can take longer than other VM tabs on large clusters.
 
 ### Understanding the Alignment column
 
-In a healthy Storage Spaces Direct cluster, misalignment between a VM and its storage is usually **low-impact** — Direct I/O lets any node read/write straight to the disks holding the data over the storage network, regardless of which node "owns" the CSV. Misalignment only becomes a likely real performance concern when the CSV has fallen into **Redirected** mode, which forces all I/O for that volume through the owner node.
+In a healthy Storage Spaces Direct cluster, misalignment between a VM and its
+storage is usually **low-impact** - Direct I/O lets any node read/write
+straight to the disks holding the data over the storage network, regardless of
+which node "owns" the CSV. Misalignment only becomes a likely real performance
+concern when the CSV has fallen into **Redirected** mode, which forces all I/O
+for that volume through the owner node.
 
 | Status | Meaning |
-|---|---|
+| --- | --- |
 | Aligned | VM is running on the same node that owns its primary CSV |
-| Misaligned (Low Impact) | Different node, but the CSV is Online (Direct I/O) — overhead is typically minimal on modern RDMA/NVMe fabrics |
-| Misaligned (High Impact) | Different node, and the CSV is in Redirected mode — a real double-hop performance penalty is likely |
-| Unknown | The VM's disk could not be attributed to a tracked CSV (e.g. unclustered VM or non-CSV storage) |
+| Misaligned (Low Impact) | Different node, but the CSV is Online (Direct I/O) - overhead is usually minimal |
+| Misaligned (High Impact) | Different node, and the CSV is in Redirected mode - a real performance penalty is likely |
+| Unknown | The VM's disk could not be attributed to a tracked CSV |
 
 ### Columns
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | VM | VM name — click to jump to it on the Virtual Machines tab |
 | VM Owner | Node currently running the VM |
 | Primary CSV | The Cluster Shared Volume hosting the VM's first virtual disk |
 | CSV Owner | Node that currently owns that CSV |
 | Alignment | See table above |
-| Capacity Check | For misaligned VMs, whether the CSV owner node has enough free CPU/memory headroom to safely host the VM (Sufficient / Insufficient / Unknown / N/A for aligned VMs) |
-| Preferred Owners | Any WFCM Preferred Owners configured for the VM's cluster group, or "None" |
-| Notes | Plain-language explanation of the status and any capacity or preferred-owner considerations |
+| Capacity Check | Whether the CSV owner node has enough CPU/memory headroom |
+| Preferred Owners | Any WFCM Preferred Owners, or "None" |
+| Notes | Plain-language explanation of the status |
 
-> Only the VM's first virtual disk is used for CSV attribution. VMs with disks spread across multiple CSVs are not specially flagged.
+> Only the VM's first virtual disk is used for CSV attribution. VMs with disks
+> spread across multiple CSVs are not specially flagged.
 
 ---
 
 ## 6. Cluster Nodes
 
 **Route:** `/clusters/{name}/nodes`  
-**Access required:** HciAccess (actions available depend on your custom RBAC role permissions)
+**Access required:** HciAccess (actions depend on your custom RBAC role)
 
-> The **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info, Nodes, Roles, Events, Node Performance** tab strip at the
+> top lets you move between all cluster sub-pages without returning to the
+> sidebar.
 
-> **Custom role filtering:** Name patterns apply to node names. If your role does not include View access to Nodes, this page shows an access-denied message and the sidebar link is hidden.
+> **Custom role filtering:** Name patterns apply to node names. If your role
+> does not include View access to Nodes, this page shows an access-denied
+> message and the sidebar link is hidden.
 
-Shows live statistics for every node: CPU %, memory usage, uptime, OS version, and combined State/DrainStatus.
+Shows live statistics for every node: CPU %, memory usage, uptime, OS version,
+and combined State/DrainStatus.
 
 ### Node Actions
 
 | Action | Description |
-|---|---|
-| Pause (drain) | Moves all running roles and VMs off the node before pausing. Use before maintenance. |
-| Pause (no drain) | Pauses the node immediately without migrating workloads. Quicker but disrupts any running VMs. |
+| --- | --- |
+| Pause (drain) | Moves roles and VMs off the node before pausing. Use before maintenance. |
+| Pause (no drain) | Pauses immediately without migrating workloads. Quicker but disrupts running VMs. |
 | Resume | Brings the node back online and allows workloads to return. |
-| Failback | Moves workloads back to this node that were migrated away during a drain. |
+| Failback | Moves workloads back to this node after a drain. |
 
-> Never pause more than one node at a time in a two-node cluster — the cluster will lose quorum.
+> Never pause more than one node at a time in a two-node cluster - the cluster
+> will lose quorum.
 
 ### Connect (RDP)
 
-The **Connect** column shows an **RDP** button for each node. Clicking it downloads a pre-filled `.rdp` file that opens a Remote Desktop connection to the node. Windows auto-launches `mstsc.exe` on download — click **Connect** in the RDP prompt.
+The **Connect** column shows an **RDP** button for each node. Clicking it
+downloads a pre-filled `.rdp` file that opens a Remote Desktop connection to
+the node. Windows auto-launches `mstsc.exe` on download - click **Connect** in
+the RDP prompt.
 
 ### Process Insights (opt-in)
 
-Expanding a node row shows a **Top Processes** section with the top 10 CPU-consuming and top 10
-memory-consuming processes on that host (process name, PID, CPU %, Private Bytes, Working Set).
+Expanding a node row shows a **Top Processes** section with the top 10
+CPU-consuming and top 10 memory-consuming processes on that host (process
+name, PID, CPU %, Private Bytes, Working Set).
 
-This is **disabled by default** and must be enabled per cluster in **Admin → Clusters → Enabled
-Features (opt-in) → Process Insights**. It is opt-in because process data is collected via a
-low-overhead WMI performance counter (`Win32_PerfFormattedData_PerfProc_Process` — the same
-mechanism Task Manager/Perfmon use) on every node; no PowerShell process is spawned and no
+This is **disabled by default** and must be enabled per cluster in **Admin ->
+Clusters -> Enabled Features (opt-in) -> Process Insights**. It is opt-in
+because process data is collected via a low-overhead WMI performance counter
+(`Win32_PerfFormattedData_PerfProc_Process` - the same mechanism Task
+Manager/Perfmon use) on every node; no PowerShell process is spawned and no
 additional load is placed on hosts that have not opted in.
 
-**Collection frequency:** every ~20 minutes by default (Slow tier — shared with other
-low-churn background collector types). If a cluster shows "Process Insights not enabled for
-this cluster", enable the feature and wait for the next poll cycle for data to appear.
+**Collection frequency:** every ~20 minutes by default (Slow tier - shared
+with other low-churn background collector types). If a cluster shows
+"Process Insights not enabled for this cluster", enable the feature and wait
+for the next poll cycle for data to appear.
 
 ---
 
@@ -388,7 +474,9 @@ this cluster", enable the feature and wait for the next poll cycle for data to a
 **Route:** `/clusters/{name}/roles`  
 **Access required:** HciAccess (actions available depend on your custom RBAC role permissions)
 
-> The **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info, Nodes, Roles, Events, Node Performance** tab strip at
+> the top lets you move between all cluster sub-pages without returning to the
+> sidebar.
 
 > **Custom role filtering:** Name patterns apply to role/group names. If your role does not include View access to Roles, this page shows an access-denied message and the sidebar link is hidden.
 
@@ -397,7 +485,7 @@ Lists all cluster resource groups (roles): VMs, file servers, generic services, 
 ### Columns
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Name | Role/group name |
 | State | Online / Offline / Partially Online / Failed (with dot) |
 | Owner Node | The node currently hosting this role |
@@ -425,7 +513,7 @@ Shows AKS (Azure Kubernetes Service) clusters deployed on this Azure Local clust
 Each AKS cluster is displayed as an expandable card showing:
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | Provisioning State | Current ARM provisioning state (dot + text) |
 | Arc Connectivity | Whether the AKS cluster is connected to Azure Arc |
 | Kubernetes Version | Kubernetes release version running in the cluster |
@@ -442,14 +530,16 @@ The **🔗 Portal** link opens the AKS cluster resource in the Azure Portal.
 
 ### Extensions
 
-Lists Kubernetes extensions installed on the cluster (from `Microsoft.KubernetesConfiguration/extensions`). Each row shows the extension name, type, version, whether auto-upgrade is enabled, and provisioning state.
+Lists Kubernetes extensions installed on the cluster (from
+`Microsoft.KubernetesConfiguration/extensions`). Each row shows the extension
+name, type, version, auto-upgrade state, and provisioning state.
 
 ### Node Pools
 
 A table listing all node pools:
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Pool Name | Node pool identifier |
 | Nodes | Number of nodes in the pool |
 | VM Size | Virtual machine size used for the pool |
@@ -458,9 +548,12 @@ A table listing all node pools:
 
 ### Kubernetes live data
 
-Namespace and pod data is **not available** via ARM for `ProvisionedCluster` kind on Azure Local.
-All ARM resource paths (`/proxy/api/v1/namespaces`, `/namespaces`) return `ResourceTypeRegistrationNotFound` for this cluster type.
-The AKS page shows ARM-sourced data only: cluster state, node pools, network/security config, upgrade availability, and installed extensions.
+Namespace and pod data is **not available** via ARM for `ProvisionedCluster`
+kind on Azure Local.
+All ARM resource paths (`/proxy/api/v1/namespaces`, `/namespaces`) return
+`ResourceTypeRegistrationNotFound` for this cluster type.
+The AKS page shows ARM-sourced data only: cluster state, node pools,
+network/security config, upgrade availability, and installed extensions.
 
 ---
 
@@ -469,38 +562,65 @@ The AKS page shows ARM-sourced data only: cluster state, node pools, network/sec
 **Route:** `/clusters/{name}/info`  
 **Access required:** HciAccess
 
-> The **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
+> The **Cluster Info, Nodes, Roles, Events, Node Performance** tab strip at
+> the top lets you move between all cluster sub-pages without returning to the
+> sidebar.
 
-> If your custom role does not include View access to this resource type, this page shows an access-denied message and the sidebar link is hidden.
+> If your custom role does not include View access to this resource type, this
+> page shows an access-denied message and the sidebar link is hidden.
 
 A summary page showing:
 
 - **Quorum** — current quorum type, witness type, and voting status
 - **Nodes** — count of Up/Down nodes
 - **S2D (Storage Spaces Direct)** — storage health state
-- **Health Faults** — any active health faults reported by the cluster, with fault description and affected object
+- **Health Faults** - active health faults reported by the cluster, with fault
+    source, description, and affected object. Quorum witness issues are also
+    surfaced here when storage fault providers return no rows.
 
 ---
 
 ## 9a. Health Settings
 
 **Route:** `/clusters/{name}/health-settings`  
-**Access required:** HciAccess (view) · Storage Configure permission (edit settings)
+**Access required:** HciAccess (view) · Storage Configure permission
+(edit settings)
 
-A sub-link inside the **Cluster** collapsible group in the sidebar. Lets you view and adjust the thresholds that control when the Health Service raises faults.
+A sub-link inside the **Cluster** collapsible group in the sidebar. Use it to
+view and adjust the thresholds that control when the Health Service raises
+faults.
 
-> **Caution:** The default values are appropriate for most environments. Incorrect thresholds can suppress real problems or generate false alarms. Changes take effect only after restarting the **SDDC Management** cluster role — the page will prompt you to restart after saving.
+> **Caution:** The default values are appropriate for most environments.
+> Incorrect thresholds can suppress real problems or generate false alarms.
+> Changes take effect only after restarting the **SDDC Management** cluster
+> role - the page will prompt you to restart after saving.
 
 ### Configurable thresholds
 
 | Setting | Default | Description |
-|---|---|---|
-| Volume Warning threshold | 80% | Percentage full at which a volume raises a Warning health fault |
-| Volume Critical threshold | 90% | Percentage full at which a volume raises a Critical health fault |
-| Storage fault counts | varies | Per-type thresholds for storage degradation fault generation |
+| --- | --- | --- |
+| Volume Warning threshold | 80% | Raises a Warning when volume is this full |
+| Volume Critical threshold | 90% | Raises a Critical when volume is this full |
+| Storage fault counts | varies | Per-type storage degradation thresholds |
 | Memory counters | varies | Per-node memory pressure fault thresholds |
 
-Users without the `Configure` operation on the `Storage` resource type see the current values in read-only mode with no save buttons.
+Users without the `Configure` operation on the `Storage` resource type see the
+current values in read-only mode with no save buttons.
+
+### Warnings about unsafe values
+
+As you type, the page compares the volume and memory values with the defaults
+and lists what they mean, including any volume that would immediately raise a
+Warning or Critical fault. Values far from the defaults (for example a Critical
+threshold of 2% against the 90% default) are shown as **Not recommended**, and
+the save button changes to **Confirm - save anyway**; nothing is saved until you
+click it a second time. Saves are recorded in the audit log, noting when the
+warning was acknowledged.
+
+The same settings are available to AI agents through the API and MCP
+(`get_health_service_settings`, `evaluate_health_service_thresholds`,
+`set_health_service_thresholds`). Agents cannot apply extreme values at all and
+must be told by you to acknowledge risky ones; see `docs/API.md`.
 
 ---
 
@@ -508,18 +628,22 @@ Users without the `Configure` operation on the `Storage` resource type see the c
 
 **Route:** `/clusters/{name}/security`  
 **Access required:** HciAccess  
-**ARM required:** Optional — ARM supplemental data enhances the view but is not required
+**ARM required:** Optional - ARM supplemental data enhances the view but is not
+required
 
-A sub-link inside the **Cluster** collapsible group in the sidebar. Shows the status of security features across all cluster nodes.
+A sub-link inside the **Cluster** collapsible group in the sidebar. Shows the
+status of security features across all cluster nodes.
 
-> **Azure Local 24H2+ only:** The `Get-AzsSecurity` cmdlet used to populate this page requires Azure Local builds from November 2024 onwards. On older clusters the page shows an informational notice and returns no data.
+> **Azure Local 24H2+ only:** The `Get-AzsSecurity` cmdlet used to populate
+> this page requires Azure Local builds from November 2024 onwards. On older
+> clusters the page shows an informational notice and returns no data.
 
 ### Security Features
 
 A matrix showing the enabled/disabled state of key security features per node:
 
 | Feature | Description |
-|---|---|
+| --- | --- |
 | Secure Boot | UEFI Secure Boot state |
 | HVCI (Memory Integrity) | Hypervisor-protected code integrity |
 | BitLocker OS | OS drive encryption status |
@@ -531,7 +655,8 @@ A matrix showing the enabled/disabled state of key security features per node:
 | SMB Encryption | SMB network encryption |
 | WDAC | Windows Defender Application Control policy status |
 
-Colour coding: green = enabled/compliant · orange = partial or degraded · red = disabled/non-compliant.
+Colour coding: green = enabled/compliant, orange = partial or degraded, red =
+disabled/non-compliant.
 
 ---
 
@@ -540,12 +665,14 @@ Colour coding: green = enabled/compliant · orange = partial or degraded · red 
 **Route:** `/clusters/{name}/storage`  
 **Access required:** HciAccess
 
-Three sections displayed on the page. Use the **Disks · Cluster Volumes · Performance** tab strip at the top to switch between the physical disk view, the cluster volumes view, and the storage performance (QoS) view.
+Three sections are shown on the page. Use the **Disks, Cluster Volumes,
+Performance** tab strip at the top to switch between the physical disk view,
+the cluster volumes view, and the storage performance (QoS) view.
 
 ### Storage Pools
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Name | Pool name |
 | Health | Healthy / Warning / Unhealthy / Critical (with dot) |
 | Operational Status | Operational / Degraded etc. |
@@ -556,7 +683,7 @@ Three sections displayed on the page. Use the **Disks · Cluster Volumes · Perf
 ### Virtual Disks
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Name | Virtual disk name |
 | Health | Health status (dot) |
 | Provisioning | Thin / Fixed |
@@ -567,7 +694,7 @@ Three sections displayed on the page. Use the **Disks · Cluster Volumes · Perf
 ### Physical Disks
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Friendly Name | Disk model or label |
 | Serial Number | Manufacturer serial |
 | Health | Health status (dot) |
@@ -583,7 +710,8 @@ Three sections displayed on the page. Use the **Disks · Cluster Volumes · Perf
 **Route:** `/clusters/{name}/cluster-performance`  
 **Access required:** HciAccess
 
-Accessible via the **Performance** tab in the **Storage** tab strip (Disks · Cluster Volumes · Performance).
+Accessible via the **Performance** tab in the **Storage** tab strip (Disks,
+Cluster Volumes, Performance).
 
 Displays Storage QoS volumes with current performance metrics. Each row shows:
 
@@ -592,7 +720,8 @@ Displays Storage QoS volumes with current performance metrics. Each row shows:
 - **Current IOPS** and **current throughput (MB/s)**
 - **Latency (ms)**
 
-Use this page to identify volumes that are hitting their IOPS limit or experiencing high latency.
+Use this page to identify volumes that are hitting their IOPS limit or high
+latency.
 
 ---
 
@@ -602,29 +731,36 @@ Use this page to identify volumes that are hitting their IOPS limit or experienc
 **Access required:** HciAccess
 
 Accessible via:
-- The **Node Performance** sub-link inside the **Cluster** collapsible group in the sidebar
-- The **Node Performance** tab in the **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip
 
-Shows per-node performance metrics sourced from `Get-ClusterPerf`, with a timeframe selector to view either the most recent sample or averaged historical data.
+- The **Node Performance** sub-link inside the **Cluster** collapsible group
+    in the sidebar
+- The **Node Performance** tab in the **Cluster Info, Nodes, Roles, Events,
+    Node Performance** tab strip
+
+Shows per-node performance metrics sourced from `Get-ClusterPerf`, with a
+timeframe selector for the most recent sample or averaged historical data.
 
 ### Timeframe selector
 
 | Option | Approximate load time | Description |
-|---|---|---|
-| Most Recent | Instant | Latest available sample — only a few seconds of history |
+| --- | --- | --- |
+| Most Recent | Instant | Latest sample - only a few seconds of history |
 | Last Hour | ~1–2 min | Averaged samples over the last 60 minutes |
 | Last Day | ~1–2 min | Averaged samples over the last 24 hours |
 | Last Week | ~2–3 min | Averaged samples over the last 7 days |
 | Last Month | ~2–3 min | Averaged samples over the last 30 days |
 
-Click **Load Performance** to fetch data for the selected timeframe. Data is not loaded automatically on page open.
+Click **Load Performance** to fetch data for the selected timeframe. Data is
+not loaded automatically on page open.
 
-> **Historical timeframes:** An amber warning is shown when a timeframe other than *Most Recent* is selected, indicating the query may take a few minutes to complete.
+> **Historical timeframes:** An amber warning is shown when a timeframe other
+> than *Most Recent* is selected, indicating the query may take a few minutes
+> to complete.
 
 ### Metrics shown per node
 
 | Metric | Description |
-|---|---|
+| --- | --- |
 | CPU % | Processor utilisation |
 | Memory Used (GB) | Physical memory in use |
 | Memory Total (GB) | Total installed physical memory |
@@ -638,17 +774,22 @@ Click **Load Performance** to fetch data for the selected timeframe. Data is not
 **Route:** `/clusters/{name}/network`  
 **Access required:** HciAccess
 
-The Network section spans five pages, switchable via the **Adapters · ATC Intents · Cluster Networks · SMB Networks · Logical Networks** tab strip shown at the top of each page.
+The Network section spans five pages, switchable via the **Adapters, ATC
+Intents, Cluster Networks, SMB Networks, Logical Networks** tab strip shown at
+the top of each page.
 
 ### Network Adapters (`/network`)
 
-Physical adapters on each node, showing status, speed, MAC address, IP address, and whether RDMA is enabled.
+Physical adapters on each node, showing status, speed, MAC address, IP
+address, and RDMA state.
 
-The **Host** column shows which node the adapter belongs to. Adapters are sorted by node then by name.
+The **Host** column shows which node the adapter belongs to. Adapters are
+sorted by node, then by name.
 
 ### Network ATC Intents (`/network/intents`)
 
-Azure Network Adapter (ATC) intents define which adapters are used for which traffic types (Management, Compute, Storage).
+Azure Network Adapter (ATC) intents define which adapters are used for each
+traffic type (Management, Compute, Storage).
 
 Click any intent row to **expand** a detail panel showing:
 
@@ -661,22 +802,29 @@ The dot colour reflects the intent's current provisioning health.
 
 ### Cluster Networks (`/network/cluster-networks`)
 
-Lists the internal cluster network segments with their role (Cluster-only, Client + Cluster, Client-only) and state.
+Lists the internal cluster network segments with their role (Cluster-only,
+Client + Cluster, Client-only) and state.
 
 ### SMB Networks (`/network/smb`)
 
-Per-node expandable cards showing RDMA, Jumbo Frames, Flow Control, QoS and PFC adapter configuration, QoS policies, traffic classes, and SMB bandwidth limits. Use this page to verify storage network health across all nodes.
+Per-node expandable cards showing RDMA, Jumbo Frames, Flow Control, QoS, PFC,
+policies, traffic classes, and SMB bandwidth limits. Use this page to verify
+storage network health across all nodes.
 
 ### Logical Networks (`/network/logical-networks`)
 
 **ARM required:** Yes
 
-Lists Azure Local logical networks (`Microsoft.AzureStackHCI/logicalNetworks`) sourced from Azure Resource Manager. Logical networks are used by Arc VMs to connect to the physical underlay network.
+Lists Azure Local logical networks (`Microsoft.AzureStackHCI/logicalNetworks`)
+sourced from Azure Resource Manager. Logical networks are used by Arc VMs to
+connect to the physical underlay network.
 
-Each logical network is displayed as a card showing provisioning state (dot + text), the Hyper-V virtual switch backing the network, and region. A **Subnets** table shows the per-subnet configuration:
+Each logical network is displayed as a card showing provisioning state, the
+Hyper-V virtual switch backing the network, and region. A **Subnets** table
+shows the per-subnet configuration:
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Name | Subnet identifier |
 | Address Prefix | CIDR notation (e.g. `192.168.1.0/24`) |
 | VLAN | VLAN ID |
@@ -684,7 +832,8 @@ Each logical network is displayed as a card showing provisioning state (dot + te
 | IP Pool Start | Start of the IP allocation range |
 | IP Pool End | End of the IP allocation range |
 
-If ARM is not configured, the tab shows a message indicating ARM credentials are required in [Admin → Settings](#22-admin--settings).
+If ARM is not configured, the tab shows a message indicating ARM credentials
+are required in [Admin -> Settings](#22-admin--settings).
 
 ---
 
@@ -695,10 +844,11 @@ If ARM is not configured, the tab shows a message indicating ARM credentials are
 
 > The **Cluster Info · Nodes · Roles · Events · Node Performance** tab strip at the top lets you move between all cluster sub-pages without returning to the sidebar.
 
-Shows the cluster event log — by default the 200 most recent entries. Each entry shows:
+Shows the cluster event log - by default the 200 most recent entries. Each
+entry shows:
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Time | Event timestamp |
 | Level | Critical / Error / Warning / Information |
 | Source | Event log source (e.g. `Microsoft-Windows-FailoverClustering`) |
@@ -708,11 +858,12 @@ Shows the cluster event log — by default the 200 most recent entries. Each ent
 
 ### Filtering
 
-Use the **Level** checkboxes in the toolbar to show/hide specific severity levels. The count updates live.
+Use the **Level** checkboxes in the toolbar to show/hide specific severity
+levels. The count updates live.
 
 ### Export
 
-Click **Export CSV** to download the currently visible events as a CSV file for further analysis in Excel or similar tools.
+Click **Export CSV** to download the currently visible events as a CSV file.
 
 ---
 
@@ -721,17 +872,21 @@ Click **Export CSV** to download the currently visible events as a CSV file for 
 **Route:** `/clusters/{name}/logs`  
 **Access required:** HciAccess
 
-Allows browsing and reading log files directly from cluster nodes without needing RDP or PowerShell access.
+Allows browsing and reading log files directly from cluster nodes without
+needing RDP or PowerShell access.
 
 ### How to use
 
 1. **Select a node** from the dropdown on the left sidebar.
-2. The default log directory (`C:\ProgramData\...`) is listed. Type a different path in the text box and click **Browse** to navigate to it.
+2. The default log directory (`C:\ProgramData\...`) is listed. Type a
+    different path in the text box and click **Browse** to navigate to it.
 3. Click any file in the list to read its contents on the right.
-4. Use the **Tail** selector to limit output to the last N lines (100 / 500 / 1000 / All).
+4. Use the **Tail** selector to limit output to the last N lines
+    (100 / 500 / 1000 / All).
 5. Click **Reload** to refresh the file content (useful for live log tailing).
 
-The file list shows each file's size and last modified time to help identify the most recent logs.
+The file list shows each file's size and last modified time to help identify
+the most recent logs.
 
 ---
 
@@ -742,57 +897,89 @@ The file list shows each file's size and last modified time to help identify the
 
 Accessible via **Diagnostic Logs** under the **Tools** group in the sidebar.
 
-Submits cluster diagnostic logs to Microsoft Support using the `Send-DiagnosticData` cmdlet, which runs directly on the cluster over WinRM. No log data passes through this portal — the portal acts only as a remote trigger.
+Submits cluster diagnostic logs to Microsoft Support using the
+`Send-DiagnosticData` cmdlet, which runs directly on the cluster over WinRM.
+No log data passes through this portal - the portal acts only as a remote
+trigger.
 
 ### How to use
 
-1. Set the **log window** — specify a start and end date/time for the collection window. The maximum range is 24 hours. The default covers the last 24 hours.
+1. Set the **log window** - specify a start and end date/time for the
+    collection window. The maximum range is 24 hours. The default covers the
+    last 24 hours.
 2. Click **Send Diagnostic Logs**.
-3. Wait for the command to complete — this may take several minutes while logs are collected and uploaded.
-4. A **Correlation ID** is returned. Provide this ID to Microsoft Support when opening or updating a case — it lets the engineering team locate your uploaded data.
+3. Wait for the command to complete - this may take several minutes while logs
+    are collected and uploaded.
+4. A **Correlation ID** is returned. Provide this ID to Microsoft Support when
+    opening or updating a case - it lets the engineering team locate your
+    uploaded data.
 
-> If the cluster is unreachable over WinRM the command will fail with a connection error. Check the cluster connection from [Admin → Diagnostics](#27-admin--diagnostics--background-collector) if needed.
+> If the cluster is unreachable over WinRM the command will fail with a
+> connection error. Check the cluster connection from [Admin ->
+> Diagnostics](#27-admin--diagnostics--background-collector) if needed.
 
 ---
 
 ## 15. Solution Updates
 
 **Route:** `/clusters/{name}/updates`  
-**Access required:** HciAccess (start update requires the Updates · Start custom RBAC permission)
+**Access required:** HciAccess (start update requires the Updates / Start
+custom RBAC permission)
 
 ### Available Updates
 
 Lists solution updates available for the cluster. Each row shows:
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Display Name | Update package name |
 | Version | Package version string |
 | State | Ready / Downloading / Installing etc. (with dot) |
 | Publisher | Source publisher |
 | Release Notes | Link to external documentation (if available) |
 
-Click a row to expand the **detail panel** showing the full description, category, prerequisites, and package ID.
+Click a row to expand the **detail panel** showing the full description,
+category, prerequisites, and package ID.
 
-Click **▶ Start Update** to begin installation. You will be prompted to confirm before proceeding.
+Click **▶ Start Update** to begin installation. You will be prompted to
+confirm before proceeding.
 
-> Starting an update requires the Updates · Start custom RBAC permission and is recorded in the audit log.
+> Starting an update requires the Updates / Start custom RBAC permission and
+> is recorded in the audit log.
 
-The result includes a correlation ID that can be matched with **Admin > Perf Debug** and
+The result includes a correlation ID that can be matched with **Admin > Perf
+Debug** and
 the audit log:
 
 | Outcome | Meaning | Operator action |
-|---|---|---|
-| Accepted | A follow-up cluster read proved that a new run or target update state/progress change occurred | Monitor the update state or new run |
-| Rejected | The cluster explicitly rejected the request, or the selected update could not be resolved uniquely | Correct the reported issue before retrying |
-| Indeterminate | The command transport ended without a definitive response and follow-up reads could not prove acceptance | Do not click Start again; check update runs and the correlation ID first |
+| --- | --- | --- |
+| Accepted | A follow-up read proved a new run or state change | Monitor the update state |
+| Rejected | The cluster rejected the request or the update was ambiguous | Fix the issue before retrying |
+| Indeterminate | Transport ended without a definitive response | Do not click Start again; check runs and correlation ID first |
 
-The application never automatically retries an indeterminate update start. This prevents
+The application never automatically retries an indeterminate update start. This
+prevents
 a transport interruption from causing a duplicate mutation.
+
+### Update Readiness summary
+
+The page surfaces a compact readiness summary above the update list. It reads the
+same health-check data used for the pre-update validation and reports one of three
+states:
+
+- **Ready** — no blocker-level checks failed.
+- **Ready with warnings** — warnings are present but the cluster is still eligible
+  to continue with the update.
+- **Blocked** — critical health or remediation items must be fixed before update
+  start is appropriate.
+
+This summary is designed to be a fast decision aid for operators: it makes the
+update gate obvious without forcing a full read of every low-level check result.
 
 ### Update Runs
 
-The lower section lists previous update run history with start time, duration, state, and result summary.
+The lower section lists previous update run history with start time, duration,
+state, and result summary.
 
 Click **📋 View Progress** on any run to open the **Live Monitor** page.
 
@@ -800,15 +987,22 @@ Click **📋 View Progress** on any run to open the **Live Monitor** page.
 
 **Route:** `/clusters/{name}/updates/monitor/{planId}`
 
-Streams live output from the update action plan as it executes. Each line is appended in real time. The stream ends when the plan completes (success or failure). The output is scrollable and colour-coded (errors appear in red).
+Streams live output from the update action plan as it executes. Each line is
+appended in real time. The stream ends when the plan completes (success or
+failure). The output is scrollable and colour-coded (errors appear in red).
 
 ---
 
 ## 16. Azure Arc
 
-The Azure Arc section spans four pages, switchable via the **Registration · Arc Machines · Arc Extensions · Cluster Extensions** tab strip shown at the top of each page. Click **Azure Arc** in the sidebar to land on Registration; use the tabs to move between the sub-pages.
+The Azure Arc section spans four pages, switchable via the **Registration, Arc
+Machines, Arc Extensions, Cluster Extensions** tab strip shown at the top of
+each page. Click **Azure Arc** in the sidebar to land on Registration; use the
+tabs to move between the sub-pages.
 
-**Arc Resource Bridge** and **Custom Locations** are separate dedicated pages accessible via the indented sub-links below Azure Arc in the sidebar — see [Arc Resource Bridge](#17-arc-resource-bridge) and [Custom Locations](#18-custom-locations).
+**Arc Resource Bridge** and **Custom Locations** are separate dedicated pages
+accessible via the indented sub-links below Azure Arc in the sidebar - see
+[Arc Resource Bridge](#17-arc-resource-bridge) and [Custom Locations](#18-custom-locations).
 
 ### Arc Registration (`/arc`)
 
@@ -817,7 +1011,7 @@ The Azure Arc section spans four pages, switchable via the **Registration · Arc
 Shows the cluster's Azure Arc registration status:
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | Connection State | Connected / Disconnected / Expired |
 | Region | Azure region the cluster is registered to |
 | Resource Group | Azure resource group |
@@ -825,13 +1019,17 @@ Shows the cluster's Azure Arc registration status:
 | Last Sync | When the cluster last synced with Azure |
 | Billing Model | Trial / PayAsYouGo / GovernmentTrial etc. |
 
-The **Azure Portal** link opens the cluster resource directly in the Azure Portal.
+The **Azure Portal** link opens the cluster resource directly in the Azure
+Portal.
 
-If ARM data isn't loading, the page will indicate whether Azure sign-in is required. Click **Load Azure Data** to trigger the sign-in flow (OBO mode) or check Settings if SPN mode is configured.
+If ARM data isn't loading, the page indicates whether Azure sign-in is
+required. Click **Load Azure Data** to trigger the sign-in flow (OBO mode) or
+check Settings if SPN mode is configured.
 
 ### Arc Machines (`/arc-machines`)
 
-Lists all machines registered as `Microsoft.HybridCompute/machines` in the Azure resource group. Shows:
+Lists all machines registered as `Microsoft.HybridCompute/machines` in the
+Azure resource group. Shows:
 
 - Machine name, OS type, OS version
 - Agent version, provisioning state, connectivity status
@@ -865,44 +1063,56 @@ Shows extensions installed on each Arc-enabled machine (e.g. AzureMonitorWindows
 The SPN (or OBO user) must have **one** of the following assigned on the resource group or subscription:
 
 | Role | Notes |
-|---|---|
+| --- | --- |
 | **Azure Connected Machine Resource Manager** | Purpose-built for Arc machine operations. Recommended for least-privilege SPNs. |
 | **Contributor** | Broader write access — acceptable if granularity is not required. |
 
 The specific ARM action required is:
+
 ```
 Microsoft.HybridCompute/machines/upgradeExtensions/action
 ```
-Reader alone is **not** sufficient for upgrades; it only permits the GET calls used to list extensions.
 
-If an upgrade fails with `AuthorizationFailed`, the error message shown in the red banner will include the exact ARM error code and the specific action that was denied.
+Reader alone is **not** sufficient for upgrades. It only permits the GET calls
+used to list extensions.
+
+If an upgrade fails with `AuthorizationFailed`, the red banner includes the
+exact ARM error code and the denied action.
 
 ### Cluster Extensions (`/cluster-extensions`)
 
-**Access required:** HciAccess (cluster extension upgrade requires the appropriate custom RBAC permission)
+**Access required:** HciAccess (cluster extension upgrade requires the
+appropriate custom RBAC permission)
 
-Shows extensions installed at the cluster level via `Microsoft.AzureStackHCI/clusters/arcSettings/extensions`. This covers cluster-wide Arc extensions like billing, monitoring, and diagnostics.
+Shows extensions installed at the cluster level via
+`Microsoft.AzureStackHCI/clusters/arcSettings/extensions`. This covers
+cluster-wide Arc extensions like billing, monitoring, and diagnostics.
 
-Columns include name, publisher, extension type, version, aggregate state (rolled-up across all nodes), upgrade mode, and per-node state summary.
+Columns include name, publisher, extension type, version, aggregate state,
+upgrade mode, and per-node state summary.
 
 #### Upgrading cluster extensions
 
 1. Tick one or more extension rows.
 2. Click **⇡ Upgrade Selected (N)**.
-3. Each selected extension triggers one ARM POST call. ARM responds with `202 Accepted` — rollout is asynchronous and may take several minutes per node in the cluster.
+3. Each selected extension triggers one ARM POST call. ARM responds with
+    `202 Accepted`; rollout is asynchronous and may take several minutes per
+    node.
 4. Refresh after a few minutes to see updated aggregate state.
 
 #### Required ARM permissions (cluster extensions)
 
 | Role | Notes |
-|---|---|
-| **Azure Stack HCI Administrator** | Purpose-built for HCI cluster operations. Recommended for least-privilege SPNs. |
-| **Contributor** | Broader write access — acceptable if granularity is not required. |
+| --- | --- |
+| **Azure Stack HCI Administrator** | Purpose-built for HCI cluster operations. |
+| **Contributor** | Broader write access if granularity is not required. |
 
 The specific ARM action required is:
+
 ```
 Microsoft.AzureStackHCI/clusters/arcSettings/extensions/upgrade/action
 ```
+
 Reader alone is **not** sufficient.
 
 ---
@@ -913,16 +1123,19 @@ Reader alone is **not** sufficient.
 **Access required:** HciAccess  
 **ARM required:** Yes — data is sourced from Azure Resource Manager
 
-> **Custom role filtering:** If your role does not include View access to Arc Resource Bridge, this page shows an access-denied message and the sidebar link is hidden.
+> **Custom role filtering:** If your role does not include View access to Arc
+> Resource Bridge, this page shows an access-denied message and the sidebar
+> link is hidden.
 
-Shows the Arc Resource Bridge appliance (`Microsoft.ResourceBridge/appliances`) deployed as part of this Azure Local cluster, along with Azure Local Sites.
+Shows the Arc Resource Bridge appliance (`Microsoft.ResourceBridge/appliances`)
+deployed as part of this Azure Local cluster, along with Azure Local Sites.
 
 ### Arc Resource Bridge Appliance
 
 Each appliance is displayed as a card:
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | Status | Current operational status (dot + text) |
 | Provisioning State | ARM provisioning state (dot + text) |
 | Version | Arc Resource Bridge software version |
@@ -932,14 +1145,16 @@ Each appliance is displayed as a card:
 
 The **🔗 Portal** link opens the appliance directly in the Azure Portal.
 
-If no appliance is found, the page notes that the appliance is automatically deployed when the cluster is Arc-registered using the Azure Local portal or CLI.
+If no appliance is found, the page notes that it is automatically deployed
+when the cluster is Arc-registered using the Azure Local portal or CLI.
 
 ### Azure Local Sites
 
-If Azure Local sites are configured, they appear below the appliance section. Each site card shows:
+If Azure Local sites are configured, they appear below the appliance section.
+Each site card shows:
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | Provisioning State | ARM provisioning state (dot + text) |
 | Address | Physical address summary |
 | Contact | Site contact name and email address |
@@ -953,16 +1168,21 @@ If Azure Local sites are configured, they appear below the appliance section. Ea
 **Access required:** HciAccess  
 **ARM required:** Yes — data is sourced from Azure Resource Manager
 
-> **Custom role filtering:** If your role does not include View access to Custom Locations, this page shows an access-denied message and the sidebar link is hidden.
+> **Custom role filtering:** If your role does not include View access to
+> Custom Locations, this page shows an access-denied message and the sidebar
+> link is hidden.
 
-Shows Azure Arc Custom Locations (`Microsoft.ExtendedLocation/customLocations`) associated with this cluster. Custom locations are created when the Arc Resource Bridge is deployed and configured, enabling Azure services such as Arc VMs and AKS to run on-premises.
+Shows Azure Arc Custom Locations (`Microsoft.ExtendedLocation/customLocations`)
+associated with this cluster. Custom locations are created when the Arc
+Resource Bridge is deployed and configured, enabling Azure services such as
+Arc VMs and AKS to run on-premises.
 
 Each custom location is displayed as a card:
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | Provisioning State | ARM provisioning state (dot + text) |
-| Host Cluster | The Arc-enabled Kubernetes cluster this location is associated with |
+| Host Cluster | The Arc-enabled Kubernetes cluster associated with this location |
 | Namespace | Kubernetes namespace within the host cluster |
 | Cluster Extensions | Extensions enabled at this custom location |
 | Region | Azure region |
@@ -970,7 +1190,8 @@ Each custom location is displayed as a card:
 
 The **🔗 Portal** link opens the custom location resource in the Azure Portal.
 
-If no custom locations are found, the page notes that they are created when the Arc Resource Bridge is deployed and linked to the cluster.
+If no custom locations are found, the page notes that they are created when
+the Arc Resource Bridge is deployed and linked to the cluster.
 
 ---
 
@@ -982,7 +1203,8 @@ If no custom locations are found, the page notes that they are created when the 
 
 Accessible via **Platform Topology** in the **Platform** group in the sidebar.
 
-Provides a visual topology of the Azure Arc-registered resources associated with this cluster, sourced from ARM. Resource types displayed include:
+Provides a visual topology of the Azure Arc-registered resources associated
+with this cluster, sourced from ARM. Resource types displayed include:
 
 - Cluster nodes
 - Logical networks
@@ -990,18 +1212,23 @@ Provides a visual topology of the Azure Arc-registered resources associated with
 - Arc virtual machines
 - Storage containers
 
-Each entry shows its ARM provisioning state, resource ID, Azure region, and a direct link to the Azure Portal resource.
+Each entry shows its ARM provisioning state, resource ID, Azure region, and a
+direct link to the Azure Portal resource.
 
-> **Prerequisite:** Visit the [Azure Arc](#16-azure-arc) page first so that ARM enrichment can run. Until ARM registration data is available, Platform Topology shows an informational notice and no resources.
+> **Prerequisite:** Visit the [Azure Arc](#16-azure-arc) page first so that
+> ARM enrichment can run. Until registration data is available, Platform
+> Topology shows an informational notice and no resources.
 
-If ARM is not configured, the page shows a message directing you to [Admin > Settings](#22-admin--settings).
+If ARM is not configured, the page shows a message directing you to [Admin >
+Settings](#22-admin--settings).
 
 ---
 
 ## 19. Agent Services
 
 **Route:** `/clusters/{name}/services`  
-**Access required:** HciAccess (Start/Stop/Restart require the Services custom RBAC permission)
+**Access required:** HciAccess (Start/Stop/Restart require the Services custom
+RBAC permission)
 
 Shows the status of the HCI infrastructure agent services on each cluster node:
 
@@ -1012,7 +1239,7 @@ Shows the status of the HCI infrastructure agent services on each cluster node:
 ### Columns
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Service Name | Windows service name |
 | Display Name | Human-readable name |
 | Status | Running / Stopped / StartPending etc. (with dot) |
@@ -1022,7 +1249,7 @@ Shows the status of the HCI infrastructure agent services on each cluster node:
 ### Actions
 
 | Button | Effect |
-|---|---|
+| --- | --- |
 | ▶ Start | Starts a stopped service |
 | ⏹ Stop | Stops a running service |
 | ↺ Restart | Restarts a running service |
@@ -1043,32 +1270,56 @@ Manage the list of clusters registered in the application.
 Click **+ Add Cluster** and fill in:
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | Name | Friendly display name used in the UI and URLs |
-| Address | Hostname or IP address of the cluster (or a node for Hyper-V standalone) |
-| Username | Service account username (leave blank to use gMSA / Kerberos pass-through) |
+| Address | Hostname or IP address of the cluster, or a node for standalone Hyper-V |
+| Username | Service account username; leave blank to use gMSA / Kerberos pass-through |
 | Password | Service account password (stored encrypted) |
-| Credential Source | `gMSA` (use app pool identity — works for both gMSA and standard service accounts) or `KeyVault` (fetch from Azure Key Vault) |
-| Key Vault Secret Name | Secret name in Key Vault (only required when Credential Source = KeyVault) |
+| Credential Source | `gMSA` (use app pool identity; works for gMSA and standard service accounts) or `KeyVault` (fetch from Azure Key Vault) |
+| Key Vault Secret Name | Secret name in Key Vault (required only when Credential Source = KeyVault) |
 
-If the cluster name is already registered, the form shows a clear validation message instead of a raw database error.
+If the cluster name is already registered, the form shows a clear validation
+message instead of a raw database error.
 
-Changes take effect immediately — no restart required. The connection pool is evicted and reconnected with the new configuration on the next page access.
+Changes take effect immediately - no restart required. The connection pool is
+evicted and reconnected with the new configuration on the next page access.
 
 ### Editing and deleting
 
-Click **Edit** on any cluster row to update its configuration. Click **Delete** to remove it. All changes are written to the audit log.
+Click **Edit** on any cluster row to update its configuration. Click **Delete**
+to remove it. All changes are written to the audit log.
 
 ### Disabling a cluster
 
-If a cluster is temporarily offline or decommissioned but you do not want to delete its registration, click **Disable** on the cluster row. A disabled cluster:
+If a cluster is temporarily offline or decommissioned but you do not want to
+delete its registration, click **Disable** on the cluster row. A disabled
+cluster:
 
 - Is hidden from the home page cluster picker
 - Is excluded from the background collector (no WinRM connections are attempted)
-- Blocks any direct page access — a clear error is shown if a URL pointing to the cluster is visited
+- Blocks any direct page access - a clear error is shown if a URL pointing to
+    the cluster is visited
 - Remains in the database so configuration is preserved
 
-The **Status** column shows **✔ Enabled** (green) or **⛔ Disabled** (red) for each cluster. Click **Enable** to re-activate a disabled cluster immediately. All enable/disable actions are written to the audit log.
+The **Status** column shows **✔ Enabled** (green) or **⛔ Disabled** (red) for
+each cluster. Click **Enable** to re-activate a disabled cluster immediately.
+All enable/disable actions are written to the audit log.
+
+### Per-cluster Insights read-source override
+
+In the cluster edit dialog under **Enabled Features**, the **Azure Insights
+Read Source** selector controls whether this cluster should prefer
+Insights-backed snapshot reads:
+
+- **Inherit global default** - uses the tenant-wide setting from **Admin ->
+    Settings -> General -> Insights Read Source**.
+- **Force enabled for this cluster** - always enable Insights read source for
+    this cluster.
+- **Force disabled for this cluster** - disable Insights read source for this
+    cluster even if the global default is enabled.
+
+Use this when a specific cluster should behave differently from the global
+policy during phased rollout or troubleshooting.
 
 ---
 
@@ -1077,12 +1328,16 @@ The **Status** column shows **✔ Enabled** (green) or **⛔ Disabled** (red) fo
 **Route:** `/admin/audit`  
 **Access required:** HciAdmin only
 
-An immutable record of every mutating action taken through the app (Start VM, Stop VM, Drain Node, Start Update, etc.). Read-only page loads are never logged.
+An immutable record of every mutating action taken through the app. Examples
+include Start VM, Stop VM, Drain Node, and Start Update. Read-only page loads
+are never logged.
+
+This also includes maintenance-window cleanup activity, such as background auto-prune runs and manual **Run prune now** actions, with item counts and cutoff details recorded in the entry detail.
 
 ### Columns
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Timestamp | UTC date/time of the action |
 | User | UPN of the signed-in user |
 | Cluster | Target cluster |
@@ -1095,6 +1350,7 @@ An immutable record of every mutating action taken through the app (Start VM, St
 ### Filtering
 
 Use the dropdowns and date pickers at the top to filter by:
+
 - Action type (Start, Stop, PauseNode, etc.)
 - Outcome (Success / Failure / All)
 - Date range
@@ -1105,7 +1361,9 @@ Click **Export CSV** to download the filtered entries as a CSV file.
 
 ### Purge
 
-Click **Purge entries older than...** to delete historical records. Purge actions are themselves logged so there is a permanent record that a purge occurred.
+Click **Purge entries older than...** to delete historical records. Purge
+actions are themselves logged so there is a permanent record that a purge
+occurred.
 
 ---
 
@@ -1114,73 +1372,88 @@ Click **Purge entries older than...** to delete historical records. Purge action
 **Route:** `/admin/settings`  
 **Access required:** HciAdmin only
 
-Stores encrypted application-level configuration in the database. Values survive every deployment and take effect immediately without restarting the app pool (except where noted).
+Stores encrypted application-level configuration in the database. Values
+survive every deployment and take effect immediately without restarting the app
+pool, except where noted.
 
 ### ARM Authentication Mode
 
 Controls how the Azure Arc pages authenticate to Azure Resource Manager.
 
 | Mode | Description |
-|---|---|
-| **OBO** (On-Behalf-Of) | Calls ARM on behalf of the currently signed-in user. Requires the `AzureAd:ClientSecret` setting and the `Azure Service Management / user_impersonation` delegated permission in the Entra app registration. |
+| --- | --- |
+| **OBO** (On-Behalf-Of) | Calls ARM on behalf of the signed-in user. Requires the `AzureAd:ClientSecret` setting and the `Azure Service Management / user_impersonation` delegated permission in the Entra app registration. |
 | **SPN** (Service Principal) | Uses dedicated service principal credentials. Requires SPN Tenant ID, Client ID, and Client Secret below. The SPN must have at least Reader RBAC on the target subscriptions. |
 
-> **OBO note:** After saving the client secret, the IIS app pool must be recycled once for the secret to be picked up by the MSAL client. All other settings take effect immediately.
+> **OBO note:** After saving the client secret, the IIS app pool must be
+> recycled once for the secret to be picked up by the MSAL client. All other
+> settings take effect immediately.
 
 ### Settings reference
 
 | Setting | Group | Description |
-|---|---|---|
+| --- | --- | --- |
 | ARM Auth Mode | Azure ARM Authentication | `OBO` or `SPN` |
-| OBO Client Secret | Azure ARM Authentication | `AzureAd:ClientSecret` — the Entra app registration client secret for OBO token acquisition |
+| OBO Client Secret | Azure ARM Authentication | `AzureAd:ClientSecret` - the Entra app registration client secret for OBO token acquisition |
 | SPN Tenant ID | Azure ARM Authentication (SPN mode) | The Entra tenant ID for SPN authentication |
 | SPN Client ID | Azure ARM Authentication (SPN mode) | The service principal application (client) ID |
 | SPN Client Secret | Azure ARM Authentication (SPN mode) | The service principal client secret (encrypted at rest) |
-| Enable Action SPN | Azure ARM Authentication (Action SPN) | `false` (default) or `true` — enables the dual-SPN mode described below |
+| Enable Action SPN | Azure ARM Authentication (Action SPN) | `false` (default) or `true` - enables the dual-SPN mode described below |
 | Action SPN Tenant ID | Azure ARM Authentication (Action SPN) | Entra tenant ID for the action SPN (usually the same as the read SPN tenant) |
 | Action SPN Client ID | Azure ARM Authentication (Action SPN) | Application (client) ID for the action SPN |
 | Action SPN Client Secret | Azure ARM Authentication (Action SPN) | Client secret for the action SPN (encrypted at rest) |
 | Licence Key | Licence | Current licence key. Leave blank or use the `PREVIEW-2026-FREE` default during the preview period. |
-| Check for Updates | Update Check | `true` (default) or `false` — enables the background check for a newer stable release |
+| Unclustered VM Grace (minutes) | Cluster Management | Global grace window (1-60, default 15) before unclustered VM alerts are eligible to fire. |
+| Expired Window Auto-Delete | Maintenance Windows | Auto-delete retention for one-time windows: `never`, `5m`, `1h`, `1d`, `3d`, `1w`, `2w`, `3w`, `4w`. |
+| Check for Updates | Update Check | `true` (default) or `false` - enables the background check for a newer stable release |
 | Check Interval (Hours) | Update Check | How often to poll GitHub for the latest release. Default: 24. |
 
 ### Action SPN (optional dual-SPN mode)
 
-By default a single SPN (or OBO user) is used for all ARM calls. When **Enable Action SPN** is set to `true` and the three Action SPN credentials are filled in, **all ARM write operations** (POST, PUT, PATCH, DELETE — any call that modifies Azure resources) are routed through the action SPN instead. The read SPN continues to handle all GET calls.
+By default a single SPN (or OBO user) is used for all ARM calls. When
+**Enable Action SPN** is set to `true` and the three Action SPN credentials
+are filled in, **all ARM write operations** (POST, PUT, PATCH, DELETE - any
+call that modifies Azure resources) are routed through the action SPN instead.
+The read SPN continues to handle all GET calls.
 
 This allows a least-privilege split:
 
 - **Read SPN** — Reader on the resource group only (no write permissions).
-- **Action SPN** — a custom role with only the specific write actions needed for the operations you want to permit.
+- **Action SPN** - a custom role with only the specific write actions needed
+    for the operations you want to permit.
 
 Current write operations the app performs and the ARM actions they require:
 
 | Operation | Page | ARM action |
-|---|---|---|
+| --- | --- | --- |
 | Upgrade Arc machine extensions | Arc Extensions | `Microsoft.HybridCompute/machines/upgradeExtensions/action` |
-| Upgrade cluster extensions | Cluster Extensions | `Microsoft.AzureStackHCI/clusters/arcSettings/extensions/write` |
+| Upgrade cluster extensions | Cluster Extensions | `Microsoft.AzureStackHCI/clusters/arcSettings/extensions/upgrade/action` |
 
-Future write operations added to the app will also automatically use the action SPN — no configuration change is required.
+Future write operations added to the app will also automatically use the
+action SPN - no configuration change is required.
 
-Assign the action SPN a custom role containing only the actions for the operations you want it to perform, scoped to the resource group. No Reader or Contributor assignment is required on the action SPN.
+Assign the action SPN a custom role containing only the actions for the
+operations you want it to perform, scoped to the resource group. No Reader or
+Contributor assignment is required on the action SPN.
 
 ---
 
 ### SPN permissions reference
 
-The following table lists every ARM action the app may invoke, the page that triggers it, and the minimum Azure built-in role that grants it. All roles are assignable at subscription or resource group scope.
+The following list covers every ARM action the app may invoke. All roles are
+assignable at subscription or resource group scope.
 
-| Action / Operation | Page | Minimum role | ARM action |
-|---|---|---|---|
-| List clusters, read Arc registration | Arc Registration | **Reader** | `Microsoft.AzureStackHCI/clusters/read` |
-| List Arc machines | Arc Machines | **Reader** | `Microsoft.HybridCompute/machines/read` |
-| List Arc machine extensions | Arc Extensions | **Reader** | `Microsoft.HybridCompute/machines/extensions/read` |
-| List cluster extensions | Cluster Extensions | **Reader** | `Microsoft.AzureStackHCI/clusters/arcSettings/extensions/read` |
-| **Upgrade Arc machine extensions** | Arc Extensions | **Azure Connected Machine Resource Manager** | `Microsoft.HybridCompute/machines/upgradeExtensions/action` |
-| **Upgrade cluster extensions** | Cluster Extensions | **Azure Stack HCI Administrator** | `Microsoft.AzureStackHCI/clusters/arcSettings/extensions/upgrade/action` |
+- Read clusters: Arc Registration, **Reader**, `Microsoft.AzureStackHCI/clusters/read`
+- Read Arc machines: Arc Machines, **Reader**, `Microsoft.HybridCompute/machines/read`
+- Read Arc ext.: Arc Extensions, **Reader**, `Microsoft.HybridCompute/machines/extensions/read`
+- Read cluster ext.: Cluster Extensions, **Reader**, `Microsoft.AzureStackHCI/clusters/arcSettings/extensions/read`
+- Upgrade Arc ext.: Arc Extensions, **Azure Connected Machine Resource Manager**, `Microsoft.HybridCompute/machines/upgradeExtensions/action`
+- Upgrade cluster ext.: Cluster Extensions, **Azure Stack HCI Administrator**, `Microsoft.AzureStackHCI/clusters/arcSettings/extensions/upgrade/action`
 
-> A SPN configured only for **read** operations needs the **Reader** role only.  
-> A SPN that also needs to **trigger upgrades** needs one of the write roles above in addition to Reader (or can use **Contributor** which covers everything).
+> A SPN configured only for **read** operations needs the **Reader** role
+> only. A SPN that also needs to **trigger upgrades** needs one of the write
+> roles above in addition to Reader, or can use **Contributor** which covers
+> everything.
 
 #### Recommended SPN setup for least privilege
 
@@ -1191,124 +1464,200 @@ Subscription or resource group scope:
   Azure Stack HCI Administrator              ← for cluster extension upgrades
 ```
 
-If your organisation separates read and write access, configure the optional **Action SPN** in `Admin → Settings → Azure ARM Authentication (Action SPN)` — see the FAQ for full details.
+If your organisation separates read and write access, configure the optional
+**Action SPN** in `Admin → Settings → Azure ARM Authentication (Action SPN)`.
+See the FAQ for full details.
 
 ### Update Check
 
 The app periodically checks the public releases repo on GitHub
-(`AzureLocal-ClusterTool-Web-Releases`) for the latest **stable** release —
-pre-release tags (`-preview`/`-beta`/`-rc`) are never reported as an available
-update. No data leaves the app beyond this single read-only lookup, and it
-never runs on every page load — only once per configured interval (default
-every 24 hours).
+(`AzureLocal-ClusterTool-Web-Releases`) for the latest **stable** release.
+Pre-release tags (`-preview`/`-beta`/`-rc`) are never reported as available
+updates. No data leaves the app beyond this single read-only lookup, and it
+runs only once per configured interval (default every 24 hours).
 
 When a newer stable version is found, HciAdmins see a small **⬆ Update
 available** badge under the app title in the nav bar, linking to the release
-on GitHub. Regular (non-admin) users never see this badge.
+on GitHub. Regular users never see this badge.
 
-Use `Admin → Settings → Update Check → Check Now` to check immediately
-without waiting for the next scheduled poll — useful right after deploying,
-or to confirm connectivity to GitHub. The panel also shows the current
-version, the latest known version, and the time of the last check attempt.
+Use `Admin → Settings → Update Check → Check Now` to check immediately without
+waiting for the next scheduled poll. This is useful right after deploying or
+to confirm connectivity to GitHub. The panel also shows the current version,
+the latest known version, and the time of the last check attempt.
 
 > **Note:** if the app runs as two IIS app pools (main + WinAuth site, see
 > Deployment Guide), each process checks independently and keeps its own
-> status — the badge and panel reflect whichever process handled your
-> request.
+> status. The badge and panel reflect whichever process handled your request.
 
 ## 22a. Admin — SIEM Integration
 
 **Route:** `/admin/settings` (SIEM tab)  
 **Access required:** HciAdmin only
 
-Forwards the audit log — and, optionally, alert history — to an external SIEM for long-term retention, correlation, and compliance reporting. Delivery is a periodic background poll (default every 120 seconds, configurable) rather than real-time streaming; each destination is called a **sink**, and the app ships with two built in:
+Forwards the audit log - and, optionally, alert history - to an external SIEM
+for long-term retention, correlation, and compliance reporting. Delivery is a
+periodic background poll (default every 120 seconds, configurable) rather than
+real-time streaming. Each destination is called a **sink**, and the app ships
+with two built in:
 
 | Sink | Protocol | Notes |
-|---|---|---|
+| --- | --- | --- |
 | **Splunk** | HTTP Event Collector (HEC) | Works with Splunk Enterprise, Splunk Cloud, and any HEC-compatible collector |
 | **Microsoft Sentinel** | Logs Ingestion API (Data Collection Rule) | The modern, Microsoft-recommended replacement for the deprecated HTTP Data Collector API |
 
-Both sinks can be enabled at the same time — the same audit/alert data is forwarded to each independently. Delivery is **per-sink and per-stream**: if one sink is down or misconfigured, the other keeps receiving events, and the down sink automatically catches up (no data loss, no duplicates) once it's fixed.
+Both sinks can be enabled at the same time. The same audit/alert data is
+forwarded to each independently. Delivery is **per-sink and per-stream**: if
+one sink is down or misconfigured, the other keeps receiving events, and the
+down sink automatically catches up once it is fixed.
 
 ### Global settings
 
 | Setting | Description |
-|---|---|
-| SIEM Forwarding Enabled | Master switch. When `false`, no outbound calls are made at all. |
-| Include Alert History | When `true`, alert fires/suppressions are forwarded in addition to the audit log. Default: `false` (audit log only). |
-| Poll Interval (seconds) | How often new rows are checked for. Default: 120. |
+| --- | --- |
+| SIEM Forwarding Enabled | Master switch. When `false`, no outbound calls are made. |
+| Include Alert History | When `true`, alert fires/suppressions are forwarded too. Default: `false`. |
+| Poll Interval (seconds) | How often new rows are checked. Default: 120. |
 | Batch Size | Maximum events sent per sink per poll cycle. Default: 500. |
 
 ### Splunk setup
 
-1. In Splunk Web: **Settings → Data Inputs → HTTP Event Collector → New Token**. Note the token value and the HEC base URL (e.g. `https://splunk.example.com:8088`).
-2. In `Admin → Settings → SIEM` → **SIEM Integration (Splunk)**: set **Splunk Enabled** to `true`, paste the **HEC URL** and **HEC Token**, and optionally set a custom **Source**, **Source Type**, or target **Index**.
-3. Only enable **Skip TLS Certificate Validation** against a lab/test HEC endpoint with a self-signed certificate — never against production. It is clearly marked Insecure and defaults to `false`.
-4. If **Send Test Event** fails with `HttpClient.Timeout ... elapsing`, this is almost never a code problem — it means either the HEC URL/port is wrong, the scheme (`http://` vs `https://`) doesn't match Splunk's `inputs.conf` HEC `enableSSL` setting, or the app server simply cannot reach that host/port at all (firewall or proxy in the way). Verify reachability from the app server itself first (e.g. `Test-NetConnection splunk.example.com -Port 8088`) before raising **Request Timeout (seconds)** — a longer timeout only helps if the endpoint is reachable but genuinely slow.
+1. In Splunk Web: **Settings → Data Inputs → HTTP Event Collector → New Token**.
+    Note the token value and the HEC base URL (for example,
+    `https://splunk.example.com:8088`).
+2. In `Admin → Settings → SIEM` → **SIEM Integration (Splunk)**: set **Splunk
+    Enabled** to `true`, paste the **HEC URL** and **HEC Token**, and optionally
+    set a custom **Source**, **Source Type**, or **Index**.
+3. Only enable **Skip TLS Certificate Validation** against a lab or test HEC
+    endpoint with a self-signed certificate. Never use it in production.
+4. If **Send Test Event** fails with `HttpClient.Timeout ... elapsing`, the
+    issue is usually the HEC URL/port, the `http://` vs `https://` scheme, or
+    simple network reachability. Verify reachability from the app server first
+    before raising **Request Timeout (seconds)**.
 
 ### Microsoft Sentinel setup
 
-Sentinel ingestion uses the modern **Logs Ingestion API**, which requires a one-time setup in the Azure portal before the app can send data (the app does not provision these resources itself):
+Sentinel ingestion uses the modern **Logs Ingestion API**. It requires a
+one-time setup in the Azure portal before the app can send data; the app does
+not provision these resources itself:
 
-1. **Create a Log Analytics custom table** with columns matching the forwarded event shape: `TimeGenerated` (datetime), `SourceId` (long), `StreamType` (string), `ClusterName` (string), `UserUpn` (string), `UserDisplayName` (string), `ResourceType` (string), `ResourceName` (string), `Action` (string), `Outcome` (string), `Detail` (string), `Severity` (string). Easiest path: in the Log Analytics workspace go to **Tables → Create → New custom log (DCR-based)**, and on the *Sample logs* step upload [`siem-sentinel-sample-events.json`](siem-sentinel-sample-events.json) — the wizard infers all 12 columns and their types automatically, and also creates the matching Data Collection Rule and Data Collection Endpoint for you in the same flow.
+1. **Create a Log Analytics custom table** with columns matching the forwarded
+    event shape: `TimeGenerated` (datetime), `SourceId` (long), `StreamType`
+    (string), `ClusterName` (string), `UserUpn` (string), `UserDisplayName`
+    (string), `ResourceType` (string), `ResourceName` (string), `Action`
+    (string), `Outcome` (string), `Detail` (string), `Severity` (string). The
+    easiest path is **Tables → Create → New custom log (DCR-based)**. On the
+    *Sample logs* step, upload [`siem-sentinel-sample-events.json`](siem-sentinel-sample-events.json).
 2. **Create a Data Collection Endpoint (DCE)** and note its logs ingestion URL.
-3. **Create a Data Collection Rule (DCR)** with a stream pointing at the custom table (add a second stream if you also plan to forward alert history). Note the DCR's immutable ID and the exact **stream name** — this is **not** the table name. A DCR stream name always has a literal `Custom-` prefix in front of the table name, e.g. table `AZLSEIM_CL` → stream name `Custom-AZLSEIM_CL`. Find the exact value under the DCR resource's **JSON view → `properties.dataFlows[].streams`** (or `streamDeclarations`) if unsure — entering just the table name here causes an `InvalidStream` 400 error.
-4. **Create a dedicated Entra app registration** (client credentials) and grant it the **Monitoring Metrics Publisher** role scoped to the DCR only — this is least-privilege: the identity can only ingest data, never read it back.
-5. In `Admin → Settings → SIEM` → **SIEM Integration (Sentinel)**: set **Sentinel Enabled** to `true` and fill in the DCE endpoint, DCR immutable ID, audit (and optionally alert) stream names (with the `Custom-` prefix, per step 3), and the Entra tenant/client ID/client secret from step 4.
-6. If **Send Test Event** fails with `... does not have access to ingest data for the data collection rule ... 403 (Forbidden)`, this is always an Azure RBAC problem, never an app bug. Check, in order:
-   - The **Monitoring Metrics Publisher** role must be assigned via **Access control (IAM) on the DCR resource itself** — not on the Data Collection Endpoint, and not on the Log Analytics workspace (a resource group or subscription scope that contains the DCR also works).
-   - Subscription-level **Reader** (or Contributor) does **not** grant ingestion — ingestion is a separate data-plane permission that only `Monitoring Metrics Publisher` (or a custom role with the equivalent data action) provides.
-   - Double-check `Siem:Sentinel:TenantId`/`ClientId` exactly match the app registration the role was actually granted to — easy to mix up with the ARM read/action SPNs configured elsewhere in this app.
-   - Confirm the role was assigned to the app registration's **Enterprise Application** (service principal) — searching by the app's display name in "Add role assignment" normally resolves this correctly.
-   - New role assignments can take several minutes to propagate; retry after ~10 minutes before assuming the assignment is wrong. If a role assigned directly on the DCR resource ("This resource" scope) still fails after 30+ minutes with everything else confirmed correct, add a second assignment scoped to the **Resource Group** containing the DCR instead — this is a known propagation quirk with Azure Monitor's data-plane ingestion RBAC and reliably unblocks it.
-7. If **Send Test Event** instead fails with `The stream <name> was not configured in the data collection rule ... 400 (Bad Request) ... InvalidStream`, the **Audit/Alert Stream Name** setting is missing the `Custom-` prefix described in step 3 — update it to `Custom-<your table name>` and retry.
+3. **Create a Data Collection Rule (DCR)** with a stream pointing at the custom
+    table. Add a second stream if you also plan to forward alert history. Note
+    the DCR immutable ID and the exact **stream name**; it is not the table
+    name. A DCR stream name always has a literal `Custom-` prefix in front of
+    the table name, for example `AZLSEIM_CL` becomes `Custom-AZLSEIM_CL`.
+4. **Create a dedicated Entra app registration** (client credentials) and
+    grant it the **Monitoring Metrics Publisher** role scoped to the DCR only.
+5. In `Admin → Settings → SIEM` → **SIEM Integration (Sentinel)**: set
+    **Sentinel Enabled** to `true` and fill in the DCE endpoint, DCR immutable
+    ID, audit and optional alert stream names, and the Entra tenant/client ID
+    and client secret from step 4.
+6. If **Send Test Event** fails with a 403 saying the identity cannot ingest
+    data, this is always an Azure RBAC problem, never an app bug. Check:
+    - **Monitoring Metrics Publisher** must be assigned on the DCR resource or
+      its containing resource group.
+    - Subscription-level **Reader** or **Contributor** does not grant ingestion.
+    - `Siem:Sentinel:TenantId` and `ClientId` must match the app registration.
+    - The assignment must target the app registration's Enterprise Application.
+    - Propagation can take several minutes; retry after about 10 minutes.
+7. If **Send Test Event** instead fails with `InvalidStream`, the audit or alert
+    stream name is missing the `Custom-` prefix.
 
 ### Delivery health and testing
 
-The **Delivery Health** panel (under the SIEM Integration group) shows, per sink and stream: Enabled/Disabled status, last successful send, last error, consecutive failures, and current backlog (events waiting to be sent). Use **Send Test Event** to verify connectivity end-to-end without waiting for real audit activity — test sends are themselves recorded in the [Audit Log](#21-admin--audit-log) as a `SiemSendTest` action so you can confirm delivery worked.
+The **Delivery Health** panel shows, per sink and stream, enabled status, last
+success, last error, consecutive failures, and current backlog. Use
+**Send Test Event** to verify connectivity end-to-end without waiting for real
+audit activity. Test sends are recorded in the [Audit Log](#21-admin--audit-log)
+as a `SiemSendTest` action.
 
-> **New activity is always forwarded first.** The very first time a sink polls, its watermark starts at the *current* newest row rather than 0 — it never tries to replay an existing, possibly very large, audit history. If a sink falls behind later (for example after being disabled for a long time, or a large batch of automated actions ran while it was down), a **Skip Backlog** button appears next to its row once its backlog is non-zero. Clicking it permanently discards the queued backlog for that sink/stream — only new activity from that point on is sent. This cannot be undone, so confirm the backlog really is old/expected before using it.
+> **New activity is always forwarded first.** The first time a sink polls,
+> its watermark starts at the current newest row rather than 0. If a sink falls
+> behind later, a **Skip Backlog** button appears once its backlog is non-zero.
+> Clicking it permanently discards the queued backlog for that sink/stream.
 
 ## 22b. Admin — Direct Alerting (Splunk / Log Analytics)
 
 **Route:** `/admin/settings` (Alerting tab)  
 **Access required:** HciAdmin only
 
-Pushes each fired alert (from [Alert Rules](#alert-rules)) to Splunk and/or a Log Analytics workspace **the instant it fires** — a real-time channel alongside Teams and Email, not a periodic batch job. This is deliberately separate from [SIEM Integration](#22a-admin--siem-integration) above:
+Pushes each fired alert (from [Alert Rules](#alert-rules)) to Splunk and/or a
+Log Analytics workspace **the instant it fires**. This is a real-time channel
+alongside Teams and Email, not a periodic batch job. It is deliberately
+separate from [SIEM Integration](#22a-admin--siem-integration) above:
 
 | | SIEM Integration (22a) | Direct Alerting (this section) |
-|---|---|---|
+| --- | --- | --- |
 | Delivery | Periodic poll (default every 120s), only if **Include Alert History** is on | Instant, the moment `AlertEngine` fires a notification |
 | Scope | Full audit log + optional alert history, for compliance/retention | Fired alerts only, for real-time ops monitoring/paging |
-| Config | `SIEM Integration (Splunk)` / `(Sentinel)` groups | `Alerting (Splunk)` / `Alerting (Log Analytics)` groups — separate HEC token/index and DCE/DCR/stream, so it can target a completely different destination |
+| Config | `SIEM Integration (Splunk)` / `(Sentinel)` groups | `Alerting (Splunk)` / `Alerting (Log Analytics)` groups - separate HEC token/index and DCE/DCR/stream |
 | Audience | SOC / compliance | Ops teams (dashboards, workbooks, paging rules) |
 
-Both destinations can be enabled at the same time as Teams/Email — every configured channel receives the same alert in parallel. Each destination has its own **Minimum Severity** filter (`Warning` or `Critical`) so, for example, Splunk can receive every alert while Log Analytics only receives `Critical` ones.
+Both destinations can be enabled at the same time as Teams/Email. Every
+configured channel receives the same alert in parallel. Each destination has
+its own **Minimum Severity** filter (`Warning` or `Critical`).
 
 ### Splunk setup
 
-1. In Splunk Web: **Settings → Data Inputs → HTTP Event Collector → New Token**. Note the token value and the HEC base URL.
-2. In `Admin → Settings → Alerting` → **Alerting (Splunk)**: set **Splunk Alert Delivery Enabled** to `true`, paste the **HEC URL** and **HEC Token**, and optionally set a custom **Source**, **Source Type**, **Index**, or **Minimum Severity**.
-3. Click **Send Test Alert** to verify connectivity — it sends a synthetic `Critical` test alert immediately, bypassing the Minimum Severity filter, and reports genuine success/failure (not just "dispatched").
-4. Same timeout/TLS troubleshooting guidance applies as the SIEM Splunk sink (22a) — a timeout almost always means the URL/port/scheme is wrong or the app server cannot reach that host at all.
+1. In Splunk Web: **Settings → Data Inputs → HTTP Event Collector → New
+    Token**. Note the token value and the HEC base URL.
+2. In `Admin → Settings → Alerting` → **Alerting (Splunk)**: set **Splunk
+    Alert Delivery Enabled** to `true`, paste the **HEC URL** and **HEC Token**,
+    and optionally set **Source**, **Source Type**, **Index**, or **Minimum
+    Severity**.
+3. Click **Send Test Alert** to verify connectivity. It sends a synthetic
+    `Critical` test alert immediately and reports genuine success or failure.
+4. The same timeout/TLS troubleshooting guidance applies as the SIEM Splunk
+    sink (22a).
 
 ### Log Analytics setup
 
-Uses the same Logs Ingestion API (Data Collection Rule based) mechanism as SIEM Integration (Sentinel), but configured entirely separately so it can point at a different workspace/table dedicated to ops alerting:
+Uses the same Logs Ingestion API (Data Collection Rule based) mechanism as
+SIEM Integration (Sentinel), but configured separately so it can point at a
+different workspace/table for ops alerting:
 
-1. **Create a Log Analytics custom table** with columns: `TimeGenerated` (datetime), `ClusterName` (string), `RuleType` (string), `Severity` (string), `Title` (string), `Message` (string). Easiest path: in the Log Analytics workspace go to **Tables → Create → New custom log (DCR-based)**, and on the *Sample logs* step upload [`alerting-log-analytics-sample-events.json`](alerting-log-analytics-sample-events.json) — the wizard infers all 6 columns and their types automatically, and also creates the matching Data Collection Rule and Data Collection Endpoint for you in the same flow.
-   > **Naming gotcha:** the wizard always appends its own `_CL` suffix to whatever table name you type. If you type `AZLALERT_CL` as the base name (already including `_CL` out of habit from the SIEM setup above), the real table ends up named **`AZLALERT_CL_CL`** — check the table's actual name under **Tables** in the workspace before configuring the Stream Name in step 2; don't assume it matches what you originally typed.
-2. **Create a Data Collection Endpoint (DCE)** and a **Data Collection Rule (DCR)** with a stream pointing at that table. Note the DCR's immutable ID and the exact stream name — it is **always** `Custom-` + the table's real name from step 1 (e.g. table `AZLALERT_CL_CL` → stream `Custom-AZLALERT_CL_CL`, not `Custom-AZLALERT_CL`). Don't guess this from memory — open the DCR resource's **Export template** (or JSON view) and read the value directly under `properties.dataFlows[].streams` (or `properties.streamDeclarations`); that's the only guaranteed-correct source.
+1. **Create a Log Analytics custom table** with columns `TimeGenerated`
+    (datetime), `ClusterName` (string), `RuleType` (string), `Severity`
+    (string), `Title` (string), `Message` (string). The easiest path is
+    **Tables → Create → New custom log (DCR-based)**. Upload
+    [`alerting-log-analytics-sample-events.json`](alerting-log-analytics-sample-events.json)
+    on the *Sample logs* step.
+    > **Naming gotcha:** the wizard appends its own `_CL` suffix to whatever
+    > table name you type. If you type `AZLALERT_CL`, the real table becomes
+    > `AZLALERT_CL_CL`. Check the table name under **Tables** before configuring
+    > the stream name.
+2. **Create a Data Collection Endpoint (DCE)** and a **Data Collection Rule
+    (DCR)** with a stream pointing at that table. The stream name is always
+    `Custom-` plus the table's real name.
 3. **Create a dedicated Entra app registration** (client credentials) and grant it **Monitoring Metrics Publisher** scoped to the DCR only.
 4. In `Admin → Settings → Alerting` → **Alerting (Log Analytics)**: set **Log Analytics Alert Delivery Enabled** to `true` and fill in the DCE endpoint, DCR immutable ID, stream name, tenant/client ID/client secret, and optionally **Minimum Severity**.
-5. Click **Send Test Alert** to verify. The same RBAC (403) and `InvalidStream` (400) troubleshooting guidance from the Sentinel SIEM sink (22a) applies here.
-6. **If "Send Test Alert" still fails after confirming steps 1-5 and waiting 15+ minutes for RBAC propagation**, isolate the problem from the app before assuming it's a code bug:
-   - **List every role actually assigned** to the app registration's service principal, across all scopes, with Azure CLI:
+5. Click **Send Test Alert** to verify. The same RBAC (403) and
+    `InvalidStream` (400) guidance from the Sentinel SIEM sink (22a) applies
+    here.
+6. **If "Send Test Alert" still fails after confirming steps 1-5 and waiting
+    15+ minutes for RBAC propagation**, isolate the problem from the app before
+    assuming it's a code bug:
+    - **List every role actually assigned** to the app registration's service
+      principal across all scopes, with Azure CLI:
+
      ```powershell
      az role assignment list --assignee <ClientId> --all -o table
      ```
-     Confirm `Monitoring Metrics Publisher` appears with a scope that covers the DCR (the DCR itself, or an ancestor resource group/subscription). If it's missing or scoped somewhere unrelated, that's the fix.
-   - **Test ingestion directly with PowerShell**, bypassing the app entirely, using the exact same DCE/DCR/stream/credentials configured in Admin > Settings. If this also fails with the same error, it's conclusively an Azure-side RBAC/config issue, not an app bug:
+
+         Confirm `Monitoring Metrics Publisher` appears with a scope that covers
+         the DCR. If it is missing or scoped somewhere unrelated, that is the fix.
+     - **Test ingestion directly with PowerShell**, bypassing the app entirely,
+         using the exact same DCE/DCR/stream/credentials configured in Admin >
+         Settings. If this also fails with the same error, it is conclusively an
+         Azure-side RBAC/config issue, not an app bug:
+
      ```powershell
      $tenantId     = '<TenantId>'
      $clientId     = '<ClientId>'
@@ -1316,9 +1665,9 @@ Uses the same Logs Ingestion API (Data Collection Rule based) mechanism as SIEM 
      $cred = New-Object System.Management.Automation.PSCredential($clientId, $clientSecret)
      Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred | Out-Null
 
-     # Get-AzAccessToken returns .Token as a SecureString on recent Az.Accounts versions —
-     # interpolating it directly produces the literal text "System.Security.SecureString"
-     # instead of a real JWT and causes a misleading 401. Convert it first.
+    # Get-AzAccessToken returns .Token as a SecureString on recent
+    # Az.Accounts versions. Interpolating it directly produces a literal
+    # SecureString string instead of a real JWT and causes a misleading 401.
      $tokenObj = Get-AzAccessToken -ResourceUrl 'https://monitor.azure.com/'
      if ($tokenObj.Token -is [System.Security.SecureString]) {
          $bstr  = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token)
@@ -1328,105 +1677,212 @@ Uses the same Logs Ingestion API (Data Collection Rule based) mechanism as SIEM 
 
      $dceEndpoint = '<DceEndpoint>'
      $dcrId       = '<DcrImmutableId>'
-     $streamName  = '<StreamName>'   # e.g. Custom-AZLALERT_CL_CL — confirm from the DCR JSON view
+    $streamName  = '<StreamName>'   # e.g. Custom-AZLALERT_CL_CL
      $uri = "$dceEndpoint/dataCollectionRules/$dcrId/streams/$streamName`?api-version=2023-01-01"
 
-     $events = @(@{
-         TimeGenerated = (Get-Date).ToUniversalTime().ToString('o')
-         ClusterName   = '(manual-test)'; RuleType = 'Test'; Severity = 'Critical'
-         Title         = 'Manual REST Test'; Message = 'Direct REST ingestion test, bypassing the app.'
-     })
-     # Force a JSON array even for one element — ConvertTo-Json -AsArray is PS7+ only
+      $events = @(@{
+          TimeGenerated = (Get-Date).ToUniversalTime().ToString('o')
+          ClusterName   = '(manual-test)'; RuleType = 'Test'; Severity = 'Critical'
+          Title         = 'Manual REST Test'
+          Message       = 'Direct REST ingestion test, bypassing the app.'
+      })
+     # Force a JSON array even for one element.
      $body = '[' + (($events | ForEach-Object { $_ | ConvertTo-Json -Compress }) -join ',') + ']'
 
      Invoke-RestMethod -Method Post -Uri $uri -Headers @{ Authorization = "Bearer $token" } -Body $body -ContentType 'application/json'
      ```
-   - **Real-world note:** in one troubleshooting session, `Monitoring Metrics Publisher` alone (correctly scoped to the DCR) still returned a 403 well past the normal propagation window, and only granting `Log Analytics Contributor` (much broader than the documented minimal role) made it start working. This may have been coincidental timing rather than a genuine permission gap — if you hit the same thing, try removing the broader role again once ingestion is working, to confirm whether `Monitoring Metrics Publisher` alone is actually sufficient in your tenant before leaving the wider grant in place permanently.
 
+     - **Real-world note:** in one troubleshooting session, `Monitoring Metrics
+         Publisher` alone still returned a 403 well past the normal propagation
+         window, and only granting `Log Analytics Contributor` made it work. This
+         may have been timing rather than a real permission gap.
+
+## 22c. Admin — API Access
+
+The **API Access** settings group manages a set of named API keys. Each key has:
+
+- **Name** - for example `App Team`, `Infra Runbook`, or `CI Pipeline`
+- **Access level** - `Read` or `Admin`
+- **Description** - optional free text for ownership or purpose
+
+Both keys use the same request header format:
+
+```text
+Authorization: ApiKey <token>
+```
+
+Read-level keys can call the standard REST API and read-only Ops API endpoints.
+Admin-level keys can also call privileged Ops API actions such as forcing an
+immediate collector poll or resetting a collector circuit breaker.
+
+Admin-level keys are also required for VM mutation endpoints:
+
+- `POST /api/ops/clusters/{name}/nodes/{nodeName}/pause`
+- `POST /api/ops/clusters/{name}/nodes/{nodeName}/drain`
+- `POST /api/ops/clusters/{name}/nodes/{nodeName}/resume`
+- `POST /api/ops/clusters/{name}/nodes/{nodeName}/failback`
+- `POST /api/ops/clusters/{name}/roles/{roleName}/start`
+- `POST /api/ops/clusters/{name}/roles/{roleName}/stop`
+- `POST /api/ops/clusters/{name}/roles/{roleName}/move?targetNode={nodeName}`
+
+- `POST /api/ops/clusters/{name}/vms/{vmName}/start`
+- `POST /api/ops/clusters/{name}/vms/{vmName}/stop`
+- `POST /api/ops/clusters/{name}/vms/{vmName}/restart`
+- `POST /api/ops/clusters/{name}/vms/{vmName}/suspend`
+- `POST /api/ops/clusters/{name}/vms/{vmName}/turn-off`
+
+Current read-only Ops endpoints include:
+
+- `/api/ops/clusters/{name}/health`
+- `/api/ops/clusters/{name}/status`
+- `/api/ops/clusters/{name}/nodes`
+- `/api/ops/clusters/{name}/nodes/{nodeName}/actions`
+- `/api/ops/clusters/{name}/cluster-info`
+- `/api/ops/clusters/{name}/roles`
+- `/api/ops/clusters/{name}/roles/{roleName}/status?targetState=Online`
+- `/api/ops/clusters/{name}/roles/{roleName}/wait?targetState=Online&timeoutSeconds=60&pollIntervalMs=2500`
+- `/api/ops/clusters/{name}/roles/{roleName}/actions`
+- `/api/ops/clusters/{name}/vms`
+- `/api/ops/clusters/{name}/vms/{vmName}`
+- `/api/ops/clusters/{name}/vms/{vmName}/status?targetState=Running`
+- `/api/ops/clusters/{name}/vms/{vmName}/wait?targetState=Running&timeoutSeconds=60&pollIntervalMs=2500`
+- `/api/ops/clusters/{name}/vms/{vmName}/actions`
+- `/api/ops/clusters/{name}/vms/summary`
+- `/api/ops/ps-calls`
+
+For mutation endpoints, the API returns immediately with `requested: true` to
+indicate the cluster command was accepted. For client-side wait loops, poll the
+matching `/status` endpoint until `isConverged` becomes `true` or use the matching
+`/wait` helper endpoint for a bounded, one-call convergence check.
+
+For mutating API calls, audit rows now include the API key identity so you can
+trace which named key performed an action (for example `API (CI Pipeline)` with
+`UserUpn = api-key:CI Pipeline`).
+
+The plaintext token is shown only once when generated or rotated. After that,
+the app keeps only a hash of the token, so you cannot reveal it again later.
+
+Recommended practice:
+
+- create separate keys per team or automation system
+- use `Read` for dashboards, inventory sync, and reporting
+- reserve `Admin` for supervised runbooks and tightly controlled operational tooling
+- revoke unused keys instead of sharing a single long-lived token
 
 ## 23. Admin — Custom Roles (RBAC)
 
 **Route:** `/admin/roles`  
 **Access required:** HciAdmin only
 
-Fine-grained role-based access control layered on top of the base Entra group policies. Allows you to restrict which resources specific Entra groups can see or operate — down to individual VM names or wildcard/regex patterns.
+Fine-grained role-based access control layered on top of the base Entra group
+policies. It lets you restrict which resources specific Entra groups can see
+or operate, down to individual VM names or wildcard/regex patterns.
 
 ### Default roles
 
-On first startup (when no custom roles exist), the app automatically creates four built-in roles as a starting point. You can rename, modify, or delete them at any time.
+On first startup, the app automatically creates four built-in roles as a
+starting point. You can rename, modify, or delete them at any time.
 
 | Role | Description | Key permissions |
-|---|---|---|
-| **Cluster Admin** | Full administrative access across all resources | VMs: Start/Stop/ForceStop/Migrate; Nodes: Drain/Resume; Roles: Start/Stop/Move; Services: Start/Stop/Restart; Updates: Start; Clusters: View; all other types: View |
-| **VM Admin** | Full VM lifecycle control, read-only everywhere else | VMs: Start/Stop/ForceStop/Migrate; Clusters: View; all other types: View |
-| **Solution Admin** | Can start and monitor solution updates, read-only everywhere else | Updates: View+Start; Clusters: View; all other types: View |
-| **Reader** | View-only access to all resources, no operational actions | All types: View only (including Clusters) |
+| --- | --- | --- |
+| **Cluster Admin** | Full administrative access across all resources | VMs: Start/Stop/ForceStop/Migrate; Nodes: Drain/Resume; Roles: Start/Stop/Move; Services: Start/Stop/Restart; Updates: Start; Clusters: View; other types: View |
+| **VM Admin** | Full VM lifecycle control, read-only elsewhere | VMs: Start/Stop/ForceStop/Migrate; Clusters: View; other types: View |
+| **Solution Admin** | Can start and monitor solution updates, read-only elsewhere | Updates: View+Start; Clusters: View; other types: View |
+| **Reader** | View-only access to all resources | All types: View only |
 
-Default roles have **no group assignments** when created — they are inactive until you assign an Entra group Object ID (or AD group SID for Windows Auth deployments) to them via the Group Assignments panel.
+Default roles have **no group assignments** when created. They stay inactive
+until you assign an Entra group Object ID (or AD group SID for Windows Auth
+deployments) to them via the Group Assignments panel.
 
-> The defaults are seeded by name — each role is added only if a role with that exact name does not already exist. Safe to run on every deployment; renaming a default role prevents it being re-created automatically.
+> The defaults are seeded by name - each role is added only if a role with
+> that exact name does not already exist. Renaming a default role prevents it
+> being re-created automatically.
 
-> **Automatic backfill:** On every startup, the app checks whether existing default roles are missing any permission claims — for example, when a new resource type was added after your initial deployment. Any missing claims are automatically added with the correct default permissions. This only applies to the four named default roles; admin-created custom roles are never automatically modified.
+> **Automatic backfill:** On every startup, the app checks whether existing
+> default roles are missing any permission claims. Any missing claims are
+> automatically added with the correct default permissions. This only applies
+> to the four named default roles; admin-created custom roles are never
+> automatically modified.
 
 ### How it works
 
-The app has three base access tiers (see [Access Levels](#24-access-levels)). Custom roles add a further layer:
+The app has three base access tiers (see [Access Levels](#24-access-levels)).
+Custom roles add a further layer:
 
 - A **Custom Role** groups a set of permissions and the groups they apply to.
-- Each role has **Permission claims** defining what resource types and specific resource names a member can access and what operations they can perform.
-- Each role has **Group Assignments** linking it to one or more Entra security group Object IDs.
+- Each role has **Permission claims** defining the resource types and names a
+    member can access, plus the operations they can perform.
+- Each role has **Group Assignments** linking it to one or more Entra security
+    group Object IDs.
 - Users inherit permissions from every role their groups are assigned to.
 
-**Pass-through mode:** When no group assignments exist, custom RBAC is fully inactive and access is controlled only by the base Entra group policies. You can run the app indefinitely without ever configuring custom roles.
+**Pass-through mode:** When no group assignments exist, custom RBAC is fully
+inactive and access is controlled only by the base Entra group policies. You
+can run the app indefinitely without ever configuring custom roles.
 
-**HciAdmin bypass:** Admins always have unrestricted access regardless of any custom role definitions.
+**HciAdmin bypass:** Admins always have unrestricted access regardless of any
+custom role definitions.
 
 ### Creating a role
 
 1. Click **+ New Role**.
-2. Enter a name (e.g. `Prod VM Operators`) and an optional description.
+2. Enter a name, for example `Prod VM Operators`, and an optional description.
 3. Click **Create**.
 
 ### Adding permissions to a role
 
 Expand the role row. In the **Permissions** panel:
 
-1. Choose the **Resource type** (VMs, Nodes, Storage, Network, **Clusters**, etc.).
+1. Choose the **Resource type** (VMs, Nodes, Storage, Network, **Clusters**,
+   and so on).
 2. Choose a **Name filter**:
-   - **All resources** — the permission applies to every resource of this type.
-   - **Wildcard** — use `*` (any characters) and `?` (single character). Example: `PROD-*` matches `PROD-VM01`, `PROD-SQL`.
-   - **Regex** — full .NET regular expression, case-insensitive. Example: `^(PROD|DR)-` matches any name starting with `PROD-` or `DR-`.
+     - **All resources** - the permission applies to every resource of this type.
+     - **Wildcard** - use `*` for any characters and `?` for a single
+         character. Example: `PROD-*` matches `PROD-VM01` and `PROD-SQL`.
+     - **Regex** - a full .NET regular expression, case-insensitive. Example:
+         `^(PROD|DR)-` matches any name starting with `PROD-` or `DR-`.
 3. Check the **operations** you want to permit:
 
 | Operation | Effect |
-|---|---|
-| View | Resource appears in list views. **Also controls:** sidebar link visibility, page-level access, and Overview card visibility for VMs and Roles |
+| --- | --- |
+| View | Resource appears in list views and controls page access |
 | Start | Start / power-on (includes Restart) |
 | Stop | Graceful stop / suspend |
 | ForceStop | Hard / forced power-off |
 | Migrate | Live migrate (VMs) / Move (cluster roles) |
 | Drain | Pause + drain (cluster nodes) |
 | Resume | Resume / failback (cluster nodes) |
-| Delete | Reserved — not currently wired to UI actions |
+| Delete | Reserved for future UI actions |
 
-4. Click **+ Add Permission**.
+1. Click **+ Add Permission**.
 
-> A user with `View` on `PROD-*` VMs but not `ALL` will only see VMs whose names match `PROD-*` — other VMs are completely hidden from their view.
+> A user with `View` on `PROD-*` VMs but not `ALL` sees only VMs whose names
+> match `PROD-*`. Other VMs are hidden from their view.
 >
-> **Clusters resource type:** Adding a permission on `Clusters` with a name pattern controls which clusters the user sees in the home page picker and in the left navigation. For example, a pattern of `PROD-*` shows only clusters whose names start with `PROD-`. Users who navigate directly to a cluster URL they do not have View access to will see an access-denied message.
+> **Clusters resource type:** Adding a permission on `Clusters` with a name
+> pattern controls which clusters the user sees in the home page picker and in
+> the left navigation. For example, `PROD-*` shows only clusters whose names
+> start with `PROD-`. Users who navigate directly to a cluster URL they do not
+> have View access to will see an access-denied message.
 >
 > **View also controls four other access points:**
-> - **Cluster picker** — the home page only shows clusters for which the user has `Clusters` View access.
-> - **Sidebar link** — the navigation link for that resource type is hidden when the user has no View permission for it.
-> - **Page access** — navigating directly to the URL shows an access-denied message instead of data.
-> - **Overview card** — the VM and Roles summary cards on the Overview page are hidden when the user lacks View access to those resource types.
+>
+> - **Cluster picker** - the home page only shows clusters for which the user
+>   has `Clusters` View access.
+> - **Sidebar link** - the navigation link for that resource type is hidden
+>   when the user has no View permission for it.
+> - **Page access** - navigating directly to the URL shows an access-denied
+>   message instead of data.
+> - **Overview card** - the VM and Roles summary cards on the Overview page are
+>   hidden when the user lacks View access to those resource types.
 
 ### Assigning a group to a role
 
 Expand the role row. In the **Group Assignments** panel:
 
 1. Paste the Entra group **Object ID** (GUID).
-   - Find it in Entra Portal → **Groups** → select the group → **Overview** → **Object ID**.
+   - Find it in Entra Portal -> **Groups** -> select the group -> **Overview**
+     -> **Object ID**.
 2. Enter an optional display name to make the assignment readable in the UI.
 3. Click **+ Assign Group**.
 
@@ -1434,7 +1890,9 @@ All users in that group now inherit the permissions defined on the role.
 
 ### Removing permissions / groups
 
-Click the **✕** button on any permission row or assignment row to remove it immediately. Changes take effect within 5 minutes (cache TTL) or instantly if the app pool is recycled.
+Click the **✕** button on any permission row or assignment row to remove it
+immediately. Changes take effect within 5 minutes (cache TTL) or instantly if
+the app pool is recycled.
 
 ### Example: give the Helpdesk group view-only access to Prod VMs
 
@@ -1443,16 +1901,20 @@ Click the **✕** button on any permission row or assignment row to remove it im
 3. Add permission: Resource = `VMs`, Filter = `Wildcard: PROD-*`, Operations = `View` only
 4. Assign group: paste the Object ID of your Helpdesk Entra group
 
-Result: Helpdesk members only see clusters matching `PROD-*` in the picker and can only see VMs matching `PROD-*`, with no action buttons visible. They cannot navigate to clusters or resource types not covered by their permissions.
+Result: Helpdesk members only see clusters matching `PROD-*` in the picker and
+can only see VMs matching `PROD-*`, with no action buttons visible. They
+cannot navigate to clusters or resource types not covered by their permissions.
 
 ### Example: two teams, two cluster sets
 
 | Role | Clusters pattern | Resource permissions | Entra group |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **Team A — Operator** | `Wildcard: PROD-*` | All resource types: View; VMs: Start/Stop | `sg-team-a` OID |
 | **Team B — Operator** | `Wildcard: DEV-*` | All resource types: View; VMs: Start/Stop | `sg-team-b` OID |
 
-Team A members see only `PROD-*` clusters in the picker and nav; Team B sees only `DEV-*`. If a Team A member tries to navigate directly to a `DEV-*` cluster URL, they see an access-denied message.
+Team A members see only `PROD-*` clusters in the picker and nav; Team B sees
+only `DEV-*`. If a Team A member tries to navigate directly to a `DEV-*`
+cluster URL, they see an access-denied message.
 
 ---
 
@@ -1461,27 +1923,31 @@ Team A members see only `PROD-*` clusters in the picker and nav; Team B sees onl
 The app enforces two base access tiers via Entra security group membership.
 
 | Level | Description | What you can do |
-|---|---|---|
+| --- | --- | --- |
 | **HciAccess** | Standard access | View all pages; perform operations permitted by your assigned custom RBAC role. |
-| **HciAdmin** | Administrative access | All of the above + access to Admin pages (Clusters, Audit Log, Settings, Custom Roles). Bypasses all custom RBAC checks — always sees the full navigation and all data. |
+| **HciAdmin** | Administrative access | All of the above + access to Admin pages (Clusters, Audit Log, Settings, Custom Roles). Bypasses all custom RBAC checks. Always sees the full navigation and all data. |
 
 These groups are configured in `appsettings.json` on the server. Both can point to the same Entra group if a single access tier is sufficient.
 
 **Group membership takes effect at sign-in.** If you are added to a group mid-session, sign out and back in to receive the updated claims.
 
-**Custom Roles layer on top** of the base tiers — they define which specific resource types and named resources an HciAccess member can View or operate on. Without any custom roles configured (pass-through mode), all HciAccess members can view and act on everything.
+**Custom Roles layer on top** of the base tiers. They define which specific
+resource types and named resources an HciAccess member can View or operate on.
+Without any custom roles configured (pass-through mode), all HciAccess members
+can view and act on everything.
 
 **What custom role View restrictions control:**
 
 When a custom role limits which resource types you can see, the restriction is enforced at three levels simultaneously:
 
 | Where | Behaviour |
-|---|---|
-| Sidebar navigation | Links for resource types you cannot View are hidden automatically. Section headers (e.g. *Compute*, *Operations*) are hidden when all links within them are hidden. |
-| Page access | Navigating directly to a restricted page (e.g. by URL) shows an access-denied message rather than data. |
-| Overview cards | The VM and Cluster Roles summary cards on the Overview page are hidden when you lack View access to those resource types. Items within visible cards are filtered by any name patterns in your role. |
+| --- | --- |
+| Sidebar navigation | Links for resource types you cannot View are hidden automatically. Section headers are hidden when all links within them are hidden. |
+| Page access | Navigating directly to a restricted page shows an access-denied message rather than data. |
+| Overview cards | The VM and Cluster Roles summary cards on the Overview page are hidden when you lack View access to those resource types. |
 
-> **HciAdmin users** are exempt from all custom role restrictions — they always see the full navigation and all data.
+> **HciAdmin users** are exempt from all custom role restrictions. They always
+> see the full navigation and all data.
 
 ---
 
@@ -1491,67 +1957,124 @@ When a custom role limits which resource types you can see, the restriction is e
 A: Your account is not in any of the configured Entra groups. Contact your administrator to be added to the HciAccess group (or higher).
 
 **Q: I can see VMs but the action buttons aren't visible.**  
-A: Your account is in the HciAccess group but does not have the required custom RBAC operation permissions. The action requires a custom role that includes the corresponding `Op` flag (e.g. `Op.Start` for VM start). Contact your administrator to update your role in [Admin → Custom Roles](#23-admin--custom-roles-rbac).
+A: Your account is in the HciAccess group but does not have the required
+custom RBAC operation permissions. The action requires a custom role that
+includes the corresponding `Op` flag. Contact your administrator to update
+your role in [Admin -> Custom Roles](#23-admin--custom-roles-rbac).
 
 **Q: The VM list is empty but I know there are VMs on the cluster.**  
-A: A custom RBAC role with a name pattern may be filtering your view. Contact your administrator to check `/admin/roles` for any roles whose pattern doesn't match the VMs you expect to see.
+A: A custom RBAC role with a name pattern may be filtering your view. Contact
+your administrator to check `/admin/roles` for any roles whose pattern doesn't
+match the VMs you expect to see.
 
 **Q: I started an action but the VM state didn't update.**  
-A: The page automatically polls for 15 seconds after an action. If the state still hasn't changed after that, click **↻ Refresh** manually. If the action failed, a red banner message will explain why.
+A: The page automatically polls for 15 seconds after an action. If the state
+still hasn't changed, click **↻ Refresh** manually. If the action failed, a
+red banner message will explain why.
 
 **Q: The network adapter flyout shows "No network adapters found".**  
-A: This can happen if the VM is off and doesn't have any configured adapters, or if WinRM connectivity to the host node is unavailable. Check the debug log (if you have Admin access) for any PowerShell errors.
+A: This can happen if the VM is off and doesn't have any configured adapters,
+or if WinRM connectivity to the host node is unavailable. Check the debug log
+for any PowerShell errors.
 
 **Q: The Azure Arc page says "ARM not configured".**  
-A: The ARM authentication mode needs to be set in [Admin → Settings](#22-admin--settings). Choose OBO or SPN and provide the required credentials.
+A: The ARM authentication mode needs to be set in [Admin ->
+Settings](#22-admin--settings). Choose OBO or SPN and provide the required
+credentials.
 
 **Q: Solution Update progress isn't streaming.**  
-A: The live monitor requires an active cluster connection. Refresh the page. If the update run has already completed, a static summary of the completed plan is shown instead of a live stream.
+A: The live monitor requires an active cluster connection. Refresh the page.
+If the update run has already completed, a static summary is shown instead of
+a live stream.
 
 **Q: How do I add a new cluster to the app?**
 
 **Q: Can I use separate SPNs for read and write/action operations?**  
-A: Yes — the *Action SPN* feature lets you configure a second, lower-privilege service principal used exclusively for **all ARM write operations** (POST, PUT, PATCH, DELETE). The read SPN (or OBO user) continues to handle all GET calls. Any write operation added to the app in future releases will also automatically use the action SPN — no reconfiguration required.
+A: Yes - the *Action SPN* feature lets you configure a second, lower-privilege
+service principal used exclusively for **all ARM write operations** (POST, PUT,
+PATCH, DELETE). The read SPN continues to handle all GET calls. Any write
+operation added to the app in future releases will also automatically use the
+action SPN.
 
-To enable it, go to **Admin → Settings** → *Azure ARM Authentication (Action SPN)*:
+To enable it, go to **Admin -> Settings -> Azure ARM Authentication (Action
+SPN)**:
 
 1. Set **Enable Action SPN** to `true`.
 2. Fill in **Action SPN Tenant ID**, **Client ID**, and **Client Secret**.
-3. Assign the action SPN a custom Azure role on the resource group with only these two actions:
+3. Assign the action SPN a custom Azure role on the resource group with only
+   these two actions:
    - `Microsoft.HybridCompute/machines/upgradeExtensions/action`
    - `Microsoft.AzureStackHCI/clusters/arcSettings/extensions/write`
 
-No Reader or Contributor assignment is needed for the action SPN — it only needs those two actions.
-The read SPN still requires **Reader** on the resource group (plus **Azure Connected Machine Resource Manager** and **Azure Stack HCI Administrator** if it also performs upgrades in any scenario).
+No Reader or Contributor assignment is needed for the action SPN. It only
+needs those two actions. The read SPN still requires **Reader** on the resource
+group (plus **Azure Connected Machine Resource Manager** and **Azure Stack HCI
+Administrator** if it also performs upgrades in any scenario).
 
-**Q: The upgrade request succeeded but the extension state hasn't changed after 10 minutes.**  
-A: ARM extension upgrades are asynchronous. The `202 Accepted` response means the request was accepted, not that it has completed. Check the **Provisioning** and **State** columns — `Updating` or `Upgrading` indicates the rollout is in progress. If the state remains `Failed`, check the Azure Portal → the machine's Extensions blade for detailed error information.  
+**Q: The upgrade request succeeded but the extension state hasn't changed after
+10 minutes.**  
+A: ARM extension upgrades are asynchronous. The `202 Accepted` response means
+the request was accepted, not that it has completed. Check the **Provisioning**
+and **State** columns. `Updating` or `Upgrading` indicates the rollout is in
+progress. If the state remains `Failed`, check the Azure Portal for error
+information.  
 A: Go to [Admin → Clusters](#20-admin--clusters) (HciAdmin required) and click **+ Add Cluster**.
 
 **Q: Custom role changes aren't taking effect immediately.**  
 A: Role changes are cached for up to 5 minutes. For instant effect, ask an administrator to recycle the IIS app pool (`AZLManagementPool`) on the server.
 
 **Q: Is there an option for users on domain-joined machines who can't use MFA?**  
-A: Yes — a second Windows Authentication site can be deployed alongside the primary Entra ID site. Domain-joined browsers receive silent Kerberos SSO with no login prompt. See [Windows Authentication Deployment](#26-windows-authentication-deployment) for details.
+A: Yes - a second Windows Authentication site can be deployed alongside the
+primary Entra ID site. Domain-joined browsers receive silent Kerberos SSO with
+no login prompt. See [Windows Authentication Deployment](#26-windows-authentication-deployment)
+for details.
 
 **Q: I'm on the Windows Auth URL but I'm still getting a sign-in prompt.**  
 A: Work through this checklist in order:
-1. **HTTP SPNs missing** — most common cause. Run `setspn -L DOMAIN\azlmgmt-svc$` on the server; you should see `HTTP/azlmgmt-win.yourdomain.com` and `HTTP/azlmgmt-win`. If missing, run `Setup-IIS-WinAuth.ps1` again (step 5b now auto-registers them).
-2. **Machine not domain-joined** — NTLM fallback will prompt once; enter `DOMAIN\username` + password.
-3. **Browser not passing Kerberos automatically** — for Edge/IE add `azlmgmt-win.yourdomain.com` to the Local Intranet zone. For Chrome it inherits IE zone settings. For Firefox add the URL to `network.negotiate-auth.trusted-uris` in `about:config`.
-4. **`useAppPoolCredentials` not set** — run `Deploy-ToIIS.ps1` which applies this setting in step 8 on every deploy.
+
+1. **HTTP SPNs missing** - most common cause. Run `setspn -L DOMAIN\azlmgmt-svc$` on
+   the server; you should see `HTTP/azlmgmt-win.yourdomain.com` and
+   `HTTP/azlmgmt-win`. If missing, run `Setup-IIS-WinAuth.ps1` again (step 5b
+   now auto-registers them).
+2. **Machine not domain-joined** - NTLM fallback will prompt once; enter
+   `DOMAIN\username` + password.
+3. **Browser not passing Kerberos automatically** - for Edge/IE add
+   `azlmgmt-win.yourdomain.com` to the Local Intranet zone. For Chrome it
+   inherits IE zone settings. For Firefox add the URL to
+   `network.negotiate-auth.trusted-uris` in `about:config`.
+4. **`useAppPoolCredentials` not set** - run `Deploy-ToIIS.ps1` which applies
+   this setting in step 8 on every deploy.
 
 **Q: My group was given a custom role but I still can't see anything.**  
-A: Ensure the role has at least one permission with `View` checked. Without a `View` claim, the resource filter returns nothing. Also confirm the Entra group Object ID in the assignment exactly matches what Entra is issuing in your token groups claim.
+A: Ensure the role has at least one permission with `View` checked. Without a
+`View` claim, the resource filter returns nothing. Also confirm the Entra group
+Object ID in the assignment exactly matches what Entra is issuing in your token
+groups claim.
 
 **Q: A yellow banner says "Data may be outdated" on a page. What does that mean?**  
-A: The **background collector** did not successfully sync data for this cluster within the expected time window. The data shown is from the last successful poll and may not reflect recent changes. Click **Refresh live data** in the banner (or **↻ Refresh** in the toolbar) to force an immediate live data fetch directly from the cluster over WinRM. The stale flag clears once the fresh fetch completes.
+A: The **background collector** did not successfully sync data for this cluster
+within the expected time window. The data shown is from the last successful poll
+and may not reflect recent changes. Click **Refresh live data** in the banner (or
+**↻ Refresh** in the toolbar) to force an immediate live data fetch directly from
+the cluster over WinRM. The stale flag clears once the fresh fetch completes.
 
 **Q: How often does the background collector update the data?**  
-A: By default, VM state is refreshed approximately every 2 minutes, cluster nodes every 4 minutes, cluster info and roles every 10 minutes, storage pools/virtual disks every 20 minutes, and solution updates/physical disks every 40 minutes (all approximate; intervals are auto-scaled with cluster count). These intervals are configurable in **Admin → Settings** under *Background Collector*. In auto mode the interval scales up automatically when multiple clusters are registered so total WinRM load stays constant.
+A: By default, VM state is refreshed approximately every 2 minutes, cluster
+nodes every 4 minutes, cluster info and roles every 10 minutes, storage
+pools/virtual disks every 20 minutes, and solution updates/physical disks every
+40 minutes (all approximate; intervals are auto-scaled with cluster count). These
+intervals are configurable in **Admin -> Settings** under *Background
+Collector*. In auto mode the interval scales up automatically when multiple
+clusters are registered so total WinRM load stays constant.
 
-**Q: The background collector shows a red "Circuit open" status in Admin → Diagnostics. What should I do?**  
-A: The circuit breaker trips after 3 consecutive poll failures to prevent the poller from hammering an unreachable cluster. Common causes: WinRM not reachable (firewall, cluster down), gMSA Kerberos ticket invalid, or credentials changed. Check network connectivity and WinRM access from the app server, then click the **Reset** button that appears next to the circuit-open row in **Admin → Diagnostics** to reset the circuit immediately without an IIS recycle.
+**Q: The background collector shows a red "Circuit open" status in Admin ->
+Diagnostics. What should I do?**  
+A: The circuit breaker trips after 3 consecutive poll failures to prevent the
+poller from hammering an unreachable cluster. Common causes: WinRM not reachable
+(firewall, cluster down), gMSA Kerberos ticket invalid, or credentials changed.
+Check network connectivity and WinRM access from the app server, then click the
+**Reset** button that appears next to the circuit-open row in **Admin ->
+Diagnostics** to reset the circuit immediately without an IIS recycle.
 
 ---
 
@@ -1560,55 +2083,71 @@ A: The circuit breaker trips after 3 consecutive poll failures to prevent the po
 The app supports a **second IIS site** running Windows Authentication (Kerberos/NTLM) alongside the primary Entra ID site. Both sites share the same database, same cluster registry, and the same app binaries.
 
 | Site | URL | Authentication | Typical users |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Primary | `https://azlmgmt.yourdomain.com` | Entra ID (SSO) | Cloud/external users, MFA required |
 | Windows Auth | `http://azlmgmt-win.yourdomain.com` (HTTP by default) | Kerberos/NTLM | Domain-joined machines, no MFA prompt |
 
-> **HTTPS on the Windows Auth site:** HTTP is the default. Run `Add-HttpsBinding.ps1 -SiteName AZLManagementWinAuth` once a certificate is available to enable HTTPS.
+> **HTTPS on the Windows Auth site:** HTTP is the default. Run
+> `Add-HttpsBinding.ps1 -SiteName AZLManagementWinAuth` once a certificate is
+> available to enable HTTPS.
 
 ### How sign-in works
 
-When you browse to the Windows Auth URL from a **domain-joined machine**, your browser automatically supplies your Kerberos ticket — no sign-in prompt appears. On a non-domain machine the browser will show an NTLM username/password prompt.
+When you browse to the Windows Auth URL from a **domain-joined machine**, your
+browser automatically supplies your Kerberos ticket — no sign-in prompt appears.
+On a non-domain machine the browser will show an NTLM username/password prompt.
 
 ### Access control
 
-The Windows Auth site uses **AD Security Group SIDs** (not Entra Object IDs) to define the three access levels:
+The Windows Auth site uses **AD Security Group SIDs** (not Entra Object IDs) to
+define the three access levels:
 
 | Level | AD group SID set in `appsettings.WinAuth.json` | Access |
-|---|---|---|
+| --- | --- | --- |
 | HciRead | `Groups:HciRead` SID | Read-only cluster data |
 | HciOperate | `Groups:HciOperate` SID | Read + VM/node operations |
 | HciAdmin | `Groups:HciAdmin` SID | Full access including admin pages |
 
 To get an AD group's SID, run on any domain controller:
+
 ```powershell
 (Get-ADGroup "YourGroupName").SID.Value
 # Returns: S-1-5-21-...-xxxx
 ```
 
-Then paste the SID into `C:\apps\azlmgmt\appsettings.WinAuth.json` on the app server.
+Then paste the SID into `C:\apps\azlmgmt\appsettings.WinAuth.json` on the app
+server.
 
 ### Fine-grained RBAC
 
-The Windows Auth site runs with **RBAC pass-through** enabled (`Rbac:ForcePassThrough = true`). This means the custom roles and patterns configured in [Admin - Custom Roles](#23-admin--custom-roles-rbac) do **not** apply on the Windows Auth site. Access is controlled solely by the three flat group policies above.
+The Windows Auth site runs with **RBAC pass-through** enabled
+(`Rbac:ForcePassThrough = true`). This means the custom roles and patterns
+configured in [Admin - Custom Roles](#23-admin--custom-roles-rbac) do **not**
+apply on the Windows Auth site. Access is controlled solely by the three flat
+group policies above.
 
-This is intentional — the custom RBAC `RoleAssignments` table uses Entra group OIDs. If you need per-resource or pattern-based RBAC on the Windows Auth site, see the developer documentation (BACKLOG-9, Option B) for the upgrade path.
+This is intentional — the custom RBAC `RoleAssignments` table uses Entra group
+OIDs. If you need per-resource or pattern-based RBAC on the Windows Auth site,
+see the developer documentation (BACKLOG-9, Option B) for the upgrade path.
 
 ### Limitations on the Windows Auth site
 
 | Feature | Availability |
-|---|---|
+| --- | --- |
 | All WinRM-based pages (VMs, Nodes, Storage, Network, Events, etc.) | Fully functional |
 | Arc Registration status | Functional (WinRM data only) |
-| Azure Arc ARM enrichment (Arc Machines, Extensions, Cluster Extensions) | Not available — requires an Entra token |
-| Custom RBAC roles and name-pattern filtering | Bypassed — flat group policies only |
+| Azure Arc ARM enrichment (Arc Machines, Extensions, Cluster Extensions) | Not available. Requires an Entra token. |
+| Custom RBAC roles and name-pattern filtering | Bypassed. Flat group policies only. |
 | Audit log | Shared with Entra site — all actions logged normally |
 
-Users who need the full Arc ARM data (extension upgrade buttons, Arc machine status) should use the primary Entra ID site.
+Users who need the full Arc ARM data (extension upgrade buttons, Arc machine
+status) should use the primary Entra ID site.
 
 ### Setup (administrator)
 
-The Windows Auth site is set up by running `Setup-IIS-WinAuth.ps1` on the app server **after** `Setup-IIS.ps1` and the first `Deploy-ToIIS.ps1` deploy have already been completed.
+The Windows Auth site is set up by running `Setup-IIS-WinAuth.ps1` on the app
+server **after** `Setup-IIS.ps1` and the first `Deploy-ToIIS.ps1` deploy have
+already been completed.
 
 ```powershell
 # On the app server, run as Domain Admin
@@ -1616,16 +2155,22 @@ The Windows Auth site is set up by running `Setup-IIS-WinAuth.ps1` on the app se
 ```
 
 The script:
+
 1. Creates the `AZLManagementWinPool` app pool (same gMSA identity as the Entra site)
 2. Sets `ASPNETCORE_ENVIRONMENT = WinAuth` on the pool so the overlay config is loaded
 3. Creates the `AZLManagementWinAuth` IIS site on **port 80** (HTTP) pointing at `C:\apps\azlmgmt`
 4. Disables Anonymous Authentication and enables Windows Authentication on the site
-5. Registers `HTTP/azlmgmt-win.yourdomain.com` and `HTTP/azlmgmt-win` SPNs on the gMSA (required for Kerberos)
+5. Registers `HTTP/azlmgmt-win.yourdomain.com` and `HTTP/azlmgmt-win` SPNs on
+   the gMSA (required for Kerberos)
 
 After running the script:
+
 1. Populate AD group SIDs in `C:\apps\azlmgmt\appsettings.WinAuth.json`  
-   *(Leave all three values empty to allow any authenticated domain user — safest starting point)*
-2. Verify `AllowedHosts` in `C:\apps\azlmgmt\appsettings.json` includes `azlmgmt-win.yourdomain.com` — both hostnames must be listed or the app returns HTTP 400
+   *(Leave all three values empty to allow any authenticated domain user.
+   Safest starting point)*
+2. Verify `AllowedHosts` in `C:\apps\azlmgmt\appsettings.json` includes
+   `azlmgmt-win.yourdomain.com`. Both hostnames must be listed or the app
+   returns HTTP 400
 3. Add a DNS A record: `azlmgmt-win.yourdomain.com` → server IP
 4. Run `scripts\Install.ps1` once to deploy the app binaries if not done already
    (or `Install.ps1 -Upgrade` if you already have a previous version installed)
@@ -1635,12 +2180,12 @@ After running the script:
 ### Troubleshooting
 
 | Symptom | Cause | Fix |
-|---|---|---|
-| `ERR_CONNECTION_REFUSED` | Site bound to wrong port, or Default Web Site competing on port 80 | Check IIS bindings — site must be on port 80 (or 443 for HTTPS). Stop Default Web Site if needed. |
-| Credential prompt loops — never accepts password | Missing HTTP SPNs on gMSA (`SEC_E_NO_CREDENTIALS`) | Run `setspn -S HTTP/azlmgmt-win.yourdomain.com DOMAIN\azlmgmt-svc$` and `setspn -S HTTP/azlmgmt-win DOMAIN\azlmgmt-svc$`, then recycle `AZLManagementWinPool` |
-| `HTTP 400 Bad Request — Invalid Hostname` | `AllowedHosts` in `appsettings.json` does not include the WinAuth hostname | Add `azlmgmt-win.yourdomain.com` to `AllowedHosts` in `appsettings.json`; `Deploy-ToIIS.ps1` will keep it in sync |
-| Prompt loop only on HTTPS (not HTTP) | `UseHttpsRedirection()` redirects HTTP→HTTPS; IIS re-challenges on the redirected HTTPS connection | Already fixed in code — ensure you are running the latest deployed version |
-| `401.2 Unauthorized` with no prompt | `useAppPoolCredentials` not set — IIS tries the machine account key, not the gMSA | Run `Deploy-ToIIS.ps1` (step 8 re-applies this setting) or set manually in IIS Manager |
+| --- | --- | --- |
+| `ERR_CONNECTION_REFUSED` | Site bound to wrong port, or Default Web Site competing on port 80 | Check IIS bindings. Site must be on port 80 (or 443 for HTTPS). Stop Default Web Site if needed. |
+| Credential prompt loops — never accepts password | Missing HTTP SPNs on gMSA (`SEC_E_NO_CREDENTIALS`) | Run `setspn -S HTTP/azlmgmt-win.yourdomain.com DOMAIN\azlmgmt-svc$` and `setspn -S HTTP/azlmgmt-win DOMAIN\azlmgmt-svc$`. Then recycle `AZLManagementWinPool`. |
+| `HTTP 400 Bad Request - Invalid Hostname` | `AllowedHosts` in `appsettings.json` does not include the WinAuth hostname | Add `azlmgmt-win.yourdomain.com` to `AllowedHosts` in `appsettings.json`. `Deploy-ToIIS.ps1` will keep it in sync. |
+| Prompt loop only on HTTPS (not HTTP) | `UseHttpsRedirection()` redirects HTTP→HTTPS; IIS re-challenges on the redirected HTTPS connection | Already fixed in code. Ensure you are running the latest deployed version. |
+| `401.2 Unauthorized` with no prompt | `useAppPoolCredentials` not set. IIS tries the machine account key, not the gMSA. | Run `Deploy-ToIIS.ps1` (step 8 re-applies this setting) or set manually in IIS Manager. |
 
 ---
 
@@ -1655,53 +2200,68 @@ The Diagnostics page has three panels.
 
 ### Background Collector Health
 
-Shows the current state of the **background poller** — the in-process service that periodically connects to each registered cluster over WinRM/CIM and writes VM state, node health, cluster info, cluster roles, solution updates, storage pools, virtual disks, physical disks, and Arc registration data (9 data types) to the local SQLite database. Pages load instantly from this cache rather than waiting for a live WinRM call on every visit.
+Shows the current state of the **background poller** — the in-process service that
+periodically connects to each registered cluster over WinRM/CIM and writes VM
+state, node health, cluster info, cluster roles, solution updates, storage
+pools, virtual disks, physical disks, and Arc registration data (9 data types)
+to the local SQLite database. Pages load instantly from this cache rather than
+waiting for a live WinRM call on every visit.
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Cluster | Cluster name |
 | Status | Green = OK · Orange = recent failures · Red = circuit open |
 | Last Success | Time of the last successful poll, with age (e.g. `14:32:01 (48s ago)`) |
 | Failures | Consecutive failure count since the last success |
-| Last Message | Error text when in a failure state; green *"Collected successfully (N ms, N calls)"* when the last poll was clean — clears automatically after the next successful poll |
+| Last Message | Error text when in a failure state; green *"Collected successfully (N
+ms, N calls)"* when the last poll was clean. Clears automatically after the
+next successful poll. |
 
 **Status values:**
 
 | Status | Meaning |
-|---|---|
+| --- | --- |
 | 🟢 OK | Last poll succeeded; no consecutive failures |
 | 🟠 Degraded (N fails) | Polls are partially failing; circuit still closed |
 | 🔴 Circuit open until HH:mm:ss | Too many consecutive failures — poller is skipping this cluster until the retry time |
 | ⚫ Never polled | App just started; first poll hasn't run yet (~15 s after startup) |
 
-**Circuit breaker reset:** Click the **Reset** button next to the circuit-open row in the health table. This resets the poller retry state immediately and allows it to reconnect without an IIS recycle. Recycling `AZLManagementPool` in IIS Manager also resets the circuit but causes all in-flight requests to restart.
+**Circuit breaker reset:** Click the **Reset** button next to the circuit-open
+row in the health table. This resets the poller retry state immediately and
+allows it to reconnect without an IIS recycle. Recycling `AZLManagementPool` in
+IIS Manager also resets the circuit but causes all in-flight requests to
+restart.
 
-**Collector settings** are configurable in **Admin → Settings** under the *Background Collector* group:
+**Collector settings** are configurable in **Admin -> Settings** under the
+*Background Collector* group:
 
 | Setting | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | Enabled | `true` | Master on/off switch |
 | Min Poll Interval (s) | `120` | Minimum time between polls for any data type |
-| Auto Interval | `true` | Scales interval up with cluster count to keep WinRM load constant |
+| Auto Interval | `true` | Scales interval up with cluster count to keep WinRM load constant. |
 | Max Concurrent Polls | `3` | Maximum clusters polled simultaneously |
 | VM Interval Multiplier | `1` | VMs polled every 1x min interval (~2 min) |
 | Node Interval Multiplier | `2` | Nodes polled every 2x min interval (~4 min) |
-| Info/Roles Multiplier | `5` | Cluster info and roles polled every 5x min interval (~10 min) |
-| Updates Multiplier | `20` | Solution updates polled every 20x min interval (~40 min) |
-| Storage Pool Multiplier | `10` | Storage pools polled every 10x min interval (~20 min; uses CIM) |
-| Physical Disk Multiplier | `20` | Physical disks polled every 20x min interval (~40 min; uses CIM) |
-| Arc Info Multiplier | `30` | Arc registration data polled every 30x min interval (~60 min) |
+| Info/Roles Multiplier | `5` | Cluster info and roles polled every 5x min interval (~10 min). |
+| Updates Multiplier | `20` | Solution updates polled every 20x min interval (~40 min). |
+| Storage Pool Multiplier | `10` | Storage pools polled every 10x min interval (~20 min; uses CIM). |
+| Physical Disk Multiplier | `20` | Physical disks polled every 20x min interval (~40 min; uses CIM). |
+| Arc Info Multiplier | `30` | Arc registration data polled every 30x min interval (~60 min). |
 | History Retention (days) | `3` | How long snapshot history rows are kept before pruning |
 | Circuit Breaker Threshold | `3` | Consecutive failures before the circuit opens |
 | Circuit Breaker Timeout (s) | `300` | How long the circuit stays open before auto-retry |
+
 ---
 
 ### PS / WinRM Call Log
 
-A rolling buffer of the last 500 PowerShell/WinRM calls made by the app — includes both background collector calls and live page calls. Useful for diagnosing slow pages, credential failures, or unexpected empty results.
+A rolling buffer of the last 500 PowerShell/WinRM calls made by the app.
+Includes both background collector calls and live page calls. Useful for
+diagnosing slow pages, credential failures, or unexpected empty results.
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Time | Timestamp to millisecond precision |
 | Cluster | Cluster the call was made against |
 | Method | Service method called (green = success, red = had PS errors) |
@@ -1709,13 +2269,19 @@ A rolling buffer of the last 500 PowerShell/WinRM calls made by the app — incl
 | Rows | Result row count returned |
 | Error | First PS error stream message, if any |
 
-Rows with PS errors are highlighted with a dark red background. The log auto-refreshes every 5 seconds while the page is open. Method and Error columns now wrap full text instead of truncating to a single line, and the grid scrolls horizontally if needed on smaller screens. Click **Clear** to flush the buffer.
+Rows with PS errors are highlighted with a dark red background. The log
+auto-refreshes every 5 seconds while the page is open. Method and Error columns
+now wrap full text instead of truncating to a single line, and the grid scrolls
+horizontally if needed on smaller screens. Click **Clear** to flush the buffer.
 
 ---
 
 ### Raw Get-ClusterPerf Diagnostic
 
-Runs a raw `Get-ClusterPerf` PowerShell script against a selected cluster and dumps all returned series names, values, and unit enums. Used by developers and administrators to diagnose missing or unexpected performance metrics on the Storage QoS / VM Performance pages.
+Runs a raw `Get-ClusterPerf` PowerShell script against a selected cluster and
+dumps all returned series names, values, and unit enums. Used by developers and
+administrators to diagnose missing or unexpected performance metrics on the
+Storage QoS / VM Performance pages.
 
 Select a cluster and target type (ClusterNode / Volume / VM), then click **▶ Run Diagnostic**.
 
@@ -1723,11 +2289,16 @@ Select a cluster and target type (ClusterNode / Volume / VM), then click **▶ R
 
 ### Database schema migration (existing installations)
 
-If you are upgrading from a version that did not include the background collector, the three collector tables must be added to the existing `app.db` manually — `EnsureCreated` only runs against an empty database and will not modify an existing file.
+If you are upgrading from a version that did not include the background
+collector, the three collector tables must be added to the existing `app.db`
+manually. `EnsureCreated` only runs against an empty database and will not
+modify an existing file.
 
 **Step 1 — Install sqlite3.exe on the IIS server**
 
-Download from **https://www.sqlite.org/download.html** → *Precompiled Binaries for Windows* → `sqlite-tools-win-x64-*.zip`. Extract and copy `sqlite3.exe` to `C:\Windows\System32` (or anywhere on the server PATH).
+Download from **<https://www.sqlite.org/download.html>** - *Precompiled Binaries
+for Windows* - `sqlite-tools-win-x64-*.zip`. Extract and copy `sqlite3.exe` to
+`C:\Windows\System32` (or anywhere on the server PATH).
 
 ```powershell
 # Alternative: winget
@@ -1779,10 +2350,13 @@ CREATE TABLE IF NOT EXISTS CollectorHealths (
 
 **Step 2b — Add IsDisabled column to Clusters table**
 
-If you are upgrading from a version before cluster disable was added, add the new column. The command is safe to run on any install — it is silently ignored if the column already exists.
+If you are upgrading from a version before cluster disable was added, add the
+new column. The command is safe to run on any install. It is silently ignored if
+the column already exists.
 
 ```powershell
-sqlite3.exe $db "ALTER TABLE Clusters ADD COLUMN IsDisabled INTEGER NOT NULL DEFAULT 0;" 2>&1 | Out-Null
+sqlite3.exe $db "ALTER TABLE Clusters ADD COLUMN IsDisabled INTEGER NOT NULL
+DEFAULT 0;" 2>&1 | Out-Null
 ```
 
 **Step 3 — Verify**
@@ -1818,7 +2392,10 @@ sqlite3.exe $db "SELECT ClusterName, ConsecutiveFails, IsCircuitOpen FROM Collec
 *For deployment and infrastructure documentation, see [IIS-Deployment.md](IIS-Deployment.md).*  
 *For developer and architecture documentation, see [../.github/copilot-instructions.md](../.github/copilot-instructions.md).*
 
-> **Maintainers:** when adding a new page or feature, update both this file (`docs/USER-GUIDE.md`) and `.github/copilot-instructions.md` as part of the same commit. The new-page checklist in `copilot-instructions.md` lists both as required steps.
+> **Maintainers:** when adding a new page or feature, update both this file
+> (`docs/USER-GUIDE.md`) and `.github/copilot-instructions.md` as part of the
+> same commit. The new-page checklist in `copilot-instructions.md` lists both
+> as required steps.
 
 ---
 
@@ -1827,7 +2404,10 @@ sqlite3.exe $db "SELECT ClusterName, ConsecutiveFails, IsCircuitOpen FROM Collec
 **Route:** `/status`  
 **Access required:** HciAccess (or higher)
 
-The **All Clusters** page provides a **zero-WinRM, read-only overview of all registered clusters** in a single page. All data comes from the background collector's database snapshots — no live WinRM connections are made when the page loads.
+The **All Clusters** page provides a **zero-WinRM, read-only overview of all
+registered clusters** in a single page. All data comes from the background
+collector's database snapshots. No live WinRM connections are made when the page
+loads.
 
 ---
 
@@ -1836,7 +2416,7 @@ The **All Clusters** page provides a **zero-WinRM, read-only overview of all reg
 A row of coloured pills at the top of the page shows totals across all clusters:
 
 | Pill | What it counts |
-|---|---|
+| --- | --- |
 | VMs Running | Total VMs in Running state across all clusters |
 | VMs Off | Total VMs in Off state |
 | Nodes Up | Total cluster nodes reported Up |
@@ -1851,14 +2431,17 @@ A row of coloured pills at the top of the page shows totals across all clusters:
 One row per cluster. Columns:
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Cluster | Cluster name, hyperlinked to its `/clusters/{name}/overview` page |
 | VMs | Running / Off / Paused counts |
-| Nodes | Nodes Up / Total (coloured dot: green = all up, orange = some down, red = majority down) |
-| Health | Fault summary: Critical / Warning count with traffic-light dot; green if no faults |
+| Nodes | Nodes Up / Total (coloured dot: green = all up, orange = some down,
+        red = majority down) |
+| Health | Fault summary: Critical / Warning count with traffic-light dot; green
+        if no faults |
 | Updates | Failed / In-progress / Available count / Current (all-green) |
 | Collector | Status dot from the background collector health record |
-| Last Poll | Time since the last successful collector run (full timestamp on hover tooltip) |
+| Last Poll | Time since the last successful collector run (full timestamp on
+            hover tooltip) |
 
 Click a cluster name to navigate directly to its Overview page.
 
@@ -1866,10 +2449,11 @@ Click a cluster name to navigate directly to its Overview page.
 
 ### Snapshot Freshness Grid
 
-A collapsible section (collapsed by default) showing a grid of **9 data types × all clusters**. Each cell shows a coloured dot and age label for that cluster's most recent snapshot of that type.
+A collapsible section (collapsed by default) showing a grid of **9 data types× all clusters**. Each cell shows a coloured dot and age label for that
+cluster's most recent snapshot of that type.
 
 | Dot colour | Meaning |
-|---|---|
+| --- | --- |
 | 🟢 Green | Fresh — age is less than 50% of the stale threshold |
 | 🟠 Orange | Ageing — age is between 50% and 100% of the threshold |
 | 🔴 Red | Stale — age exceeds the stale threshold |
@@ -1878,7 +2462,7 @@ A collapsible section (collapsed by default) showing a grid of **9 data types ×
 **Stale thresholds per data type:**
 
 | Type | Threshold |
-|---|---|
+| --- | --- |
 | VMs | 10 minutes |
 | Nodes | 15 minutes |
 | Cluster Info | 30 minutes |
@@ -1896,11 +2480,19 @@ Click **▼ Snapshot Freshness** / **▶ Snapshot Freshness** to expand or colla
 ### Use Cases
 
 - **Morning health check:** Open the All Clusters page before starting work to see at a glance if any cluster has faults, stale data, or collector problems.
-- **Collector monitoring:** The Collector column and freshness grid immediately show which clusters have polling problems without navigating to each cluster individually.
-- **Pre-maintenance scan:** Confirm all nodes are Up and no updates are failing before scheduling a maintenance window.
-- **Alternative to individual cluster browsing:** For read-only stakeholders who need a high-level view, the All Clusters page may be sufficient without ever visiting a per-cluster page.
+- **Collector monitoring:** The Collector column and freshness grid immediately
+  show which clusters have polling problems without navigating to each cluster
+  individually.
+- **Pre-maintenance scan:** Confirm all nodes are Up and no updates are failing
+  before scheduling a maintenance window.
+- **Alternative to individual cluster browsing:** For read-only stakeholders who
+  need a high-level view, the All Clusters page may be sufficient without ever
+  visiting a per-cluster page.
 
-> **Note:** The All Clusters page only reflects data already collected by the background collector. If a cluster was added recently and has not been polled yet, it will show no data in the table until the first successful poll completes.
+> **Note:** The All Clusters page only reflects data already collected by the
+> background collector. If a cluster was added recently and has not been polled
+> yet, it will show no data in the table until the first successful poll
+> completes.
 
 ---
 
@@ -1911,12 +2503,14 @@ Click **▼ Snapshot Freshness** / **▶ Snapshot Freshness** to expand or colla
 
 Accessible via **VM Status** in the **Monitoring** group in the sidebar (or from the All Clusters Dashboard).
 
-Provides a **cross-cluster VM table** drawn entirely from background-collector snapshots — no live WinRM is used. Shows every virtual machine across all registered clusters on a single page.
+Provides a **cross-cluster VM table** drawn entirely from background-collector
+snapshots. No live WinRM is used. Shows every virtual machine across all
+registered clusters on a single page.
 
 ### Summary pills
 
 | Pill | Meaning |
-|---|---|
+| --- | --- |
 | Running | VMs currently in Running state |
 | Off | VMs currently powered off |
 | Other | VMs in any other state (Saved, Paused, etc.) |
@@ -1927,7 +2521,7 @@ Click a pill to filter the table to that state.
 ### VM table columns
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Name | VM display name |
 | State | Current power state with a traffic-light dot |
 | Cluster | Cluster the VM belongs to (links to cluster Overview) |
@@ -1946,23 +2540,36 @@ The table supports client-side search (Name / Cluster / Node) and is sortable by
 
 Accessible via **Update Status** in the **Monitoring** group in the sidebar.
 
-Summarises the solution-update state for every registered cluster. Prefers a live Azure Resource
-Manager (ARM) read per cluster (fast, not a WinRM call); falls back to the background collector's
-last snapshot when ARM isn't configured or the cluster has no Azure Arc info yet.
+Summarises the solution-update state for every registered cluster. Prefers a
+live Azure Resource Manager (ARM) read per cluster (fast, not a WinRM call);
+falls back to the background collector's last snapshot when ARM isn't configured
+or the cluster has no Azure Arc info yet.
+
+### New layout (simplified triage view)
+
+The page now uses a cleaner triage-first layout:
+
+- A single global filter band (search plus installed-version filter)
+- Optional **Show advanced** controls for update scope, run-state bucket, and rows per page
+- Compact status pills for quick filtering
+- A single primary cluster table
+- Optional **Show update run details** panel for run-level metrics and run-detail rows
+
+This keeps all prior filtering and drilldown capability while reducing default visual density.
 
 ### Saved Views
 
 The same **All Clusters / My Favourites / personal / shared views** bar from the All Clusters
-Dashboard is available here too — views are shared between the two pages, so a view you (or an
+Dashboard is available here too. Views are shared between the two pages, so a view you (or an
 administrator) create on one page is immediately available on the other. Click a view pill to
-narrow the table to just those clusters; it combines with the state pills, version filter, and
-search box below rather than replacing them. Dynamic query views (built from the condition
-builder on the All Clusters page) are All-Clusters-only and appear disabled here.
+narrow the table to just those clusters. It combines with the state pills and filters, rather
+than replacing them. Dynamic query views (built from the condition builder on the All Clusters
+page) are All-Clusters-only and appear disabled here.
 
 ### Summary pills
 
 | Pill | Meaning |
-|---|---|
+| --- | --- |
 | All Clusters | Every registered cluster you have access to |
 | Failed | Clusters where the last update attempt failed |
 | In Progress | Clusters currently downloading, health-checking, or installing an update |
@@ -1973,29 +2580,37 @@ builder on the All Clusters page) are All-Clusters-only and appear disabled here
 Click a pill to filter the table to that state. The search box filters by cluster name, SBE
 version, or update name/version.
 
-### Fleet overview
+### Run-level summary filters
 
-Below the main state pills, the page shows two compact fleet-level summary bands to help the
-table scale to larger estates:
+Below the main state pills, the page shows compact run-level summary filters:
 
 | Overview item | Meaning |
-|---|---|
+| --- | --- |
 | Feature Ready | Clusters with a Feature Update ready to install |
 | Cumulative Ready | Clusters with a Cumulative Update ready to install |
 | Needs SBE First | Clusters whose visible Feature or Cumulative path requires a higher SBE version before it can proceed |
 
-These overview pills are clickable and act as additional filters.
+These pills are clickable and act as additional filters.
 
-The page also shows the top current solution-bundle versions in the fleet (for example
-`12.2609.1003.7 (11 clusters)`). Clicking one filters the table to clusters currently on that
-version.
+The page also shows current installed solution-bundle versions in the version filter. Selecting
+one narrows the table to clusters currently on that version.
+
+### Update run details panel (optional)
+
+Use **Show update run details** to open the optional run-details panel. It includes:
+
+- Run-state metric tiles (In Progress, Ready, Completed, Failed, Blocked, Needs SBE first)
+- Success-rate percentage for the current filter scope
+- A run-details table with current step, elapsed step time, run started time, and error/context details
+
+Hide this panel when you only need high-level triage from the main cluster table.
 
 ### Cluster table
 
 One row per cluster showing:
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Cluster | Cluster name (links to that cluster's Solution Updates page) |
 | SBE Version | Currently installed Solution Builder Extension (OEM hardware update package) version, with vendor/model as subtext. Shows a dash when ARM isn't configured or the cluster has no Arc info. |
 | Feature Update | The most relevant Feature Update for this cluster — a pending one (Ready/In Progress/Failed) if it exists, otherwise the most recently installed Feature Update. A ⚠ icon appears when the update needs a prerequisite (e.g. an SBE update) installed first — hover for details. |
@@ -2020,7 +2635,7 @@ Allows operators and administrators to plan and track scheduled solution-update 
 ### Schedule table
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Cluster | Target cluster name |
 | Update package | The update selected for this schedule |
 | Scheduled for | Date and time the update is planned to start (local time) |
@@ -2059,47 +2674,103 @@ Lists every configured alert rule. Click **+ New Rule** to create one, or the **
 #### Rule fields
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | **Name** | Display name shown in the history table and in email/Teams notifications |
 | **Cluster** | Cluster this rule applies to, or `*` to apply to all clusters |
 | **Rule Type** | One of the four types — see below |
-| **Severity** | `Critical` (red) or `Warning` (orange) — reflected in notification colour |
+| **Severity** | `Critical` (red) or `Warning` (orange). Reflected in notification
+              colour. |
 | **Threshold** | Minimum fault count before firing (ClusterHealthFault only; ignored for other types) |
-| **Cooldown (mins)** | Minimum minutes between repeated notifications for the same rule and cluster. Prevents alert floods. **Acknowledging an alert resets the cooldown** — the next firing sends a fresh notification. |
-| **Webhook URL** | Optional — Teams incoming webhook URL for this rule only. Overrides the global webhook URL in Settings. Leave blank to use the global URL. |
-| **Email To** | Optional — email recipient(s) for this rule only (comma-separated). Overrides the global `Smtp:ToAddress` in Settings. Leave blank to use the global address. |
-| **VM Name Pattern** | **VMUnexpectedStop only** — glob filter on VM names. Supports `*` (any sequence) and `?` (single character), case-insensitive. Leave blank to alert on all VMs. Examples: `PROD-*`, `*-SQL-*`. Shown as a hint in the Cluster column when set. |
+| **Cooldown (mins)** | Minimum minutes between repeated notifications for
+                      the same rule and cluster. Prevents alert floods.
+                      **Acknowledging an alert resets the cooldown**. The next
+                      firing sends a fresh notification. |
+| **Webhook URL** | Optional - Teams incoming webhook URL for this rule only.
+                  Overrides the global webhook URL in Settings. Leave blank to
+                  use the global URL. |
+| **Email To** | Optional - email recipient(s) for this rule only
+             (comma-separated). Overrides the global `Smtp:ToAddress` in
+             Settings. Leave blank to use the global address. |
+| **VM Name Pattern** | **VMUnexpectedStop / Unclustered VMs / Replication
+                      Unhealthy** - glob filter on VM names. Supports `*` (any
+                      sequence) and `?` (single character), case-insensitive.
+                      Leave blank to alert on all matching VMs. Examples:
+                      `PROD-*`, `*-SQL-*`. Shown as a hint in the Cluster column
+                      when set. |
 | **Enabled** | Toggle a rule on/off without deleting it |
 
 #### Rule types
 
 | Type | What triggers it |
-|---|---|
-| **Health Fault** | One or more active health faults on the cluster (from `Get-HealthFault`). Threshold controls how many faults are required before firing. |
-| **Node Offline** | Any cluster node moves to a state other than `Up`. Fires independently for each affected node. |
-| **Cluster Unreachable** | The background poller's circuit breaker trips — the cluster is unreachable for consecutive poll cycles. |
-| **VM Stop** | One or more VMs transition to the `Off` state unexpectedly (not triggered by a user action through the app). Use the `VmNamePattern` field to limit which VMs trigger the rule. |
-| **High Memory Process Per Host** | A single process on any cluster host is using more Private Bytes than the configured threshold (entered in GB in the rule editor). Requires the **Process Insights** feature to be enabled for the cluster (Admin → Clusters). The **Process Exclude Pattern** field (reuses the VM Name Pattern input) excludes matching process names from firing the alert — defaults to `vmwp.exe` so large-VM worker processes, already visible on the Virtual Machines page, don't create noise. |
-| **CSV Save-VM Space Risk** | A Cluster Shared Volume would fall below a safety-margin percentage of free space (Threshold, default 10%) if every VM hosted on it were saved (Save-VM) at the same time — e.g. a UPS-triggered shutdown or planned maintenance. Required space per VM is its current memory usage (or Maximum/Startup when not running) plus a 10% overhead estimate. |
+| --- | --- |
+| **Health Fault** | One or more active health faults on the cluster (from
+                 `Get-HealthFault`). Threshold controls how many faults are
+                 required before firing. |
+| **Node Offline** | Any cluster node moves to a state other than `Up`. Fires
+               independently for each affected node. |
+| **Cluster Unreachable** | The background poller's circuit breaker trips. The
+                        cluster is unreachable for consecutive poll cycles. |
+| **VM Stop** | One or more VMs transition to the `Off` state unexpectedly
+           (not triggered by a user action through the app). Use the
+           `VmNamePattern` field to limit which VMs trigger the rule. |
+| **High Memory Process Per Host** | A single process on any cluster host is
+                                   using more Private Bytes than the configured
+                                   threshold (entered in GB in the rule editor).
+                                   Requires the **Process Insights** feature to be
+                                   enabled for the cluster (Admin -> Clusters). The
+                                   **Process Exclude Pattern** field (reuses the VM
+                                   Name Pattern input) excludes matching process
+                                   names from firing the alert. Defaults to
+                                   `vmwp.exe` so large-VM worker processes, already
+                                   visible on the Virtual Machines page, don't
+                                   create noise. |
+| **CSV Save-VM Space Risk** | A Cluster Shared Volume would fall below a
+                            safety-margin percentage of free space (Threshold,
+                            default 10%) if every VM hosted on it were saved
+                            (Save-VM) at the same time. E.g. a UPS-triggered
+                            shutdown or planned maintenance. Required space per VM
+                            is its current memory usage (or Maximum/Startup when
+                            not running) plus a 10% overhead estimate. |
 
-> **Health Fault threshold:** Setting threshold to `1` (default) fires on any fault. Setting it to `3` requires at least 3 simultaneous faults. Use a threshold of `1` for production clusters where any fault is actionable.
+> **Unclustered VM grace:** The Unclustered VMs rule uses a global grace timer
+> from `Admin -> Settings -> Cluster Management -> Unclustered VM Grace
+> (minutes)` (default 15). A VM must remain unclustered for at least that many
+> minutes before it counts toward the alert threshold.
+
+> **Health Fault threshold:** Setting threshold to `1` (default) fires on any
+> fault. Setting it to `3` requires at least 3 simultaneous faults. Use a
+> threshold of `1` for production clusters where any fault is actionable.
 
 #### Channels — how alerts are delivered
 
 Each rule fires through **both** channels simultaneously if both are configured. If a specific rule overrides a channel setting, the override takes precedence over the global setting.
 
 | Channel | Global setting location | Per-rule override field |
-|---|---|---|
+| --- | --- | --- |
 | Teams webhook | Admin → Settings → `Alerting:TeamsWebhookUrl` | Rule **Webhook URL** field |
 | Email (SMTP) | Admin → Settings → `Smtp:ToAddress` | Rule **Email To** field |
-| Splunk (real-time) | Admin → Settings → `Alerting (Splunk)` — see [22b](#22b-admin--direct-alerting-splunk--log-analytics) | None (global only) |
-| Log Analytics (real-time) | Admin → Settings → `Alerting (Log Analytics)` — see [22b](#22b-admin--direct-alerting-splunk--log-analytics) | None (global only) |
+| Splunk (real-time) | Admin -> Settings -> `Alerting (Splunk)`. See
+                     [22b](#22b-admin--direct-alerting-splunk--log-analytics) | None (global only) |
+| Log Analytics (real-time) | Admin -> Settings -> `Alerting (Log Analytics)`.
+                           See [22b](#22b-admin--direct-alerting-splunk--log-analytics) | None (global only) |
 
-The Splunk and Log Analytics channels additionally respect their own **Minimum Severity** setting — a rule's alert is only forwarded to that channel if its Severity meets or exceeds the channel's configured minimum.
+The Splunk and Log Analytics channels additionally respect their own **Minimum
+Severity** setting. A rule's alert is only forwarded to that channel if its
+Severity meets or exceeds the channel's configured minimum.
 
-Each channel can also be turned off independently without losing its configuration: **Enable Teams Delivery** (Alerting group), **Enable Email Delivery** (Email Alerting (SMTP) group), and the **Splunk/Log Analytics Alert Delivery Enabled** toggles under their own groups. Flipping one of these to `false` stops that channel's live alert delivery while leaving its webhook URL, SMTP credentials, HEC token, etc. untouched — flip it back to `true` to resume with the exact same settings. (Email's **Send Test Email** button always attempts delivery regardless of this toggle, so you can still verify SMTP credentials while email alerting is temporarily disabled.)
+Each channel can also be turned off independently without losing its
+configuration: **Enable Teams Delivery** (Alerting group), **Enable Email
+Delivery** (Email Alerting (SMTP) group), and the **Splunk/Log Analytics Alert
+Delivery Enabled** toggles under their own groups. Flipping one of these to
+`false` stops that channel's live alert delivery while leaving its webhook URL,
+SMTP credentials, HEC token, etc. untouched. Flip it back to `true` to resume
+with the exact same settings. (Email's **Send Test Email** button always attempts
+delivery regardless of this toggle, so you can still verify SMTP credentials
+while email alerting is temporarily disabled.)
 
-If neither a per-rule override nor the global setting is configured, that channel is silently skipped for the rule — no error is shown. Configure at least one channel in Admin → Settings before creating rules.
+If neither a per-rule override nor the global setting is configured, that channel
+is silently skipped for the rule. No error is shown. Configure at least one
+channel in Admin -> Settings before creating rules.
 
 ---
 
@@ -2110,7 +2781,7 @@ Shows the last 200 fired alert events. Use the filter dropdowns to narrow by clu
 #### History columns
 
 | Column | Description |
-|---|---|
+| --- | --- |
 | Time | UTC timestamp when the alert fired |
 | Cluster | Cluster that triggered the alert |
 | Rule | Rule name |
@@ -2159,10 +2830,14 @@ Configured in **Admin → Maintenance** (accessible from the Admin menu). During
 
 This prevents alert floods during planned maintenance (node firmware updates, storage rebalancing, update runs) without needing to disable and re-enable rules.
 
+Expired/inactive **one-time** maintenance windows can be automatically deleted by the nightly cleanup job using `Admin -> Settings -> Maintenance Windows -> Expired Window Auto-Delete`. Recurring schedule occurrences are managed separately.
+
+Nightly auto-delete runs and manual **Run prune now** actions are written to the audit log. The entry includes the purge action name, outcome, item count removed, and the retention/cutoff context used for that run.
+
 **Actions available on each row:**
 
 | Button | When shown | Effect |
-|---|---|---|
+| --- | --- | --- |
 | **Deactivate** | Active/running windows and scheduled-future windows only | Immediately marks the window inactive — no further notifications are suppressed |
 | **Edit** | All active windows (running or scheduled) | Opens a modal pre-populated with the current cluster, start/end times, and reason — save to apply changes |
 | **Delete** | Always | Permanently removes the row from the database |
@@ -2172,7 +2847,7 @@ This prevents alert floods during planned maintenance (node firmware updates, st
 ### RBAC for Alerts
 
 | Permission | What it controls |
-|---|---|
+| --- | --- |
 | `AlertRules → View` | Can see the Alerts page, rules list, and history |
 | `AlertRules → Configure` | Can create, edit, and delete alert rules |
 | `AlertRules → Acknowledge` | Can acknowledge fired alert history entries |
@@ -2194,7 +2869,7 @@ The Activity report consolidates **all audited cluster and VM operations** into 
 **Filters available:**
 
 | Filter | Options |
-|---|---|
+| --- | --- |
 | Cluster | All clusters or a specific registered cluster |
 | Resource Type | All / Virtual Machines / Cluster Nodes / Cluster Roles / Cluster Administration |
 | Resource Name | Free-text filter — matches VM names, node names, role names, etc. |
@@ -2207,7 +2882,7 @@ The Activity report consolidates **all audited cluster and VM operations** into 
 **Actions covered per resource type:**
 
 | Resource Type | Actions |
-|---|---|
+| --- | --- |
 | Virtual Machines | Start, Stop, Restart, Suspend, Live Migrate, Configure CPU, Configure Memory, Resize Disk |
 | Cluster Nodes | Pause/Drain, Resume, Failback |
 | Cluster Roles | Start Role, Stop Role, Move Role |
@@ -2222,6 +2897,8 @@ Click **Search** to run the query (up to 1,000 rows). Click **CSV** to export th
 ### 30b. Health Faults (`/reports/cluster-health`)
 
 Historical record of health faults detected across all clusters. Each row represents a point in time where the background collector recorded a non-empty fault state.
+
+The report includes a **Source** column so you can quickly see whether captured faults were sourced from WinRM data paths (and, when available in future snapshots, Insights-backed paths).
 
 Use the cluster dropdown and severity filter to narrow the view, and export to CSV for incident records.
 

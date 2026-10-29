@@ -83,6 +83,30 @@ See [docs/QUICK-START.md](docs/QUICK-START.md) for a step-by-step guide from zer
 See [docs/QUICK-START.md](docs/QUICK-START.md) for full step-by-step instructions.  
 See [docs/IIS-Deployment.md](docs/IIS-Deployment.md) for gMSA setup, HTTPS binding, Entra registration, and troubleshooting.
 
+### Developer MCP runbook
+
+This repository uses MCP servers to support standard Copilot workflows. Configuration is in `.vscode/mcp.json`.
+
+Required for MCP-driven tasks:
+
+1. Azure MCP: use for Azure subscription/resource queries and operations.
+2. GitHub MCP: use for repo issues/PRs/metadata queries.
+
+Recommended where relevant:
+
+1. Playwright MCP: UI smoke checks and browser flow validation.
+2. PowerShell MCP: host diagnostics and quick command validation.
+
+Session validation checklist:
+
+1. `MCP: List Servers` shows required servers as running.
+2. Azure smoke test: list subscriptions.
+3. GitHub smoke test: resolve identity, then list open issues for this repo.
+4. Playwright smoke test: navigate to `https://azlocalmgmt.jase.org` and return title + URL.
+5. PowerShell smoke test: `system_info` and a basic `run_powershell` command.
+
+If a server fails to start because a runtime is missing (`dnx`, `npx`) or TLS trust blocks access, fix the environment and rerun the checklist before relying on MCP outputs.
+
 ### Windows Authentication (second site)
 
 An optional second IIS site (`HCIPortalWinAuth`) can be configured for internal users on the domain,

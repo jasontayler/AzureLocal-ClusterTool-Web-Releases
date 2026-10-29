@@ -3,7 +3,24 @@
 This file is the source for published GitHub Release bodies.
 Each release body is generated from exactly one matching section (latest-only, non-cumulative).
 
-## v0.14.0-preview - 2026-10-01
+## v1.0.1-preview - 2026-10-30
+
+### New — MCP endpoint (Trusted Preview)
+
+This release introduces optional AI-agent operations support for Azure Local, via a Model
+Context Protocol (MCP) endpoint that lets approved agents (for example Azure SRE Agent) query
+cluster health, diagnostics, and update readiness, and carry out guarded operational actions
+with confirmation and full audit logging.
+
+**This capability is disabled by default** and ships as a trusted preview — it is not
+self-service and is not enabled automatically by upgrading. If you would like to evaluate it
+in your environment, please contact your account or support team to discuss eligibility,
+onboarding, and the guardrails available (per-key tool profiles, rate limits, confirm-gated
+actions, and full audit logging).
+
+No other behavior changes in this release — see v1.0.0 below for the full platform changelog.
+
+## v1.0.0 - 2026-10-30
 
 ### Highlights
 - Added a VM Storage Alignment tab that flags VMs whose compute placement doesn't match the Cluster Shared Volume hosting their disks, with a capacity check and preferred-owner context.
@@ -11,18 +28,27 @@ Each release body is generated from exactly one matching section (latest-only, n
 - Added VM footprint tracking (config/checkpoints/disk/Save-VM estimate), a Save-VM CSV space warning, a CSV Save-VM Space Risk alert rule, and RAM-headroom warnings for Live Migration and node Drain.
 - Added real-time direct alerting to Splunk and Microsoft Log Analytics, alongside the existing Teams and Email channels.
 - Added an in-app update check with a nav bar badge and an Admin > Settings panel.
+- Added configurable Health Service thresholds (storage volume capacity warning/critical, minimum free node memory) with built-in safety checks that flag values far from the defaults before they're applied.
+- Redesigned the Fleet Update Status page into a cleaner triage-first layout, with optional advanced filters and an optional update-run-details panel.
+- Added a configurable retention policy for maintenance windows, plus an on-demand "Run prune now" admin action.
+- Added a configurable grace period for new/unclustered VM alerting to reduce noise during VM provisioning.
 - Teams and Email alert delivery can now each be disabled independently without losing configuration.
 - The Admin > Clusters Add/Edit form now opens as a modal dialog instead of an inline block.
+- Cluster health faults now show their real source (live cluster data vs. Log Analytics) and are corroborated across sources when available, including explicit visibility for quorum/witness degradation.
+- Added versioned REST API routes (`/api/v1/...`); existing routes continue to work as deprecated aliases.
 
 ### Reliability
-- Fixed column-header tooltips not appearing for browsers that had cached older site assets.
-- Fixed the Disk Replacement Wizard incorrectly reporting that a genuine Storage Spaces Direct disk wasn't in any pool.
-- Fixed the Disk Replacement Wizard potentially targeting the wrong disk when multiple disks share the same drive model, including same-day follow-up fixes for a stale-cached-data edge case and a PowerShell parameter error on the final Remove step.
-- Fixed Settings page dropdowns occasionally showing a stale value right after a save.
+- Fixed the Disk Replacement Wizard potentially targeting the wrong physical disk when multiple disks share the same drive model, including fixes for a stale-cached-data edge case and a PowerShell parameter error on the final Remove step.
 - Fixed the Live Update Monitor reporting a silent "complete" when no real output was produced.
+- Fixed a misleading "System health OK" banner that could appear on the Solution Updates page even when the cluster's update health state showed a real issue.
+- Fixed column-header tooltips not appearing for browsers that had cached older site assets.
+- Fixed Settings page dropdowns occasionally showing a stale value right after a save.
 - Clearer troubleshooting guidance for Splunk/Sentinel/Log Analytics setup errors.
 
 ### Security
+- Hardened action-discovery API responses so a caller's permission level can never be served from another caller's cached result.
+- API rate limiting now partitions by API key identity instead of relying solely on source IP, improving fairness for automation clients behind shared network egress.
+- Tightened cluster registration address validation to reject malformed URLs and unsafe targets (loopback, unspecified, multicast).
 - Added endpoint validation for admin-configurable SIEM/Alerting URLs, with explicit warnings when TLS validation is disabled.
 - Error messages shown in the admin UI no longer include raw GUIDs or Azure resource paths.
 
