@@ -1,13 +1,16 @@
 # Azure Local Cluster Tool — Web
 
-> **Public Preview — Free to use during Public Preview.**
-> A licensing model may be introduced at general availability — this is still under consideration.
+> **Latest release: v1.0.0** — first stable release. See [Releases](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/releases) to download.
+> Free to use. A licensing model for enterprise-tier capabilities is still under consideration.
+> An optional AI-agent operations capability (MCP endpoint for Azure SRE Agent and similar agents)
+> is available as a **private preview** in `v1.0.1-preview` — it ships **disabled by default**;
+> reach out to the team to discuss eligibility and use cases.
 > Please report bugs and feedback via [GitHub Issues](https://github.com/jasontayler/AzureLocal-ClusterTool-Web-Releases/issues).
 
 A **Blazor Server** web application for managing **Azure Stack HCI (Azure Local)** clusters and
 Hyper-V hosts from any browser. Provides VM operations, node management, storage monitoring,
-network (ATC intents), solution updates, alerting, Azure Arc status, and more — without needing
-Remote Desktop or multiple PowerShell windows.
+network (ATC intents), solution updates, alerting, SIEM integration, Azure Arc status, and more
+— without needing Remote Desktop or multiple PowerShell windows.
 
 ---
 
@@ -28,7 +31,14 @@ Remote Desktop or multiple PowerShell windows.
 | **Solution Updates** | List available updates, view runs, start an update, live streaming progress monitor; ARM catalog source when configured |
 | **Azure Arc** | Registration and portal properties; Arc Machines; Arc Extensions (with upgrade detection); Cluster Extensions; Arc Resource Bridge appliance and Azure Local Sites; Custom Locations |
 | **Agent Services** | View and control HCI agent services (wssdagent / mochostagent) |
-| **Alerting** | Rules engine with configurable thresholds and cooldown; Teams webhook and SMTP email delivery; maintenance windows to suppress alerts during planned work; alert history with acknowledgement; VM name glob pattern filtering for VM stop alerts |
+| **Alerting** | Rules engine with configurable thresholds and cooldown; Teams webhook, SMTP email, and real-time direct delivery to Splunk and Microsoft Log Analytics; maintenance windows (configurable retention + manual prune) to suppress alerts during planned work; alert history with acknowledgement; VM name glob pattern filtering; unclustered-VM alerting grace period |
+| **SIEM Integration** | Forward the audit log (and optionally alert history) to Splunk (HTTP Event Collector) and/or Microsoft Sentinel (Logs Ingestion API); per-sink Delivery Health panel and Send Test Event action |
+| **Health Service Settings** | Configure storage volume capacity warning/critical thresholds and minimum free node memory from the UI, with live safety advice and a confirmation step for values far from the defaults |
+| **VM Storage Alignment** | Flags VMs whose compute placement doesn't match the Cluster Shared Volume hosting their disks, with a capacity check and preferred-owner context |
+| **Per-Host Process Insights** | Opt-in top CPU/memory process view per cluster host, with a matching alert rule |
+| **Update Check** | In-app check against the public releases feed, with a nav bar badge and an on-demand Check Now button (HciAdmin only) |
+| **REST API** | Versioned `/api/v1/...` endpoints for clusters, maintenance, and Ops actions; API-key authentication with per-key RBAC scoping and rate limiting |
+| **AI Operations (MCP)** | Optional Model Context Protocol endpoint (`/mcp`) for approved AI agents (e.g. Azure SRE Agent) — confirm-gated actions, per-key tool profiles, rate limiting, and full audit logging. **Private preview, disabled by default** (`Features:EnableMcpServer`) — see [docs/API.md](docs/API.md) |
 | **Fleet Status** | Default home page — multi-cluster dashboard with interactive filter pills (VMs Running, Nodes Up, Health Faults, Updates); user Favourites (pin clusters); personal named views (explicit / wildcard / regex); admin-created global and group-scoped shared views; zero WinRM calls (DB reads only) |
 | **Fleet VM Status** | Fleet-wide VM table across all clusters — state, memory, uptime, node; interactive state-filter pills and name search; snapshot data, no live WinRM |
 | **Fleet Update Status** | Cross-cluster update state summary — per-cluster update state pills (All Current / Failed / In Progress / Updates Ready); links to cluster update pages; snapshot data, no live WinRM |
@@ -139,9 +149,8 @@ Key settings in `appsettings.json` on the server:
     "ClientSecret": "<client-secret>"
   },
   "Groups": {
-    "HciRead":    "<entra-group-object-id>",
-    "HciOperate": "<entra-group-object-id>",
-    "HciAdmin":   "<entra-group-object-id>"
+    "HciAccess": "<entra-group-object-id>",
+    "HciAdmin":  "<entra-group-object-id>"
   },
   "Database": {
     "Provider":         "PostgreSQL",
@@ -265,7 +274,7 @@ dotnet build AzureLocal.ClusterTool.Web.csproj --configuration Release
 dotnet test Tests/AzureLocal.ClusterTool.Web.Tests.csproj
 ```
 
-318 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
+822 tests — unit (services + models), bUnit component tests, and `WebApplicationFactory` HTTP pipeline integration tests. No cluster connection required.
 
 ---
 
@@ -278,9 +287,8 @@ For detailed context, implementation notes, and next steps see [`.github/BACKLOG
 
 | Feature | Description |
 |---|---|
-| **Alerting — Phase 2** | Additional rule types (storage threshold, update available, Arc connectivity); alert acknowledgement; per-alert escalation policy |
+| **Alerting — escalation policies** | Per-alert escalation policy for repeated or unacknowledged alerts; additional rule types (Arc connectivity) |
 | **Historical trending** | Background collection of CPU/memory/storage utilisation over time; capacity forecasting graphs |
-| **SIEM sink for audit logs** | Forward audit entries to Azure Monitor / Log Analytics, Splunk, or a generic HTTP webhook |
 | **Scheduled reporting** | Weekly cluster health report emailed as CSV/PDF |
 | **ARM REST strategic review** | Evaluate replacing WinRM reads with ARM API calls for clusters on Azure Local 25H2+ |
 | **JEA endpoints** | Restrict WinRM to an approved cmdlet allowlist for least-privilege access from the app server |
@@ -296,7 +304,6 @@ For detailed context, implementation notes, and next steps see [`.github/BACKLOG
 ## Known Gaps
 
 - **VM creation** is not supported — the tool manages existing VMs only; use Windows Admin Center or PowerShell to provision new VMs
-- **Live Update Monitor** has not been fully validated against an active in-progress update run
 
 ---
 
