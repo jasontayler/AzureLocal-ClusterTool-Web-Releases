@@ -5,18 +5,18 @@ Each release body is generated from exactly one matching section (latest-only, n
 
 ## v1.0.1-preview - 2026-10-30
 
-### New — MCP endpoint (Trusted Preview)
+### New — MCP endpoint (Private Preview)
 
 This release introduces optional AI-agent operations support for Azure Local, via a Model
 Context Protocol (MCP) endpoint that lets approved agents (for example Azure SRE Agent) query
 cluster health, diagnostics, and update readiness, and carry out guarded operational actions
 with confirmation and full audit logging.
 
-**This capability is disabled by default** and ships as a trusted preview — it is not
-self-service and is not enabled automatically by upgrading. If you would like to evaluate it
-in your environment, please contact your account or support team to discuss eligibility,
-onboarding, and the guardrails available (per-key tool profiles, rate limits, confirm-gated
-actions, and full audit logging).
+**This capability is disabled by default** and ships as a private preview — it is not
+self-service and is not enabled automatically by upgrading. Please reach out to the team to
+discuss eligibility and understand the use cases that make sense for your environment before
+enabling it. Guardrails available once enabled include per-key tool profiles, rate limits,
+confirm-gated actions, and full audit logging.
 
 No other behavior changes in this release — see v1.0.0 below for the full platform changelog.
 
